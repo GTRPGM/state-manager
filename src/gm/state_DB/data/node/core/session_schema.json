@@ -1,0 +1,75 @@
+{
+  "schema_type": "node",
+  "name": "session",
+  "storage": "postgresql",
+  "description": "시나리오 하나의 플레이 단위를 나타내는 전역적인 컨테이너",
+
+  "primary_key": ["session_id"],
+
+  "columns": {
+    "session_id": {
+      "type": "uuid",
+      "nullable": false,
+      "auto": "uuid",
+      "scope": "session",
+      "mutable": false,
+      "used_by": ["all"],
+      "description": "플레이 세션 식별자"
+    },
+
+    "scenario_id": {
+      "type": "uuid",
+      "nullable": false,
+      "relation": "scenario.scenario_id",
+      "scope": "story",
+      "mutable": false,
+      "used_by": ["scenario_writer", "GM"],
+      "description": "진행 중인 시나리오 ID"
+    },
+
+    "status": {
+      "type": "enum",
+      "values": ["playing", "pause", "end"],
+      "default": "playing",
+      "scope": "session",
+      "mutable": true,
+      "used_by": ["GM"],
+      "description": "현재 세션 상태"
+    },
+
+    "current_act": {
+      "type": "integer",
+      "nullable": false,
+      "default": 1,
+      "scope": "act",
+      "mutable": true,
+      "used_by": ["GM", "play_cache", "play_log_DB"],
+      "description": "현재 act 번호"
+    },
+
+    "current_sequence": {
+      "type": "integer",
+      "nullable": false,
+      "default": 1,
+      "scope": "sequence",
+      "mutable": true,
+      "used_by": ["GM", "play_cache", "play_log_DB"],
+      "description": "현재 sequence"
+    },
+
+    "started_at": {
+      "type": "timestamp",
+      "auto": "now"
+    },
+
+    "ended_at": {
+      "type": "timestamp",
+      "nullable": true
+    },
+
+    "created_at": {
+      "type": "timestamp",
+      "auto": "now"
+    }
+  }
+}
