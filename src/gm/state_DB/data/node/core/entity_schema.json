@@ -2,9 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "entity_schema.json",
   "title": "GM Entity Schema",
-  "description": "TRPG 상태 DB에서 사용되는 모든 엔티티의 공통 스키마",
+  "description": "TRPG state_DB에서 사용되는 모든 엔티티의 공통 스키마",
   "type": "object",
   "required": ["id", "entity_type", "meta"],
+
+
   "properties": {
     "id": {
       "description": "엔티티 고유 식별자",
@@ -18,18 +20,19 @@
         "story",
         "act",
         "sequence",
-        "scene",
-        "beat",
+        "npc",
         "character",
-        "location",
         "item",
-        "event"
+        "ability",
+        "inventory"
       ]
     },
+
     "meta": {
       "description": "엔티티 공통 메타데이터",
       "type": "object",
       "required": ["created_at", "updated_at"],
+
       "properties": {
         "created_at": {
           "type": "string",
@@ -49,11 +52,13 @@
       },
       "additionalProperties": false
     },
+
     "state": {
       "description": "엔티티의 현재 상태 값",
       "type": "object",
       "default": {}
     },
+
     "relations": {
       "description": "다른 엔티티와의 관계 정보",
       "type": "object",
