@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "GM"
+name = "senario-writer"
 version = "0.1.0"
-description = "GM 작업 저장소"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -22,7 +22,7 @@ dev = ["pytest>=9.0.2"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["gm"]
+packages = ["writer"]
 
 
 [tool.uv]
@@ -30,6 +30,8 @@ index-url = "https://pypi.org/simple"
 
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
 
@@ -50,4 +52,4 @@ indent-style = "space"
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gm"]
+known-first-party = ["writer"]
