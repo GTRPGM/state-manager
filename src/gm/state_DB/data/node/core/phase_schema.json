@@ -1,7 +1,7 @@
 {
   "schema_type": "concept_ref",
   "name": "phase",
-  "description": "세션 전역에서 사용되는 플레이 단계(Phase)에 대한 의미적 정의 및 제약 스키마",
+  "description": "session 내 선택가능한 행동단위",
 
   "created_at": {
     "type": "timestamp",
@@ -17,12 +17,7 @@
 
   "phase_definition": {
     "type": "enum",
-    "values": [
-      "exploration",
-      "combat",
-      "dialogue",
-      "rest"
-    ]
+    "values": ["exploration","combat","dialogue","rest"]
   },
 
   "semantics": {
