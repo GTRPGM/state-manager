@@ -1,0 +1,60 @@
+{
+  "schema_type": "node",
+  "name": "phase",
+  "storage": "postgresql",
+  "description": "세션 진행중에 사용자가 선택 가능한 큰 범주의 행동 단위",
+
+  "primary_key": ["session_id"],
+
+  "columns": {
+    "session_id": {
+      "type": "uuid",
+      "nullable": false,
+      "relation": "session.session_id",
+      "scope": "session",
+      "mutable": false,
+      "used_by": ["all"],
+      "description": "Phase가 적용되는 세션 ID"
+    },
+
+    "current_phase": {
+      "type": "enum",
+      "values": [
+        "exploration",
+        "combat",
+        "dialogue",
+        "rest",
+        "cutscene"
+      ],
+      "default": "exploration",
+      "nullable": false,
+      "scope": "session",
+      "mutable": true,
+      "used_by": ["GM", "RuleEngine"],
+      "description": "현재 세션에 적용되는 플레이 규칙 단계"
+    },
+
+    "entered_at_turn": {
+      "type": "integer",
+      "nullable": false,
+      "scope": "session",
+      "mutable": false,
+      "used_by": ["GM", "play_log_DB"],
+      "description": "해당 phase에 진입한 turn 번호"
+    },
+
+    "reason": {
+      "type": "string",
+      "nullable": true,
+      "scope": "session",
+      "mutable": false,
+      "used_by": ["GM"],
+      "description": "Phase 전환 사유(전투 개시, 컷신 진입 등)"
+    },
+
+    "created_at": {
+      "type": "timestamp",
+      "auto": "now"
+    }
+  }
+}
