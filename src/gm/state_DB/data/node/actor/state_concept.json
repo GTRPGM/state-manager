@@ -9,9 +9,9 @@
   },
 
   "scope": {
-    "applicable_to": ["session", "entity"],
+    "applicable_to": "entity",
     "mutable": true,
-    "changed_by": ["RuleEngine", "GM"],
+    "changed_by": ["GM"],
     "change_unit": "turn"
   },
 
@@ -21,20 +21,14 @@
       "numeric": {
         "description": "HP, MP, sanity 등 수치형 상태",
         "type": "map",
-        "value_type": "number"
+        "value_type": "number",
+        "default_keys": ["HP", "MP"]
       },
+
       "boolean": {
         "description": "버프 활성화 여부 등",
         "type": "map",
         "value_type": "boolean"
-      },
-      "position": {
-        "description": "위치, 공간 상태",
-        "type": "object"
-      },
-      "flags": {
-        "description": "서사적 플래그",
-        "type": "array"
       }
     }
   },

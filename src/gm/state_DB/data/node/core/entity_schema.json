@@ -56,7 +56,24 @@
     "state": {
       "description": "엔티티의 현재 상태 값",
       "type": "object",
-      "default": {}
+      "properties": {
+        "numeric": {
+          "description": "HP, MP 등 수치형 상태",
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {}
+        },
+        "boolean":{
+          "description": "버프/디버프 활성화 여부",
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "default": {}
+        }
+      }
     },
 
     "relations": {
