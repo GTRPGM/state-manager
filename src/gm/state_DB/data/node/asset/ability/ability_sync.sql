@@ -1,8 +1,10 @@
 -- ability_sync.sql
 -- Rule Engine → state_DB ability 동기화
+-- 현재 활성 세션(session_id)을 받아서 session에 종속된 ability 생성
 
 INSERT INTO ability (
     rule_ability_id,
+    session_id,
     name,
     description,
     ability_type,
@@ -10,6 +12,7 @@ INSERT INTO ability (
 )
 SELECT
     a.ability_id,
+    :session_id,  -- 현재 플레이 세션 UUID, 바인딩 필요
     a.name,
     a.description,
     a.ability_type,

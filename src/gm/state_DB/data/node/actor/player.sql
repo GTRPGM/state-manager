@@ -1,7 +1,8 @@
 -- player.sql
 -- Entity schema 기반 Player Node 정의
 -- Graph 중심 설계를 위한 최소 상태 노드 + JSONB 확장 가능 구조
--- name, description, state.numeric 일부만 사용자 입력 가능하도록 수정
+-- name, description, state.numeric 일부만 사용자 입력 가능
+-- session_id는 가장 최근 생성된 세션 자동 참조
 
 -- 1. 테이블 생성
 CREATE TABLE IF NOT EXISTS player (
@@ -10,7 +11,15 @@ CREATE TABLE IF NOT EXISTS player (
     entity_type VARCHAR(50) NOT NULL DEFAULT 'character',  -- 엔티티 유형
     name VARCHAR(100) NOT NULL,                     -- 플레이어 이름 | 사용자 입력
     description TEXT DEFAULT '',                    -- 설명 | 사용자 입력
-    
+
+    -- session 자동 참조
+    session_id UUID NOT NULL DEFAULT (
+        SELECT session_id
+        FROM session
+        ORDER BY started_at DESC
+        LIMIT 1
+    ),
+
     -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -34,7 +43,7 @@ CREATE TABLE IF NOT EXISTS player (
 
 -- 2. updated_at 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_player_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $$ 
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
@@ -46,8 +55,7 @@ BEFORE UPDATE ON player
 FOR EACH ROW
 EXECUTE FUNCTION update_player_updated_at();
 
--- 3. 초기 데이터 (player1)
--- 사용자 입력 기반 바인딩 (:name, :description, :STR, :DEX, :INT, :LUX, :SAN)
+-- 3. 초기 데이터 예시
 INSERT INTO player (
     name,
     description,
@@ -57,18 +65,18 @@ INSERT INTO player (
 ) VALUES (
     :name,        -- 사용자 입력
     :description, -- 사용자 입력
-    ARRAY['player'], -- tags 기본값
+    ARRAY['player'], -- 기본 tags
     jsonb_build_object(
         'numeric', jsonb_build_object(
             'HP', 100,
             'MP', 50,
-            'STR', :STR,   -- 사용자 입력
-            'DEX', :DEX,   -- 사용자 입력
-            'INT', :INT,   -- 사용자 입력
-            'LUX', :LUX,   -- 사용자 입력
-            'SAN', :SAN    -- 사용자 입력, 기본 10 가능
+            'STR', :STR,
+            'DEX', :DEX,
+            'INT', :INT,
+            'LUX', :LUX,
+            'SAN', :SAN
         ),
         'boolean', '{}'::jsonb
     ),
-    '{}'::jsonb   -- 초기 관계는 빈 객체
+    '{}'::jsonb
 );

@@ -2,28 +2,29 @@
 -- State DB - Inventory Node
 -- 역할: Player/NPC가 소유하는 아이템 컨테이너
 -- 아이템 자체는 Rule DB 소유 (earn_item edge로 연결)
+-- 모든 inventory는 session_id에 종속
 
 CREATE TABLE IF NOT EXISTS inventory (
     -- inventory node ID
     inventory_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    -- 어느 세션에 속하는 inventory인지
-    session_id UUID NOT NULL,
+    -- 어느 세션에 속하는 inventory인지 (session 참조 포함)
+    session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
 
     -- 소유 엔티티 정보 (player / npc)
     owner_entity_type VARCHAR(20) NOT NULL
         CHECK (owner_entity_type IN ('player', 'npc')),
 
-    owner_entity_id UUID NOT NULL,
+    owner_entity_id UUID NOT NULL, -- player.id 또는 npc.id 참조 가능 (외래키는 선택)
 
     -- inventory 상태 제약 (RuleEngine에서 참조)
     capacity INTEGER NULL,          -- 슬롯 수 제한 (null = 무제한)
-    weight_limit NUMERIC NULL,      -- 무게 제한 (계산은 RuleEngine)
+    weight_limit NUMERIC NULL,      -- 무게 제한 (RuleEngine에서 계산)
 
-    -- inventory 상태 플래그 (확장용)
-    state JSONB DEFAULT '{}'::jsonb,
+    -- inventory 상태 플래그 (확장용) | 이거는 earn_item이랑 used_item으로 관리할듯?
+    state JSONB DEFAULT '{}'::jsonb,  -- HP, 장착 상태, 기타 확장 가능
 
-    -- 메타 정보
+    -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
