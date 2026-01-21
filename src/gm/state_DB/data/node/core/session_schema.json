@@ -27,7 +27,7 @@
       "description": "진행 중인 시나리오 ID"
     },
 
-    "status": {
+    "session_now": {
       "type": "enum",
       "values": ["playing", "pause", "end"],
       "default": "playing",

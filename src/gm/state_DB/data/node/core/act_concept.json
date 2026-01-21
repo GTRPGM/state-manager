@@ -1,0 +1,86 @@
+{
+  "schema_type": "concept",
+  "name": "act",
+  "description": "스토리의 큰 흐름을 구성하는 하위 구조 단위. session은 story에 정의된 act 중 하나를 선택하여 진행한다.",
+
+  "domain": "story",
+
+  "ownership": {
+    "definition": "story",
+    "selection": "session"
+  },
+
+  "source": {
+    "definition_schema": "story_schema.json",
+    "definition_field": "acts",
+    "runtime_ref": {
+      "ref_schema": "session_schema.json",
+      "ref_field": "current_act"
+    }
+  },
+
+  "structure": {
+    "type": "ordered",
+    "identifier": "act_number",
+    "example": ["act1", "act2", "act3"]
+  },
+
+  "lifecycle": {
+    "enter": {
+      "trigger": [
+        "session.start",
+        "act.transition"
+      ],
+      "effects": [
+        "play_cache.initialize",
+        "play_log.open_act"
+      ]
+    },
+
+    "exit": {
+      "trigger": [
+        "act.complete",
+        "scenario_branch",
+        "GM_override"
+      ],
+      "effects": [
+        "play_cache.flush",
+        "play_log.summarize_act"
+      ]
+    }
+  },
+
+  "constraints": {
+    "validity": "current_act must exist in story.act_definition",
+    "transition": {
+      "default": "sequential",
+      "branching": "allowed if defined in scenario"
+    },
+    "rollback": "GM_override only"
+  },
+
+  "contains": [
+    "sequence",
+    "scene",
+    "beat"
+  ],
+
+  "state_interaction": {
+    "affects": [
+      "current_sequence",
+      "current_phase",
+      "location"
+    ],
+    "does_not_reset": [
+      "current_turn"
+    ]
+  },
+
+  "used_by": [
+    "GM",
+    "ScenarioWriter",
+    "RuleEngine",
+    "play_cache",
+    "play_log_DB"
+  ]
+}

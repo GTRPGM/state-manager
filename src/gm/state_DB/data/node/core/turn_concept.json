@@ -18,7 +18,7 @@
   "turn_definition": {
     "type": "counter",
     "base": "state_update",
-    "description": "상태 변경이 확정되는 시점마다 증가하는 세션 단위 카운터"
+    "description": "상태 변경을 포함한 하나의 트랜잭션이 commit 될 때마다 증가하는 세션 단위 카운터"
   },
 
   "semantics": {
@@ -37,6 +37,14 @@
         "서술만 발생하고 상태 변경이 없는 경우",
         "동일 상태의 재확인 또는 재서술",
         "캐시 재동기화"
+      ]
+    },
+
+    "transaction_boundary": {
+      "description": "Turn은 하나의 DB transaction과 1:1로 대응되며, commit 시점에만 증가한다",
+      "rules": [
+        "상태 변경, edge 변경, 로그 기록은 하나의 트랜잭션으로 묶인다",
+        "트랜잭션이 rollback 되면 turn은 증가하지 않는다"
       ]
     },
 

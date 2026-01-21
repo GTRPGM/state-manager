@@ -1,0 +1,47 @@
+{
+  "schema_type": "concept_ref",
+  "name": "status",
+  "description": "세션 또는 엔티티의 현재 운영 상태를 나타내는 개념. 규칙 적용 가능 여부와 흐름 제어에 사용된다.",
+
+  "scope": {
+    "applicable_to": "entity",
+    "mutable": true,
+    "changed_by": ["GM", "System"]
+  },
+
+  "status_definition": {
+    "type": "enum",
+    "values": [
+      "active",
+      "paused",
+      "locked",
+      "disabled",
+      "terminated"
+    ]
+  },
+
+  "semantics": {
+    "active": {
+      "description": "정상적으로 규칙 적용과 상태 변경이 가능한 상태"
+    },
+    "paused": {
+      "description": "일시 정지 상태. 상태 변경 트랜잭션이 발생하지 않는다"
+    },
+    "locked": {
+      "description": "외부 이벤트 대기 또는 연출 중 상태. GM 승인 없이 변경 불가"
+    },
+    "disabled": {
+      "description": "엔티티가 기능적으로 비활성화된 상태"
+    },
+    "terminated": {
+      "description": "종료 상태. 더 이상 상태 변경이 발생하지 않는다"
+    }
+  },
+
+  "used_by": [
+    "player",
+    "npc",
+    "RuleEngine",
+    "state_DB"
+  ]
+}
