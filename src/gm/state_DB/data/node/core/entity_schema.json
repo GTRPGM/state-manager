@@ -65,7 +65,7 @@
       "default": {}
     }
   },
-  
+
   "additionalProperties": false,
   "ownership": {
     "definition": "story",
