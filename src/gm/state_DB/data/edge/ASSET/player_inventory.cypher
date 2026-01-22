@@ -1,8 +1,8 @@
 MATCH
   (s:session),
-  (p:player { session_id: s.id }),
+  (p:player { id: $player_id, session_id: s.id }),
   (i:inventory { session_id: s.id })
-MERGE
+CREATE
   (p)-[:PLAYER_INVENTORY {
     id: gen_random_uuid(),
     session_id: s.id,
