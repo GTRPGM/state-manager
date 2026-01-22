@@ -3,7 +3,7 @@
 
 -- 1. Enemy 테이블 생성 (NPC 기반)
 CREATE TABLE IF NOT EXISTS enemy (
-    enenmy_id UUID NOT NULL UNIQUE,
+    enemy_id UUID NOT NULL UNIQUE,
     entity_type VARCHAR(50) NOT NULL DEFAULT 'enemy',
     name VARCHAR(100) NOT NULL,
     description TEXT DEFAULT '',
