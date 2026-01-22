@@ -1,74 +1,139 @@
--- inventory_updated.sql
--- GM 명령(command_type)에 따라 session/player_inventory 상태를 업데이트
--- 기존 cypher 파일은 그대로 두고, 상태 테이블/edge를 직접 참조
+-- inventory_update.sql
+-- GM 명령에 따라 인벤토리 상태를 업데이트
+-- Apache AGE Cypher 쿼리 사용
+--
+-- Edge 역할:
+--   PLAYER_INVENTORY: player → inventory (개별 공간)
+--   EARN_ITEM: inventory → item (아이템 귀속, active 플래그)
+--   USED_ITEM: inventory → item (사용 기록)
+--
+-- 사용법:
+--   GM keyword에 따라 적절한 섹션의 쿼리 실행
+--   - "획득", "습득" → EARN 섹션
+--   - "사용", "소모" → USE 섹션
+--   - "업데이트", "수정" → UPDATE 섹션
+--
+-- Parameters:
+--   :player_id   - 플레이어 UUID
+--   :session_id  - 세션 UUID
+--   :item_id     - 아이템 UUID
+--   :rule_id     - 규칙 UUID (USE 명령만)
+--   :meta        - 메타데이터 JSONB (UPDATE 명령만)
 
-DO $$
-BEGIN
-    -- -----------------------
-    -- EARN 명령 처리
-    -- -----------------------
-    IF command_type = 'earn' THEN
-        -- player_inventory 상태 조회/갱신
-        UPDATE player_inventory
-        SET active = TRUE
-        WHERE player_id = :player_id
-          AND session_id = :session_id;
 
-        -- earn_item edge 활성화
-        UPDATE earn_item_edge
-        SET active = TRUE,
-            updated_at = NOW()
-        WHERE player_inventory_id IN (
-            SELECT player_inventory_id
-            FROM player_inventory
-            WHERE player_id = :player_id
-              AND session_id = :session_id
-        )
-        AND item_id = :item_id;
+-- ===============================
+-- EARN: 아이템 습득 (GM으로부터 확인됨)
+-- Parameters: :player_id, :session_id, :item_id
+-- ===============================
 
-    -- -----------------------
-    -- USE 명령 처리
-    -- -----------------------
-    ELSIF command_type = 'use' THEN
-        -- used_item edge 생성/기록
-        INSERT INTO used_item_edge (
-            id, session_id, player_inventory_id, item_id, rule_id, created_at, success
-        )
-        SELECT
-            gen_random_uuid(),
-            :session_id,
-            pi.player_inventory_id,
-            :item_id,
-            :rule_id,
-            NOW(),
-            TRUE
-        FROM player_inventory pi
-        WHERE pi.player_id = :player_id
-          AND pi.session_id = :session_id;
+-- 1️⃣ EARN_ITEM 엣지 생성 또는 활성화
+SELECT *
+FROM cypher('state_db_item_logic', $$
+  MATCH
+    (i:inventory { session_id: $session_id }),
+    (it:item { id: $item_id, session_id: $session_id })
+  MERGE
+    (i)-[r:EARN_ITEM]->(it)
+  ON CREATE SET
+    r.session_id = $session_id,
+    r.active = true,
+    r.created_at = now()
+  ON MATCH SET
+    r.active = true,
+    r.updated_at = now()
+$$) AS (v agtype);
 
-        -- 사용 후 earn_item edge 제거
-        DELETE FROM earn_item_edge
-        WHERE item_id = :item_id
-          AND session_id = :session_id
-          AND player_inventory_id IN (
-              SELECT player_inventory_id
-              FROM player_inventory
-              WHERE player_id = :player_id
-                AND session_id = :session_id
-          );
+-- 2️⃣ 획득 메시지 생성 (선택적)
+SELECT *
+FROM cypher('state_db_item_logic', $$
+  MATCH
+    (p:player { id: $player_id, session_id: $session_id }),
+    (it:item { id: $item_id, session_id: $session_id })
+  CREATE
+    (p)-[:MESSAGE {
+      id: gen_random_uuid(),
+      session_id: $session_id,
+      content: it.name + "을(를) 얻었습니다.",
+      created_at: now()
+    }]->(it)
+$$) AS (v agtype);
 
-    -- -----------------------
-    -- UPDATE 명령 처리
-    -- -----------------------
-    ELSIF command_type = 'update' THEN
-        -- item meta 업데이트
-        UPDATE item
-        SET meta = meta || :meta
-        WHERE item_id = :item_id
-          AND session_id = :session_id;
 
-    ELSE
-        RAISE NOTICE 'Unsupported command_type: %', command_type;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- ===============================
+-- USE: 아이템 사용 (GM으로부터 확인됨)
+-- Parameters: :player_id, :session_id, :item_id, :rule_id
+-- ===============================
+
+-- 1️⃣ EARN_ITEM 엣지 비활성화
+SELECT *
+FROM cypher('state_db_item_logic', $$
+  MATCH
+    (i:inventory { session_id: $session_id })-[r:EARN_ITEM]->(it:item { id: $item_id })
+  WHERE r.active = true
+  SET
+    r.active = false,
+    r.updated_at = now()
+$$) AS (v agtype);
+
+-- 2️⃣ USED_ITEM 엣지 생성 (사용 기록 + 정보 전달)
+SELECT *
+FROM cypher('state_db_item_logic', $$
+  MATCH
+    (i:inventory { session_id: $session_id }),
+    (it:item { id: $item_id, session_id: $session_id })
+  CREATE
+    (i)-[:USED_ITEM {
+      id: gen_random_uuid(),
+      session_id: $session_id,
+      rule_id: $rule_id,
+      created_at: now(),
+      success: true
+    }]->(it)
+$$) AS (v agtype);
+
+-- 3️⃣ 사용 메시지 생성 (선택적)
+SELECT *
+FROM cypher('state_db_item_logic', $$
+  MATCH
+    (p:player { id: $player_id, session_id: $session_id }),
+    (it:item { id: $item_id, session_id: $session_id })
+  CREATE
+    (p)-[:MESSAGE {
+      id: gen_random_uuid(),
+      session_id: $session_id,
+      content: it.name + "을(를) 사용했습니다.",
+      created_at: now()
+    }]->(it)
+$$) AS (v agtype);
+
+
+-- ===============================
+-- UPDATE: 아이템 메타데이터 업데이트
+-- Parameters: :item_id, :session_id, :meta
+-- ===============================
+
+-- PostgreSQL 테이블 직접 업데이트 (AGE 그래프가 아님)
+UPDATE item
+SET
+    meta = meta || :meta::jsonb,
+    updated_at = NOW()
+WHERE
+    item_id = :item_id
+    AND session_id = :session_id;
+
+
+-- ===============================
+-- NOTES
+-- ===============================
+--
+-- 1. EARN_ITEM 엣지는 DELETE하지 않고 active 플래그로 관리
+-- 2. USED_ITEM은 사용 기록용 (인벤토리 상태 유지)
+-- 3. 모든 쿼리는 session_id로 격리됨
+-- 4. MERGE 사용으로 중복 실행 안전 (EARN)
+-- 5. MESSAGE 엣지는 UI 알림용
+--
+-- TODO (향후 개선):
+-- - inventory.capacity 체크 (EARN 섹션)
+-- - inventory.weight_limit 체크 (EARN 섹션)
+-- - 에러 처리 (OPTIONAL MATCH)
+-- - 트랜잭션 래핑 (BEGIN/COMMIT)
