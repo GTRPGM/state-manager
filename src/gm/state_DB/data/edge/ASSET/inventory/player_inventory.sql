@@ -3,15 +3,15 @@
 
 -- 1️⃣ 각 player에 대해 inventory 생성 (없으면)
 INSERT INTO inventory (session_id, owner_entity_type, owner_entity_id)
-SELECT 
+SELECT
     p.session_id,
     'player',
     p.id
 FROM player p
 WHERE p.session_id = (SELECT session_id FROM session ORDER BY started_at DESC LIMIT 1)
 AND NOT EXISTS (
-    SELECT 1 FROM inventory i 
-    WHERE i.session_id = p.session_id 
+    SELECT 1 FROM inventory i
+    WHERE i.session_id = p.session_id
     AND i.owner_entity_id = p.id
 )
 ON CONFLICT DO NOTHING;
