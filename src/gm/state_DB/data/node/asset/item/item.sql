@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS item (
     -- 엔티티 유형
     entity_type VARCHAR(10) NOT NULL DEFAULT 'item',
 
-    -- 세션 참조 | 세션 시작하면 생성되서 받아오면 됨 
+    -- 세션 참조 | 세션 시작하면 생성되서 받아오면 됨
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
 
     name VARCHAR(20) NOT NULL,
