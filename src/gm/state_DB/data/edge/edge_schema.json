@@ -4,7 +4,7 @@
   "description": "공통 필드만 정의, 확장 영역은 properties로 남겨두어 확장 가능",
   "type": "object",
   "required": ["id", "session_id", "edge_type", "from_entity", "to_entity", "meta", "state"],
-  
+
   "properties": {
     "id": {
       "type": "string",
@@ -44,9 +44,9 @@
       "properties": {
         "created_at": { "type": "string", "format": "date-time" },
         "updated_at": { "type": "string", "format": "date-time" },
-        "tags": { 
-          "type": "array", 
-          "items": { "type": "string" } 
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
         }
       }
     },
@@ -58,7 +58,7 @@
         "weight": { "type": "number" }
       }
     },
-    
+
     "properties": {
       "type": "object",
       "description": "각 edge 유형별 확장 가능한 속성, 자유롭게 정의 가능"
