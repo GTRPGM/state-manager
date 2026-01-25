@@ -1,4 +1,4 @@
-REATE TABLE IF NOT EXISTS enemy (
+CREATE TABLE IF NOT EXISTS enemy (
     -- 엔티티 필수
     enemy_id UUID NOT NULL,
     entity_type VARCHAR(50) NOT NULL DEFAULT 'enemy',
@@ -48,6 +48,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_enemy_updated_at ON enemy;
 CREATE TRIGGER trg_enemy_updated_at
 BEFORE UPDATE ON enemy
 FOR EACH ROW
@@ -64,6 +65,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_enemy_sync_created_at ON enemy;
 CREATE TRIGGER trg_enemy_sync_created_at
 BEFORE INSERT ON enemy
 FOR EACH ROW

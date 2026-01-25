@@ -42,3 +42,5 @@ tmp/
 # Gemini related files
 .gemini/
 .env
+TEAM_API_KEY.txt
+.api_key_latest

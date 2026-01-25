@@ -8,6 +8,7 @@ from .setting import (
     APP_ENV,
     APP_HOST,
     APP_PORT,
+    BE_ROUTER_PORT,
     CORS_ORIGINS,
     DB_CONFIG,
     DB_HOST,
@@ -16,8 +17,12 @@ from .setting import (
     DB_PORT,
     DB_USER,
     GM_PORT,
+    LLM_ROUTER_PORT,
+    REDIS_PORT,
     REMOTE_HOST,
-    RULE_ENGINE_PORT,
+    RULE_PORT,
+    SCENARIO_PORT,
+    STATE_PORT,
     WEB_PORT,
 )
 
@@ -32,9 +37,14 @@ __all__ = [
     "APP_PORT",
     "REMOTE_HOST",
     # Ports
-    "WEB_PORT",
+    "BE_ROUTER_PORT",
     "GM_PORT",
-    "RULE_ENGINE_PORT",
+    "STATE_PORT",
+    "SCENARIO_PORT",
+    "RULE_PORT",
+    "LLM_ROUTER_PORT",
+    "WEB_PORT",
+    "REDIS_PORT",
     # Database
     "DB_USER",
     "DB_PASSWORD",

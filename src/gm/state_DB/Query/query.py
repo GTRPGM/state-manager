@@ -62,6 +62,19 @@ class DatabaseManager:
 
 
 # ====================================================================
+# Apache AGE 세션 설정
+# ====================================================================
+
+
+async def set_age_path(conn: asyncpg.Connection):
+    """
+    Apache AGE 사용을 위한 세션 설정
+    AGE 관련 함수에서만 호출해야 함 (일반 SQL에서는 호출 X)
+    """
+    await conn.execute('SET search_path = ag_catalog, "$user", public;')
+
+
+# ====================================================================
 # Apache AGE 그래프 초기화
 # ====================================================================
 
@@ -69,34 +82,26 @@ class DatabaseManager:
 async def init_age_graph():
     """
     Apache AGE 확장 로드 및 그래프 생성
-    - ag_catalog 스키마의 함수 사용을 위해 search_path 설정
-    - 그래프가 없으면 생성
+    - AGE는 이미 superuser가 설치했다고 가정
     """
     async with DatabaseManager.get_connection() as conn:
-        # AGE 확장 로드
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS age;")
-
-        # search_path 설정 (ag_catalog 포함)
-        await conn.execute("SET search_path = ag_catalog, '$user', public;")
+        # search_path 설정 (AGE 작업용)
+        await set_age_path(conn)
 
         # 그래프 존재 여부 확인
         graph_exists = await conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1)",
+            "SELECT EXISTS (SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1)",
             AGE_GRAPH_NAME,
         )
 
         if not graph_exists:
-            # 그래프 생성
-            await conn.execute(f"SELECT create_graph('{AGE_GRAPH_NAME}');")
+            await conn.execute(
+                "SELECT create_graph($1);",
+                AGE_GRAPH_NAME,
+            )
             print(f"✅ Graph '{AGE_GRAPH_NAME}' created")
         else:
             print(f"✅ Graph '{AGE_GRAPH_NAME}' already exists")
-
-
-async def set_age_path(conn):
-    """개별 연결에서 AGE search_path 설정"""
-    await conn.execute("LOAD 'age';")
-    await conn.execute("SET search_path = ag_catalog, '$user', public;")
 
 
 # ====================================================================
@@ -170,22 +175,12 @@ async def run_sql_command(sql_path: str | Path, params: Optional[List] = None) -
 async def run_cypher_query(
     cypher: str, params: Optional[List] = None
 ) -> List[Dict[str, Any]]:
-    """
-    Apache AGE Cypher 쿼리 직접 실행
-
-    Args:
-        cypher: Cypher 쿼리 문자열
-        params: 쿼리 파라미터 리스트
-
-    Returns:
-        쿼리 결과 리스트
-    """
     async with DatabaseManager.get_connection() as conn:
         await set_age_path(conn)
 
-        # Cypher 쿼리를 SQL로 래핑
         wrapped_query = f"""
-            SELECT * FROM cypher('{AGE_GRAPH_NAME}', $$
+            SELECT result::jsonb
+            FROM cypher('{AGE_GRAPH_NAME}', $$
                 {cypher}
             $$) AS (result agtype);
         """
@@ -195,7 +190,7 @@ async def run_cypher_query(
         else:
             rows = await conn.fetch(wrapped_query)
 
-    return [dict(row) for row in rows]
+    return [row["result"] for row in rows]
 
 
 async def execute_sql_function(
@@ -223,6 +218,49 @@ async def execute_sql_function(
             rows = await conn.fetch(query)
 
     return [dict(row) for row in rows]
+
+
+# ====================================================================
+# 메인 테이블 생성
+# ====================================================================
+
+
+async def create_main_tables():
+    """FIRST 디렉토리의 모든 DDL 실행하여 메인 테이블 생성"""
+    ddl_files = [
+        "scenario.sql",
+        "session.sql",
+        "player.sql",
+        "npc.sql",
+        "enemy.sql",
+        "item.sql",
+        "inventory.sql",
+        "player_inventory.sql",
+        "player_npc_relations.sql",
+        "phase_history.sql",
+        "turn_history.sql",
+    ]
+
+    async with DatabaseManager.get_connection() as conn:
+        for ddl_file in ddl_files:
+            print(f"📝 Starting {ddl_file}...")
+            ddl_path = QUERY_DIR / "FIRST" / ddl_file
+
+            if not ddl_path.exists():
+                print(f"⚠️  {ddl_file} not found, skipping...")
+                continue
+
+            with open(ddl_path, "r", encoding="utf-8") as f:
+                ddl_sql = f.read()
+
+            try:
+                await conn.execute(ddl_sql)
+                print(f"✅ {ddl_file} executed")
+            except Exception as e:
+                print(f"❌ {ddl_file} failed: {e}")
+                raise
+
+    print("✅ All main tables created")
 
 
 # ====================================================================
