@@ -3,7 +3,7 @@
 
 LOGGING_CONFIG = {
     "version": 1,
-    "disable_existing_loggers": False,  # State Manager: False로 변경 (다른 로거도 사용 가능)
+    "disable_existing_loggers": False,  # State Manager: False로 변경
     "formatters": {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
@@ -12,7 +12,9 @@ LOGGING_CONFIG = {
         },
         "access": {
             "()": "uvicorn.logging.AccessFormatter",
-            "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
+            "fmt": (
+                '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s'
+            ),
             "use_colors": True,
         },
     },

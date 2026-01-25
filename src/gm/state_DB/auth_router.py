@@ -7,16 +7,18 @@ from fastapi import APIRouter, HTTPException
 
 from .auth import create_new_api_key, delete_api_key, list_api_keys
 from .custom import WrappedResponse
-from .schemas import APIKeyCreateRequest, APIKeyCreateResponse, APIKeyDeleteResponse, APIKeyInfo
+from .schemas import (
+    APIKeyCreateRequest,
+    APIKeyCreateResponse,
+    APIKeyDeleteResponse,
+    APIKeyInfo,
+)
 
 # ====================================================================
 # 라우터 생성
 # ====================================================================
 
-auth_router = APIRouter(
-    prefix="/auth",
-    tags=["Authentication"]
-)
+auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 # ====================================================================
@@ -28,7 +30,8 @@ auth_router = APIRouter(
     "/api-keys",
     response_model=WrappedResponse[APIKeyCreateResponse],
     summary="API 키 생성",
-    description="새로운 API 키를 생성합니다. ⚠️ 생성된 키는 한 번만 표시되므로 반드시 저장하세요.",
+    description="새로운 API 키를 생성합니다. "
+    "⚠️ 생성된 키는 한 번만 표시되므로 반드시 저장하세요.",
 )
 async def create_api_key(request: APIKeyCreateRequest):
     """
@@ -45,7 +48,7 @@ async def create_api_key(request: APIKeyCreateRequest):
     """
     try:
         result = await create_new_api_key(key_name=request.key_name)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"API 키 생성 중 오류 발생: {str(e)}"
@@ -67,7 +70,7 @@ async def get_api_keys():
     """
     try:
         result = await list_api_keys()
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"API 키 조회 중 오류 발생: {str(e)}"
@@ -98,7 +101,7 @@ async def remove_api_key(api_key_id: str):
                 status_code=404, detail=f"API Key ID {api_key_id}를 찾을 수 없습니다."
             )
 
-        return result
+        return {"status": "success", "data": result}
     except HTTPException:
         raise
     except Exception as e:

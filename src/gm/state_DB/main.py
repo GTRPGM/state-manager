@@ -69,8 +69,9 @@ for router in API_ROUTERS:
 
 @app.on_event("startup")
 async def on_startup():
-    """서버 시작 시 DB 연결 풀 및 API 키 테이블 초기화"""
+    """서버 시작 시 DB 연결 풀 및 테이블 초기화"""
     await db_startup()
+    # await create_main_tables()  # 테이블 이미 생성됨
     await create_api_key_table()
 
 

@@ -199,7 +199,7 @@ async def get_active_sessions_endpoint():
     """
     try:
         result = await get_active_sessions()
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"활성 세션 조회 중 오류 발생: {str(e)}"

@@ -19,7 +19,7 @@ AGE_GRAPH_NAME = os.getenv("AGE_GRAPH_NAME", "state_db")
 # 서버 설정
 # ====================================================================
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")  # local: 127.0.0.1, prod: 0.0.0.0
-APP_PORT = int(os.getenv("APP_PORT", "8000"))  # State Manager 포트
+APP_PORT = int(os.getenv("APP_PORT", "8030"))  # State Manager 포트 (팀 표준)
 APP_ENV = os.getenv("APP_ENV", "local")  # local, dev, prod
 
 # ====================================================================
@@ -28,11 +28,19 @@ APP_ENV = os.getenv("APP_ENV", "local")  # local, dev, prod
 REMOTE_HOST = os.getenv("REMOTE_HOST", "localhost")
 
 # ====================================================================
-# 다른 서비스 포트 설정 (CORS용)
+# 팀 서비스 포트 표준 (CORS 및 서비스 간 통신용)
 # ====================================================================
-WEB_PORT = int(os.getenv("WEB_PORT", "3000"))  # Frontend 포트
-GM_PORT = int(os.getenv("GM_PORT", "8001"))  # GM 서버 포트
-RULE_ENGINE_PORT = int(os.getenv("RULE_ENGINE_PORT", "8002"))  # Rule Engine 포트
+# 서비스 포트
+BE_ROUTER_PORT = int(os.getenv("BE_ROUTER_PORT", "8010"))
+GM_PORT = int(os.getenv("GM_PORT", "8020"))
+STATE_PORT = APP_PORT  # 8030 (현재 서비스)
+SCENARIO_PORT = int(os.getenv("SCENARIO_PORT", "8040"))
+RULE_PORT = int(os.getenv("RULE_PORT", "8050"))
+LLM_ROUTER_PORT = int(os.getenv("LLM_ROUTER_PORT", "8060"))
+WEB_PORT = int(os.getenv("WEB_PORT", "8080"))
+
+# 데이터베이스 포트
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 
 # ====================================================================
 # CORS 허용 출처 설정
@@ -40,25 +48,37 @@ RULE_ENGINE_PORT = int(os.getenv("RULE_ENGINE_PORT", "8002"))  # Rule Engine 포
 
 
 def get_cors_origins() -> list[str]:
-    """CORS 허용 출처 목록 생성"""
+    """CORS 허용 출처 목록 생성 (팀 표준 포트 적용)"""
     origins = [
-        # Frontend
+        # Frontend (Web)
         f"http://localhost:{WEB_PORT}",
         f"http://127.0.0.1:{WEB_PORT}",
-        # State Manager (자기 자신)
-        f"http://localhost:{APP_PORT}",
-        f"http://127.0.0.1:{APP_PORT}",
-        # GM 서버
+        # BE Router
+        f"http://localhost:{BE_ROUTER_PORT}",
+        f"http://127.0.0.1:{BE_ROUTER_PORT}",
+        # GM Service
         f"http://localhost:{GM_PORT}",
         f"http://127.0.0.1:{GM_PORT}",
-        # Rule Engine
-        f"http://localhost:{RULE_ENGINE_PORT}",
-        f"http://127.0.0.1:{RULE_ENGINE_PORT}",
-        # Remote Host
-        f"http://{REMOTE_HOST}:{APP_PORT}",
-        f"http://{REMOTE_HOST}:{WEB_PORT}",
+        # State Service (자기 자신)
+        f"http://localhost:{STATE_PORT}",
+        f"http://127.0.0.1:{STATE_PORT}",
+        # Scenario Service
+        f"http://localhost:{SCENARIO_PORT}",
+        f"http://127.0.0.1:{SCENARIO_PORT}",
+        # Rule Service
+        f"http://localhost:{RULE_PORT}",
+        f"http://127.0.0.1:{RULE_PORT}",
+        # LLM Router
+        f"http://localhost:{LLM_ROUTER_PORT}",
+        f"http://127.0.0.1:{LLM_ROUTER_PORT}",
+        # Remote Host (모든 서비스)
+        f"http://{REMOTE_HOST}:{BE_ROUTER_PORT}",
         f"http://{REMOTE_HOST}:{GM_PORT}",
-        f"http://{REMOTE_HOST}:{RULE_ENGINE_PORT}",
+        f"http://{REMOTE_HOST}:{STATE_PORT}",
+        f"http://{REMOTE_HOST}:{SCENARIO_PORT}",
+        f"http://{REMOTE_HOST}:{RULE_PORT}",
+        f"http://{REMOTE_HOST}:{LLM_ROUTER_PORT}",
+        f"http://{REMOTE_HOST}:{WEB_PORT}",
         f"http://{REMOTE_HOST}",
     ]
 
