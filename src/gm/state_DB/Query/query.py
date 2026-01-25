@@ -1,11 +1,12 @@
 # query.py - TRPG 상태 DB 쿼리 관리
 
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import asyncpg
+
+from ..configs.setting import AGE_GRAPH_NAME, DB_CONFIG
 
 # ====================================================================
 # 설정 및 초기화
@@ -13,18 +14,6 @@ import asyncpg
 
 # Query 폴더 경로 (현재 파일이 state_DB/Query/query.py에 위치)
 QUERY_DIR = Path(__file__).parent
-
-# PostgreSQL 연결 설정 (환경변수에서 로드)
-DB_CONFIG = {
-    "user": os.getenv("POSTGRES_USER", "postgres"),
-    "password": os.getenv("POSTGRES_PASSWORD", "postgres"),
-    "database": os.getenv("POSTGRES_DB", "state_db"),
-    "host": os.getenv("POSTGRES_HOST", "localhost"),
-    "port": int(os.getenv("POSTGRES_PORT", "5432")),
-}
-
-# Apache AGE 그래프 이름
-GRAPH_NAME = os.getenv("AGE_GRAPH_NAME", "state_db_item_logic")
 
 
 # ====================================================================
@@ -93,15 +82,15 @@ async def init_age_graph():
         # 그래프 존재 여부 확인
         graph_exists = await conn.fetchval(
             "SELECT EXISTS(SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1)",
-            GRAPH_NAME,
+            AGE_GRAPH_NAME,
         )
 
         if not graph_exists:
             # 그래프 생성
-            await conn.execute(f"SELECT create_graph('{GRAPH_NAME}');")
-            print(f"✅ Graph '{GRAPH_NAME}' created")
+            await conn.execute(f"SELECT create_graph('{AGE_GRAPH_NAME}');")
+            print(f"✅ Graph '{AGE_GRAPH_NAME}' created")
         else:
-            print(f"✅ Graph '{GRAPH_NAME}' already exists")
+            print(f"✅ Graph '{AGE_GRAPH_NAME}' already exists")
 
 
 async def set_age_path(conn):
@@ -196,7 +185,7 @@ async def run_cypher_query(
 
         # Cypher 쿼리를 SQL로 래핑
         wrapped_query = f"""
-            SELECT * FROM cypher('{GRAPH_NAME}', $$
+            SELECT * FROM cypher('{AGE_GRAPH_NAME}', $$
                 {cypher}
             $$) AS (result agtype);
         """
@@ -1030,7 +1019,7 @@ async def startup():
 
     # Apache AGE 그래프 초기화
     await init_age_graph()
-    print(f"✅ Apache AGE graph '{GRAPH_NAME}' ready")
+    print(f"✅ Apache AGE graph '{AGE_GRAPH_NAME}' ready")
 
 
 async def shutdown():

@@ -1,31 +1,21 @@
-# main.py - GTRPGM 상태 관리 FastAPI 서버
+# src/gm/state_DB/main.py
+# GTRPGM 상태 관리 FastAPI 서버
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
-# 로컬 모듈 import
+from .auth import create_api_key_table, get_api_key
+from .configs import (
+    API_ROUTERS,
+    APP_ENV,
+    APP_HOST,
+    APP_PORT,
+    CORS_ORIGINS,
+    LOGGING_CONFIG,
+)
 from .custom import CustomJSONResponse
-from .Query.query import shutdown as db_shutdown
-from .Query.query import startup as db_startup
-from .router import state_router
-
-# 설정값 (TODO: src/configs로 분리 가능)
-APP_ENV = "local"
-APP_PORT = 8000
-
-# 로깅 설정
-LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "default": {"class": "logging.StreamHandler", "stream": "ext://sys.stdout"},
-        "access": {"class": "logging.StreamHandler", "stream": "ext://sys.stdout"},
-    },
-    "loggers": {
-        "uvicorn.error": {"level": "INFO", "handlers": ["default"]},
-        "uvicorn.access": {"level": "INFO", "handlers": ["access"]},
-    },
-}
-
+from .Query import shutdown as db_shutdown
+from .Query import startup as db_startup
 
 # ====================================================================
 # FastAPI 앱 초기화
@@ -35,21 +25,42 @@ app = FastAPI(
     title="GTRPGM State Manager",
     description="TRPG 게임 상태를 관리하고 최신 상태를 제공하는 API",
     version="1.0.0",
-    default_response_class=CustomJSONResponse,  # 모든 응답에 표준 포맷 적용
+    default_response_class=CustomJSONResponse,
 )
 
+# ====================================================================
+# CORS 미들웨어 설정
+# ====================================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,  # 허용할 출처 목록
+    allow_credentials=True,  # 쿠키 등 자격 증명 허용 여부
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 HTTP 헤더 허용
+)
 
 # ====================================================================
 # 라우터 등록
 # ====================================================================
 
-# 상태 관리 관련 라우터 등록 (prefix로 /state 경로 추가)
-app.include_router(state_router, prefix="/state", tags=["State Management"])
-
-# 필요한 다른 라우터들 추가
-# from src.other_module.routers import other_router
-# app.include_router(other_router)
-
+# API 키가 필요한 엔드포인트 (State Management)
+for router in API_ROUTERS:
+    # auth 라우터 체크 (prefix나 tags로 구분)
+    router_tags = getattr(router, "tags", [])
+    if "Authentication" in router_tags or (
+        hasattr(router, "prefix") and "/auth" in str(router.prefix)
+    ):
+        # auth 라우터는 API 키 검증 없이 등록 (API 키 생성을 위해)
+        app.include_router(router, tags=["Authentication"])
+    else:
+        # 나머지 라우터는 API 키 검증 필요
+        app.include_router(
+            router,
+            prefix="/state",
+            tags=["State Management"],
+            dependencies=[Depends(get_api_key)],
+        )
 
 # ====================================================================
 # 앱 생명주기 이벤트
@@ -58,8 +69,9 @@ app.include_router(state_router, prefix="/state", tags=["State Management"])
 
 @app.on_event("startup")
 async def on_startup():
-    """서버 시작 시 DB 연결 풀 초기화"""
+    """서버 시작 시 DB 연결 풀 및 API 키 테이블 초기화"""
     await db_startup()
+    await create_api_key_table()
 
 
 @app.on_event("shutdown")
@@ -96,18 +108,10 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    # 로컬 환경에서는 127.0.0.1, 배포 환경에서는 0.0.0.0
-    effective_host = "127.0.0.1" if APP_ENV == "local" else "0.0.0.0"
-
-    # 로깅 핸들러 스트림 설정 (stdout으로 통일)
-    LOGGING_CONFIG["handlers"]["default"]["stream"] = "ext://sys.stdout"
-    LOGGING_CONFIG["handlers"]["access"]["stream"] = "ext://sys.stdout"
-
-    # uvicorn 서버 실행
     uvicorn.run(
         "main:app",
-        host=effective_host,
+        host=APP_HOST,
         port=APP_PORT,
-        reload=(APP_ENV == "local"),  # 로컬 환경에서만 auto-reload
+        reload=(APP_ENV == "local"),
         log_config=LOGGING_CONFIG,
     )

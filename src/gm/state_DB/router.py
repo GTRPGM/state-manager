@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from .custom import WrappedResponse
 
 # Query 함수 import
-from .query import (
+from .Query import (
     add_turn,
     change_act,
     change_phase,

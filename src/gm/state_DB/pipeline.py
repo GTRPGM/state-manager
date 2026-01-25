@@ -3,7 +3,7 @@
 
 from typing import Any, Dict, Optional
 
-from .query import (
+from .Query import (
     add_turn,
     change_act,
     change_phase,

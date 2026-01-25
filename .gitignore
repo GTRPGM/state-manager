@@ -41,3 +41,4 @@ tmp/
 
 # Gemini related files
 .gemini/
+.env
