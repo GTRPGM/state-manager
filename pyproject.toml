@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "GM"
+name = "state-manager"
 version = "0.1.0"
-description = "GM 작업 저장소"
+description = "state-manager: A robust state management system for applications."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -18,12 +18,16 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=9.0.2"]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+]
 
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["gm"]
+packages = ["state_db"]
 
 
 [tool.uv]
@@ -33,6 +37,8 @@ index-url = "https://pypi.org/simple"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 
 [tool.ruff]
@@ -51,4 +57,23 @@ indent-style = "space"
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gm"]
+known-first-party = ["state_db"]
+
+[tool.mypy]
+python_version = "3.11"
+python_executable = ".venv/bin/python"
+mypy_path = "src"
+strict = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "asyncpg.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fastapi.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pydantic.*"
+ignore_missing_imports = true
