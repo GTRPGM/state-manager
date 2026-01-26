@@ -1,4 +1,4 @@
-# src/gm/state_DB/main.py
+# src/gm/state_db/main.py
 # GTRPGM 상태 관리 FastAPI 서버
 
 from contextlib import asynccontextmanager
@@ -7,7 +7,7 @@ from typing import AsyncGenerator, Dict
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from state_DB.configs import (
+from state_db.configs import (
     API_ROUTERS,
     APP_ENV,
     APP_HOST,
@@ -15,9 +15,9 @@ from state_DB.configs import (
     CORS_ORIGINS,
     LOGGING_CONFIG,
 )
-from state_DB.custom import CustomJSONResponse
-from state_DB.Query import shutdown as db_shutdown
-from state_DB.Query import startup as db_startup
+from state_db.custom import CustomJSONResponse
+from state_db.Query import shutdown as db_shutdown
+from state_db.Query import startup as db_startup
 
 # ====================================================================
 # 앱 생명주기 이벤트 (Lifespan)

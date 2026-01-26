@@ -1,6 +1,6 @@
 -- player.sql
 -- Entity schema 기반 Player Node 정의
--- state_DB에서 사용자 입력으로 생성
+-- state_db에서 사용자 입력으로 생성
 -- 세션 시작 시 가장 먼저 생성됨
 
 -- 1. 테이블 생성

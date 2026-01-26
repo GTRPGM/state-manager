@@ -1,4 +1,4 @@
-# src/gm/state_DB/schemas.py
+# src/gm/state_db/schemas.py
 # API 요청/응답 스키마 정의
 
 from datetime import datetime

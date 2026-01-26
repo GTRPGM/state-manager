@@ -50,7 +50,7 @@
 
     "scope": {
       "level": "session",
-      "shared_with": ["state_DB","RuleEngine","play_cache","play_log_DB"]
+      "shared_with": ["state_db","RuleEngine","play_cache","play_log_DB"]
     }
   },
 
@@ -65,7 +65,7 @@
   "used_by": [
     "GM",
     "RuleEngine",
-    "state_DB",
+    "state_db",
     "play_cache",
     "play_log_DB"
   ]

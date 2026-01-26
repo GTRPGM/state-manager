@@ -1,5 +1,5 @@
 -- ability_sync.sql
--- Rule Engine → state_DB ability 동기화
+-- Rule Engine → state_db ability 동기화
 -- 현재 활성 세션(session_id)을 받아서 session에 종속된 ability 생성
 
 INSERT INTO ability (

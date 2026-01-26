@@ -1,4 +1,4 @@
-# src/gm/state_DB/router.py
+# src/gm/state_db/router.py
 # 상태 관리 관련 API 엔드포인트 정의
 
 from typing import Any, Dict, List, Optional
@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException
 
 # 공통 응답 래퍼 import
-from state_DB.custom import WrappedResponse
+from state_db.custom import WrappedResponse
 
 # Query 함수 import
-from state_DB.Query import (
+from state_db.Query import (
     ActChangeResult,
     EnemyInfo,
     InventoryItem,
@@ -52,7 +52,7 @@ from state_DB.Query import (
 )
 
 # Pydantic 스키마 import
-from state_DB.schemas import (
+from state_db.schemas import (
     ActChangeRequest,
     EnemySpawnRequest,
     InventoryUpdateRequest,

@@ -2,13 +2,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from state_DB.pipeline import (
+from state_db.pipeline import (
     StateUpdateResult,
     apply_rule_judgment,
     process_action,
     write_state_snapshot,
 )
-from state_DB.Query import PhaseChangeResult
+from state_db.Query import PhaseChangeResult
 
 # Mock data
 MOCK_SESSION_ID = "test-session-id"
@@ -34,19 +34,19 @@ async def test_process_action_combat():
 
     with (
         patch(
-            "state_DB.pipeline.get_current_phase",
+            "state_db.pipeline.get_current_phase",
             new=AsyncMock(return_value=mock_phase_info),
         ),
         patch(
-            "state_DB.pipeline.request_rule_judgment",
+            "state_db.pipeline.request_rule_judgment",
             new=AsyncMock(return_value=mock_judgment),
         ) as mock_req_rule,
         patch(
-            "state_DB.pipeline.apply_rule_judgment",
+            "state_db.pipeline.apply_rule_judgment",
             new=AsyncMock(return_value=mock_apply_result),
         ) as mock_apply,
         patch(
-            "state_DB.pipeline.get_state_snapshot",
+            "state_db.pipeline.get_state_snapshot",
             new=AsyncMock(return_value=mock_final_state),
         ),
     ):
@@ -68,7 +68,7 @@ async def test_process_action_unknown_phase():
     )
 
     with patch(
-        "state_DB.pipeline.get_current_phase",
+        "state_db.pipeline.get_current_phase",
         new=AsyncMock(return_value=mock_phase_info),
     ):
         action = {"action_type": "test"}
@@ -89,7 +89,7 @@ async def test_apply_rule_judgment_success():
     )
 
     with patch(
-        "state_DB.pipeline.write_state_snapshot",
+        "state_db.pipeline.write_state_snapshot",
         new=AsyncMock(return_value=mock_write_result),
     ) as mock_write:
         result = await apply_rule_judgment(MOCK_SESSION_ID, judgment)
@@ -119,9 +119,9 @@ async def test_write_state_snapshot():
     }
 
     with (
-        patch("state_DB.pipeline.update_player_hp", new=AsyncMock()) as mock_hp,
-        patch("state_DB.pipeline.update_location", new=AsyncMock()) as mock_loc,
-        patch("state_DB.pipeline.add_turn", new=AsyncMock()) as mock_turn,
+        patch("state_db.pipeline.update_player_hp", new=AsyncMock()) as mock_hp,
+        patch("state_db.pipeline.update_location", new=AsyncMock()) as mock_loc,
+        patch("state_db.pipeline.add_turn", new=AsyncMock()) as mock_turn,
     ):
         result = await write_state_snapshot(MOCK_SESSION_ID, state_changes)
 

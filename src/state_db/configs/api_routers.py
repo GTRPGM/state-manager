@@ -1,7 +1,7 @@
-# src/gm/state_DB/configs/api_routers.py
+# src/gm/state_db/configs/api_routers.py
 # State Manager API 라우터 목록 관리
 
-from state_DB.router import state_router
+from state_db.router import state_router
 
 # State Manager의 모든 라우터 목록
 API_ROUTERS = [

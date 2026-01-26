@@ -24,7 +24,7 @@ async def test_start_session(async_client: AsyncClient):
     }
 
     with patch(
-        "state_DB.router.session_start", new=AsyncMock(return_value=mock_response)
+        "state_db.router.session_start", new=AsyncMock(return_value=mock_response)
     ) as mock_session_start:
         response = await async_client.post(
             "/state/session/start",
@@ -54,7 +54,7 @@ async def test_end_session(async_client: AsyncClient):
     mock_response = {"status": "success", "message": f"Session {MOCK_SESSION_ID} ended"}
 
     with patch(
-        "state_DB.router.session_end", new=AsyncMock(return_value=mock_response)
+        "state_db.router.session_end", new=AsyncMock(return_value=mock_response)
     ) as mock_session_end:
         response = await async_client.post(f"/state/session/{MOCK_SESSION_ID}/end")
 
@@ -76,7 +76,7 @@ async def test_update_player_hp(async_client: AsyncClient):
     }
 
     with patch(
-        "state_DB.router.update_player_hp", new=AsyncMock(return_value=mock_response)
+        "state_db.router.update_player_hp", new=AsyncMock(return_value=mock_response)
     ) as mock_update_hp:
         response = await async_client.put(
             f"/state/player/{MOCK_PLAYER_ID}/hp",
@@ -104,7 +104,7 @@ async def test_update_inventory(async_client: AsyncClient):
     }
 
     with patch(
-        "state_DB.router.inventory_update", new=AsyncMock(return_value=mock_response)
+        "state_db.router.inventory_update", new=AsyncMock(return_value=mock_response)
     ) as mock_inv_update:
         response = await async_client.put(
             "/state/inventory/update",

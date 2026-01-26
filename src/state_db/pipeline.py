@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
 
-from state_DB.Query import (
+from state_db.Query import (
     PlayerStats,
     add_turn,
     change_act,
@@ -23,7 +23,7 @@ from state_DB.Query import (
     update_player_hp,
     update_player_stats,
 )
-from state_DB.schemas import Phase
+from state_db.schemas import Phase
 
 # ====================================================================
 # Type Definitions (Pydantic Models)

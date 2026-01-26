@@ -1,5 +1,5 @@
 -- item_Querry.sql
--- Rule Engine → state_DB item 동기화
+-- Rule Engine → state_db item 동기화
 -- 현재 활성 세션(session_id)을 받아서 session에 종속된 item 생성
 
 INSERT INTO item (

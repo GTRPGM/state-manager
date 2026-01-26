@@ -1,6 +1,6 @@
 -- item.sql
 -- Rule Engine 기반 Item Node 정의
--- state_DB는 item의 식별자와 meta 정보만 관리
+-- state_db는 item의 식별자와 meta 정보만 관리
 -- 모든 item은 session_id에 종속
 
 CREATE TABLE IF NOT EXISTS item (

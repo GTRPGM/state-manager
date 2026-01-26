@@ -1,4 +1,4 @@
-# src/gm/state_DB/configs/logging_config.py
+# src/gm/state_db/configs/logging_config.py
 # 로깅 설정 관리
 
 LOGGING_CONFIG = {

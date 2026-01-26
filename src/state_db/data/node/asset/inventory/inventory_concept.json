@@ -45,6 +45,6 @@
     "GM",
     "RuleEngine",
     "play_cache",
-    "state_DB"
+    "state_db"
   ]
 }

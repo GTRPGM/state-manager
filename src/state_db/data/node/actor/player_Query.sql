@@ -1,7 +1,7 @@
 -- player_dml.sql
 -- Player 엔티티 DML (Data Manipulation Language)
 -- 세션 시작 시 사용자 입력으로 생성
--- state_DB에서 관리
+-- state_db에서 관리
 
 -- ========================================
 -- 1. CREATE - 플레이어 생성

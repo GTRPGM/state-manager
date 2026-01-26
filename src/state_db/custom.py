@@ -1,4 +1,4 @@
-# src/gm/state_DB/custom.py
+# src/gm/state_db/custom.py
 # CustomStatus, CommonResponse, WrappedResponse, CustomJSONResponse 정의
 
 from enum import Enum

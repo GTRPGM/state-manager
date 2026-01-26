@@ -27,7 +27,7 @@ dev = [
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["state_DB"]
+packages = ["state_db"]
 
 
 [tool.uv]
@@ -57,7 +57,7 @@ indent-style = "space"
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["state_DB"]
+known-first-party = ["state_db"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -8,7 +8,7 @@ import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from state_DB.configs.setting import AGE_GRAPH_NAME, DB_CONFIG
+from state_db.configs.setting import AGE_GRAPH_NAME, DB_CONFIG
 
 # ====================================================================
 # Type Definitions (Pydantic Models)
@@ -179,7 +179,7 @@ class FunctionResult(BaseModel):
 # 설정 및 초기화
 # ====================================================================
 
-# Query 폴더 경로 (현재 파일이 state_DB/Query/query.py에 위치)
+# Query 폴더 경로 (현재 파일이 state_db/Query/query.py에 위치)
 QUERY_DIR = Path(__file__).parent
 
 # SQL 쿼리 캐시

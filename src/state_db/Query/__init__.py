@@ -1,7 +1,7 @@
-# src/gm/state_DB/Query/__init__.py
+# src/gm/state_db/Query/__init__.py
 # Query 모듈 초기화
 
-from state_DB.Query.query import (
+from state_db.Query.query import (
     ActChangeResult,
     EnemyHPUpdateResult,
     EnemyInfo,

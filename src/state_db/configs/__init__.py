@@ -1,9 +1,9 @@
-# src/gm/state_DB/configs/__init__.py
+# src/gm/state_db/configs/__init__.py
 # 설정 모듈 초기화
 
-from state_DB.configs.api_routers import API_ROUTERS
-from state_DB.configs.logging_config import LOGGING_CONFIG
-from state_DB.configs.setting import (
+from state_db.configs.api_routers import API_ROUTERS
+from state_db.configs.logging_config import LOGGING_CONFIG
+from state_db.configs.setting import (
     AGE_GRAPH_NAME,
     APP_ENV,
     APP_HOST,

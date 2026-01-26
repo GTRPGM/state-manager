@@ -1,4 +1,4 @@
-# src/gm/state_DB/configs/setting.py
+# src/gm/state_db/configs/setting.py
 # State Manager 설정값 관리
 
 import os
