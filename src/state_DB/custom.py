@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, Dict, Generic, Optional, TypeVar
 
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ====================================================================
 # 응답 상태 Enum
@@ -40,8 +40,7 @@ class CommonResponse(BaseModel):
     data: Optional[object] = Field(default=None, description="실제 응답 데이터")
     message: Optional[str] = Field(default=None, description="사용자에게 보여줄 메시지")
 
-    class Config:
-        use_enum_values = True  # Enum을 문자열로 직렬화
+    model_config = ConfigDict(use_enum_values=True)  # Enum을 문자열로 직렬화
 
 
 # ====================================================================
@@ -66,8 +65,7 @@ class WrappedResponse(BaseModel, Generic[T]):
     data: T
     message: Optional[str] = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 # ====================================================================

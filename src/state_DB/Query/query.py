@@ -2,11 +2,156 @@
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
+from fastapi import HTTPException
+from pydantic import BaseModel, ConfigDict
 import asyncpg
 
-from ..configs.setting import AGE_GRAPH_NAME, DB_CONFIG
+from state_DB.configs.setting import AGE_GRAPH_NAME, DB_CONFIG
+
+# ====================================================================
+# Type Definitions (Pydantic Models)
+# ====================================================================
+
+class SessionInfo(BaseModel):
+    session_id: str
+    scenario_id: str
+    player_id: str
+    current_act: int
+    current_sequence: int
+    location: str
+    status: str
+    created_at: Any # datetime
+    updated_at: Any # datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class InventoryItem(BaseModel):
+    player_id: str
+    item_id: int
+    quantity: int
+    acquired_at: Any # datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class NPCInfo(BaseModel):
+    npc_id: str
+    name: str
+    description: str
+    hp: int
+    tags: List[str]
+    model_config = ConfigDict(from_attributes=True)
+
+class NPCRelation(BaseModel):
+    npc_id: str
+    npc_name: str
+    affinity_score: int
+    model_config = ConfigDict(from_attributes=True)
+
+class EnemyInfo(BaseModel):
+    enemy_instance_id: str
+    enemy_id: int
+    name: str
+    hp: int
+    current_hp: int
+    is_active: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class PlayerStateNumeric(BaseModel):
+    HP: Optional[int] = None
+    MP: Optional[int] = None
+    gold: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class PlayerState(BaseModel):
+    numeric: PlayerStateNumeric
+    boolean: Dict[str, bool]
+    model_config = ConfigDict(from_attributes=True)
+
+class PlayerStats(BaseModel):
+    player_id: str
+    name: str
+    state: PlayerState
+    relations: List[Any]
+    tags: List[str]
+    model_config = ConfigDict(from_attributes=True)
+
+class PlayerStateResponse(BaseModel):
+    hp: int
+    gold: int
+    items: List[int]
+    model_config = ConfigDict(from_attributes=True)
+
+class FullPlayerState(BaseModel):
+    player: PlayerStateResponse
+    player_npc_relations: List[NPCRelation]
+    model_config = ConfigDict(from_attributes=True)
+
+class PlayerHPUpdateResult(BaseModel):
+    player_id: str
+    name: str
+    current_hp: int
+    max_hp: int
+    hp_change: int
+    model_config = ConfigDict(from_attributes=True)
+
+class NPCAffinityUpdateResult(BaseModel):
+    player_id: str
+    npc_id: str
+    new_affinity: int
+    model_config = ConfigDict(from_attributes=True)
+
+class EnemyHPUpdateResult(BaseModel):
+    enemy_instance_id: str
+    current_hp: int
+    is_defeated: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class DefeatEnemyResult(BaseModel):
+    status: str
+    enemy_id: str
+    model_config = ConfigDict(from_attributes=True)
+
+class LocationUpdateResult(BaseModel):
+    session_id: str
+    location: str
+    model_config = ConfigDict(from_attributes=True)
+
+class RemoveEntityResult(BaseModel):
+    status: str
+    model_config = ConfigDict(from_attributes=True)
+
+class PhaseChangeResult(BaseModel):
+    session_id: str
+    current_phase: str
+    model_config = ConfigDict(from_attributes=True)
+
+class TurnAddResult(BaseModel):
+    session_id: str
+    current_turn: int
+    model_config = ConfigDict(from_attributes=True)
+
+class ActChangeResult(BaseModel):
+    session_id: str
+    current_phase: str = "" # Default to empty if not provided
+    current_act: int
+    model_config = ConfigDict(from_attributes=True)
+
+class SequenceChangeResult(BaseModel):
+    session_id: str
+    current_sequence: int
+    model_config = ConfigDict(from_attributes=True)
+    
+class SpawnResult(BaseModel):
+    # Common fields for spawned entities
+    id: str # instance id
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+    
+class FunctionResult(BaseModel):
+    # Generic result for function calls
+    result: Any
+    model_config = ConfigDict(from_attributes=True)
+
 
 # ====================================================================
 # 설정 및 초기화
@@ -14,6 +159,24 @@ from ..configs.setting import AGE_GRAPH_NAME, DB_CONFIG
 
 # Query 폴더 경로 (현재 파일이 state_DB/Query/query.py에 위치)
 QUERY_DIR = Path(__file__).parent
+
+# SQL 쿼리 캐시
+SQL_CACHE: Dict[str, str] = {}
+
+def load_all_queries() -> None:
+    """QUERY_DIR 내의 모든 .sql 파일을 읽어 캐시에 저장"""
+    global SQL_CACHE
+    print("📂 Loading SQL files into cache...")
+    count = 0
+    for sql_file in QUERY_DIR.rglob("*.sql"):
+        try:
+            with open(sql_file, "r", encoding="utf-8") as f:
+                # 절대 경로를 키로 사용
+                SQL_CACHE[str(sql_file.resolve())] = f.read()
+                count += 1
+        except Exception as e:
+            print(f"⚠️ Failed to load {sql_file}: {e}")
+    print(f"✅ Loaded {count} SQL files into cache")
 
 
 # ====================================================================
@@ -43,7 +206,7 @@ class DatabaseManager:
         return cls._pool
 
     @classmethod
-    async def close_pool(cls):
+    async def close_pool(cls) -> None:
         """애플리케이션 종료 시 풀 정리"""
         if cls._pool:
             await cls._pool.close()
@@ -51,7 +214,7 @@ class DatabaseManager:
 
     @classmethod
     @asynccontextmanager
-    async def get_connection(cls):
+    async def get_connection(cls) -> Any:
         """
         안전한 연결 획득/반환을 위한 컨텍스트 매니저
         사용 예: async with DatabaseManager.get_connection() as conn:
@@ -66,7 +229,7 @@ class DatabaseManager:
 # ====================================================================
 
 
-async def set_age_path(conn: asyncpg.Connection):
+async def set_age_path(conn: asyncpg.Connection) -> None:
     """
     Apache AGE 사용을 위한 세션 설정
     AGE 관련 함수에서만 호출해야 함 (일반 SQL에서는 호출 X)
@@ -79,7 +242,7 @@ async def set_age_path(conn: asyncpg.Connection):
 # ====================================================================
 
 
-async def init_age_graph():
+async def init_age_graph() -> None:
     """
     Apache AGE 확장 로드 및 그래프 생성
     - AGE는 이미 superuser가 설치했다고 가정
@@ -110,7 +273,7 @@ async def init_age_graph():
 
 
 async def run_sql_query(
-    sql_path: str | Path, params: Optional[List] = None
+    sql_path: str | Path, params: Optional[List[Any]] = None
 ) -> List[Dict[str, Any]]:
     """
     SELECT 쿼리 실행 (결과 반환)
@@ -122,14 +285,22 @@ async def run_sql_query(
     Returns:
         쿼리 결과 리스트 (각 행은 dict)
     """
-    sql_path = Path(sql_path)
+    sql_path = Path(sql_path).resolve()
+    sql_key = str(sql_path)
 
-    # SQL 파일 읽기
-    if not sql_path.exists():
-        raise FileNotFoundError(f"SQL file not found: {sql_path}")
-
-    with open(sql_path, "r", encoding="utf-8") as f:
-        query = f.read()
+    # 캐시 확인
+    if sql_key in SQL_CACHE:
+        query = SQL_CACHE[sql_key]
+    else:
+        # 캐시에 없으면 파일 읽기 (개발 중 핫 리로드 지원 등을 위해)
+        if not sql_path.exists():
+            raise FileNotFoundError(f"SQL file not found: {sql_path}")
+        
+        with open(sql_path, "r", encoding="utf-8") as f:
+            query = f.read()
+            # 런타임에 읽은 것도 캐시에 추가? 
+            # 일단은 추가하여 다음 호출 시 빠르게 함
+            SQL_CACHE[sql_key] = query
 
     # 연결 풀에서 연결 획득 후 쿼리 실행
     async with DatabaseManager.get_connection() as conn:
@@ -143,7 +314,7 @@ async def run_sql_query(
     return [dict(row) for row in rows]
 
 
-async def run_sql_command(sql_path: str | Path, params: Optional[List] = None) -> str:
+async def run_sql_command(sql_path: str | Path, params: Optional[List[Any]] = None) -> str:
     """
     INSERT/UPDATE/DELETE 쿼리 실행 (결과 없음)
 
@@ -154,13 +325,18 @@ async def run_sql_command(sql_path: str | Path, params: Optional[List] = None) -
     Returns:
         실행 결과 상태 문자열 (예: "INSERT 0 3")
     """
-    sql_path = Path(sql_path)
+    sql_path = Path(sql_path).resolve()
+    sql_key = str(sql_path)
 
-    if not sql_path.exists():
-        raise FileNotFoundError(f"SQL file not found: {sql_path}")
+    if sql_key in SQL_CACHE:
+        query = SQL_CACHE[sql_key]
+    else:
+        if not sql_path.exists():
+            raise FileNotFoundError(f"SQL file not found: {sql_path}")
 
-    with open(sql_path, "r", encoding="utf-8") as f:
-        query = f.read()
+        with open(sql_path, "r", encoding="utf-8") as f:
+            query = f.read()
+            SQL_CACHE[sql_key] = query
 
     async with DatabaseManager.get_connection() as conn:
         await set_age_path(conn)  # AGE 사용을 위한 설정
@@ -169,11 +345,11 @@ async def run_sql_command(sql_path: str | Path, params: Optional[List] = None) -
         else:
             result = await conn.execute(query)
 
-    return result  # "INSERT 0 5" 같은 문자열 반환
+    return str(result)  # "INSERT 0 5" 같은 문자열 반환
 
 
 async def run_cypher_query(
-    cypher: str, params: Optional[List] = None
+    cypher: str, params: Optional[List[Any]] = None
 ) -> List[Dict[str, Any]]:
     async with DatabaseManager.get_connection() as conn:
         await set_age_path(conn)
@@ -194,7 +370,7 @@ async def run_cypher_query(
 
 
 async def execute_sql_function(
-    function_name: str, params: Optional[List] = None
+    function_name: str, params: Optional[List[Any]] = None
 ) -> List[Dict[str, Any]]:
     """
     PostgreSQL 함수 직접 호출 (create_session 등)
@@ -225,7 +401,7 @@ async def execute_sql_function(
 # ====================================================================
 
 
-async def create_main_tables():
+async def create_main_tables() -> None:
     """FIRST 디렉토리의 모든 DDL 실행하여 메인 테이블 생성"""
     ddl_files = [
         "scenario.sql",
@@ -273,7 +449,7 @@ async def session_start(
     current_act: int = 1,
     current_sequence: int = 1,
     location: str = "Starting Town",
-) -> Dict[str, Any]:
+) -> SessionInfo:
     """
     게임 세션 시작
     - create_session 함수 호출하여 세션 생성
@@ -286,14 +462,7 @@ async def session_start(
         location: 시작 위치 (기본값: "Starting Town")
 
     Returns:
-        {
-            "session_id": "uuid",
-            "scenario_id": "uuid",
-            "current_act": 1,
-            "current_sequence": 1,
-            "location": "Starting Town",
-            "status": "active"
-        }
+        SessionInfo
     """
     # create_session 함수 호출
     result = await execute_sql_function(
@@ -307,9 +476,12 @@ async def session_start(
 
     # 생성된 세션 정보 조회
     sql_path = QUERY_DIR / "INQUIRY" / "Session_show.sql"
-    session_info = await run_sql_query(sql_path, [session_id])
+    session_info_list = await run_sql_query(sql_path, [session_id])
+    
+    if not session_info_list:
+        raise Exception("Failed to retrieve session info")
 
-    return session_info[0] if session_info else {}
+    return SessionInfo.model_validate(session_info_list[0])
 
 
 async def session_end(session_id: str) -> Dict[str, str]:
@@ -365,7 +537,7 @@ async def session_resume(session_id: str) -> Dict[str, str]:
 # ====================================================================
 
 
-async def get_active_sessions() -> List[Dict[str, Any]]:
+async def get_active_sessions() -> List[SessionInfo]:
     """
     활성 세션 목록 조회
 
@@ -373,10 +545,11 @@ async def get_active_sessions() -> List[Dict[str, Any]]:
         활성 세션 정보 리스트
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Session_active.sql"
-    return await run_sql_query(sql_path)
+    results = await run_sql_query(sql_path)
+    return [SessionInfo.model_validate(row) for row in results]
 
 
-async def get_session_info(session_id: str) -> Dict[str, Any]:
+async def get_session_info(session_id: str) -> SessionInfo:
     """
     세션 상세 정보 조회
 
@@ -388,7 +561,9 @@ async def get_session_info(session_id: str) -> Dict[str, Any]:
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Session_show.sql"
     result = await run_sql_query(sql_path, [session_id])
-    return result[0] if result else {}
+    if result:
+        return SessionInfo.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Session not found")
 
 
 # ====================================================================
@@ -396,7 +571,7 @@ async def get_session_info(session_id: str) -> Dict[str, Any]:
 # ====================================================================
 
 
-async def get_session_inventory(session_id: str) -> List[Dict[str, Any]]:
+async def get_session_inventory(session_id: str) -> List[InventoryItem]:
     """
     세션의 플레이어 인벤토리 조회
 
@@ -404,18 +579,11 @@ async def get_session_inventory(session_id: str) -> List[Dict[str, Any]]:
         session_id: 세션 UUID
 
     Returns:
-        [
-            {
-                "player_id": "uuid",
-                "item_id": 1,
-                "quantity": 3,
-                "acquired_at": "2026-01-23 10:00:00"
-            },
-            ...
-        ]
+        InventoryItem list
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Session_inventory.sql"
-    return await run_sql_query(sql_path, [session_id])
+    results = await run_sql_query(sql_path, [session_id])
+    return [InventoryItem.model_validate(row) for row in results]
 
 
 # ====================================================================
@@ -423,7 +591,7 @@ async def get_session_inventory(session_id: str) -> List[Dict[str, Any]]:
 # ====================================================================
 
 
-async def get_session_npcs(session_id: str) -> List[Dict[str, Any]]:
+async def get_session_npcs(session_id: str) -> List[NPCInfo]:
     """
     세션의 NPC 목록 조회
 
@@ -434,10 +602,11 @@ async def get_session_npcs(session_id: str) -> List[Dict[str, Any]]:
         NPC 정보 리스트
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Session_npc.sql"
-    return await run_sql_query(sql_path, [session_id])
+    results = await run_sql_query(sql_path, [session_id])
+    return [NPCInfo.model_validate(row) for row in results]
 
 
-async def get_npc_relations(player_id: str) -> List[Dict[str, Any]]:
+async def get_npc_relations(player_id: str) -> List[NPCRelation]:
     """
     특정 플레이어의 NPC 호감도 조회
 
@@ -445,17 +614,11 @@ async def get_npc_relations(player_id: str) -> List[Dict[str, Any]]:
         player_id: 플레이어 UUID
 
     Returns:
-        [
-            {
-                "npc_id": "uuid",
-                "npc_name": "Merchant Tom",
-                "affinity_score": 75
-            },
-            ...
-        ]
+        NPC relation list
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Npc_relations.sql"
-    return await run_sql_query(sql_path, [player_id])
+    results = await run_sql_query(sql_path, [player_id])
+    return [NPCRelation.model_validate(row) for row in results]
 
 
 # ====================================================================
@@ -465,7 +628,7 @@ async def get_npc_relations(player_id: str) -> List[Dict[str, Any]]:
 
 async def get_session_enemies(
     session_id: str, active_only: bool = True
-) -> List[Dict[str, Any]]:
+) -> List[EnemyInfo]:
     """
     세션의 Enemy 목록 조회
 
@@ -477,7 +640,8 @@ async def get_session_enemies(
         Enemy 정보 리스트
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Session_enemy.sql"
-    return await run_sql_query(sql_path, [session_id, active_only])
+    results = await run_sql_query(sql_path, [session_id, active_only])
+    return [EnemyInfo.model_validate(row) for row in results]
 
 
 # ====================================================================
@@ -485,7 +649,7 @@ async def get_session_enemies(
 # ====================================================================
 
 
-async def get_player_stats(player_id: str) -> Dict[str, Any]:
+async def get_player_stats(player_id: str) -> PlayerStats:
     """
     플레이어 상세 스탯 조회
 
@@ -493,23 +657,16 @@ async def get_player_stats(player_id: str) -> Dict[str, Any]:
         player_id: 플레이어 UUID
 
     Returns:
-        {
-            "player_id": "uuid",
-            "name": "Hero",
-            "state": {
-                "numeric": {"HP": 85, "MP": 50, ...},
-                "boolean": {}
-            },
-            "relations": [...],
-            "tags": [...]
-        }
+        PlayerStats
     """
     sql_path = QUERY_DIR / "INQUIRY" / "Player_stats.sql"
     result = await run_sql_query(sql_path, [player_id])
-    return result[0] if result else {}
+    if result:
+        return PlayerStats.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Player not found")
 
 
-async def get_player_state(player_id: str) -> Dict[str, Any]:
+async def get_player_state(player_id: str) -> FullPlayerState:
     """
     플레이어 전체 상태 조회 (요구사항 스펙)
 
@@ -517,52 +674,37 @@ async def get_player_state(player_id: str) -> Dict[str, Any]:
         player_id: 조회할 플레이어 UUID
 
     Returns:
-        {
-            "player": {
-                "hp": 7,
-                "gold": 339,
-                "items": [1, 3, 5, 7]
-            },
-            "player_npc_relations": [
-                {"npc_id": 7, "affinity_score": 75}
-            ]
-        }
+        FullPlayerState
     """
-    # 플레이어 기본 정보 조회
-    player_data = await get_player_stats(player_id)
-
-    # 플레이어가 존재하지 않으면 빈 결과 반환
-    if not player_data:
-        return {
-            "player": {"hp": 0, "gold": 0, "items": []},
-            "player_npc_relations": [],
-        }
+    try:
+        # 플레이어 기본 정보 조회
+        player_data = await get_player_stats(player_id)
+    except Exception:
+        # 플레이어가 존재하지 않으면 빈 결과 반환
+        return FullPlayerState(
+            player=PlayerStateResponse(hp=0, gold=0, items=[]),
+            player_npc_relations=[],
+        )
 
     # NPC 관계 조회
     npc_relations = await get_npc_relations(player_id)
 
-    # state JSONB에서 값 추출
-    state = player_data.get("state", {})
-    numeric_state = state.get("numeric", {})
+    # state Pydantic 모델에서 값 추출
+    state = player_data.state
+    numeric_state = state.numeric
 
     # 인벤토리에서 아이템 ID 목록 추출 (별도 쿼리 필요)
     # TODO: player_inventory 테이블에서 조회하도록 수정 필요
-    items = []  # 임시: 빈 리스트
+    items: List[int] = []  # 임시: 빈 리스트
 
-    return {
-        "player": {
-            "hp": numeric_state.get("HP", 0),
-            "gold": numeric_state.get("gold", 0),
-            "items": items,
-        },
-        "player_npc_relations": [
-            {
-                "npc_id": relation.get("npc_id"),
-                "affinity_score": relation.get("affinity_score", 0),
-            }
-            for relation in npc_relations
-        ],
-    }
+    return FullPlayerState(
+        player=PlayerStateResponse(
+            hp=numeric_state.HP or 0,
+            gold=numeric_state.gold or 0,
+            items=items,
+        ),
+        player_npc_relations=npc_relations,
+    )
 
 
 # ====================================================================
@@ -611,7 +753,7 @@ async def inventory_update(
 
 async def update_player_hp(
     player_id: str, session_id: str, hp_change: int, reason: str = "unknown"
-) -> Dict[str, Any]:
+) -> PlayerHPUpdateResult:
     """
     플레이어 HP 변경
 
@@ -622,23 +764,19 @@ async def update_player_hp(
         reason: 변경 사유 (combat, item, rest 등)
 
     Returns:
-        {
-            "player_id": "uuid",
-            "name": "Hero",
-            "current_hp": 75,
-            "max_hp": 100,
-            "hp_change": -25
-        }
+        PlayerHPUpdateResult
     """
     sql_path = QUERY_DIR / "UPDATE" / "update_player_hp.sql"
     result = await run_sql_query(sql_path, [player_id, session_id, hp_change])
 
-    return result[0] if result else {}
+    if result:
+        return PlayerHPUpdateResult.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Player or Session not found")
 
 
 async def update_player_stats(
     player_id: str, session_id: str, stat_changes: Dict[str, int]
-) -> Dict[str, Any]:
+) -> PlayerStats:
     """
     플레이어 스탯 변경 (범용)
 
@@ -664,7 +802,7 @@ async def update_player_stats(
 
 async def update_npc_affinity(
     player_id: str, npc_id: str, affinity_change: int
-) -> Dict[str, Any]:
+) -> NPCAffinityUpdateResult:
     """
     NPC 호감도 변경
 
@@ -674,23 +812,19 @@ async def update_npc_affinity(
         affinity_change: 호감도 변화량 (양수/음수)
 
     Returns:
-        {
-            "player_id": "uuid",
-            "npc_id": "uuid",
-            "new_affinity": 80
-        }
+        NPCAffinityUpdateResult
     """
     sql_path = QUERY_DIR / "UPDATE" / "update_npc_affinity.sql"
     result = await run_sql_query(sql_path, [player_id, npc_id, affinity_change])
 
     if result:
-        return {
-            "player_id": player_id,
-            "npc_id": npc_id,
-            "new_affinity": result[0].get("new_affinity", 0),
-        }
+        return NPCAffinityUpdateResult(
+            player_id=player_id,
+            npc_id=npc_id,
+            new_affinity=result[0].get("new_affinity", 0),
+        )
     else:
-        return {"player_id": player_id, "npc_id": npc_id, "new_affinity": 0}
+        return NPCAffinityUpdateResult(player_id=player_id, npc_id=npc_id, new_affinity=0)
 
 
 # ====================================================================
@@ -700,7 +834,7 @@ async def update_npc_affinity(
 
 async def update_enemy_hp(
     enemy_instance_id: str, session_id: str, hp_change: int
-) -> Dict[str, Any]:
+) -> EnemyHPUpdateResult:
     """
     적 HP 변경
 
@@ -710,19 +844,17 @@ async def update_enemy_hp(
         hp_change: HP 변화량 (보통 음수)
 
     Returns:
-        {
-            "enemy_instance_id": "uuid",
-            "current_hp": 15,
-            "is_defeated": false
-        }
+        EnemyHPUpdateResult
     """
     sql_path = QUERY_DIR / "UPDATE" / "update_enemy_hp.sql"
     result = await run_sql_query(sql_path, [enemy_instance_id, session_id, hp_change])
 
-    return result[0] if result else {}
+    if result:
+        return EnemyHPUpdateResult.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Enemy or Session not found")
 
 
-async def defeat_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str]:
+async def defeat_enemy(enemy_instance_id: str, session_id: str) -> DefeatEnemyResult:
     """
     적 처치 처리
 
@@ -731,12 +863,12 @@ async def defeat_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str
         session_id: 세션 UUID
 
     Returns:
-        {"status": "defeated", "enemy_id": "uuid"}
+        DefeatEnemyResult
     """
     sql_path = QUERY_DIR / "UPDATE" / "defeated_enemy.sql"
     await run_sql_command(sql_path, [enemy_instance_id, session_id])
 
-    return {"status": "defeated", "enemy_id": enemy_instance_id}
+    return DefeatEnemyResult(status="defeated", enemy_id=enemy_instance_id)
 
 
 # ====================================================================
@@ -744,7 +876,7 @@ async def defeat_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str
 # ====================================================================
 
 
-async def update_location(session_id: str, new_location: str) -> Dict[str, str]:
+async def update_location(session_id: str, new_location: str) -> LocationUpdateResult:
     """
     세션 위치 변경
 
@@ -753,12 +885,12 @@ async def update_location(session_id: str, new_location: str) -> Dict[str, str]:
         new_location: 새 위치 이름
 
     Returns:
-        {"session_id": "uuid", "location": "Dark Forest"}
+        LocationUpdateResult
     """
     sql_path = QUERY_DIR / "UPDATE" / "update_location.sql"
     await run_sql_command(sql_path, [session_id, new_location])
 
-    return {"session_id": session_id, "location": new_location}
+    return LocationUpdateResult(session_id=session_id, location=new_location)
 
 
 # ====================================================================
@@ -766,7 +898,7 @@ async def update_location(session_id: str, new_location: str) -> Dict[str, str]:
 # ====================================================================
 
 
-async def spawn_enemy(session_id: str, enemy_data: Dict[str, Any]) -> Dict[str, Any]:
+async def spawn_enemy(session_id: str, enemy_data: Dict[str, Any]) -> SpawnResult:
     """
     적 동적 생성
 
@@ -796,10 +928,14 @@ async def spawn_enemy(session_id: str, enemy_data: Dict[str, Any]) -> Dict[str, 
     ]
     result = await run_sql_query(sql_path, params)
 
-    return result[0] if result else {}
+    if result:
+        # DB returns enemy_instance_id, mapping it to SpawnResult.id
+        row = result[0]
+        return SpawnResult(id=row.get("enemy_instance_id", ""), name=row.get("name", ""))
+    raise HTTPException(status_code=500, detail="Failed to spawn enemy")
 
 
-async def remove_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str]:
+async def remove_enemy(enemy_instance_id: str, session_id: str) -> RemoveEntityResult:
     """
     적 제거 (물리적 삭제)
 
@@ -808,12 +944,12 @@ async def remove_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str
         session_id: 세션 UUID
 
     Returns:
-        {"status": "removed"}
+        RemoveEntityResult
     """
     sql_path = QUERY_DIR / "MANAGE" / "enemy" / "remove_enemy.sql"
     await run_sql_command(sql_path, [enemy_instance_id, session_id])
 
-    return {"status": "removed"}
+    return RemoveEntityResult(status="removed")
 
 
 # ====================================================================
@@ -821,7 +957,7 @@ async def remove_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str
 # ====================================================================
 
 
-async def spawn_npc(session_id: str, npc_data: Dict[str, Any]) -> Dict[str, Any]:
+async def spawn_npc(session_id: str, npc_data: Dict[str, Any]) -> SpawnResult:
     """
     NPC 동적 생성
 
@@ -847,10 +983,13 @@ async def spawn_npc(session_id: str, npc_data: Dict[str, Any]) -> Dict[str, Any]
     ]
     result = await run_sql_query(sql_path, params)
 
-    return result[0] if result else {}
+    if result:
+        row = result[0]
+        return SpawnResult(id=row.get("npc_instance_id", ""), name=row.get("name", ""))
+    raise HTTPException(status_code=500, detail="Failed to spawn NPC")
 
 
-async def remove_npc(npc_instance_id: str, session_id: str) -> Dict[str, str]:
+async def remove_npc(npc_instance_id: str, session_id: str) -> RemoveEntityResult:
     """
     NPC 제거
 
@@ -859,12 +998,12 @@ async def remove_npc(npc_instance_id: str, session_id: str) -> Dict[str, str]:
         session_id: 세션 UUID
 
     Returns:
-        {"status": "removed"}
+        RemoveEntityResult
     """
     sql_path = QUERY_DIR / "MANAGE" / "npc" / "remove_npc.sql"
     await run_sql_command(sql_path, [npc_instance_id, session_id])
 
-    return {"status": "removed"}
+    return RemoveEntityResult(status="removed")
 
 
 # ====================================================================
@@ -872,7 +1011,7 @@ async def remove_npc(npc_instance_id: str, session_id: str) -> Dict[str, str]:
 # ====================================================================
 
 
-async def change_phase(session_id: str, new_phase: str) -> Dict[str, str]:
+async def change_phase(session_id: str, new_phase: str) -> PhaseChangeResult:
     """
     Phase 전환
 
@@ -881,15 +1020,15 @@ async def change_phase(session_id: str, new_phase: str) -> Dict[str, str]:
         new_phase: 새 Phase (exploration, combat, dialogue, rest)
 
     Returns:
-        {"session_id": "uuid", "current_phase": "combat"}
+        PhaseChangeResult
     """
     sql_path = QUERY_DIR / "MANAGE" / "phase" / "change_phase.sql"
     await run_sql_command(sql_path, [session_id, new_phase])
 
-    return {"session_id": session_id, "current_phase": new_phase}
+    return PhaseChangeResult(session_id=session_id, current_phase=new_phase)
 
 
-async def get_current_phase(session_id: str) -> Dict[str, Any]:
+async def get_current_phase(session_id: str) -> PhaseChangeResult:
     """
     현재 Phase 조회
 
@@ -902,7 +1041,9 @@ async def get_current_phase(session_id: str) -> Dict[str, Any]:
     sql_path = QUERY_DIR / "INQUIRY" / "Session_phase.sql"
     result = await run_sql_query(sql_path, [session_id])
 
-    return result[0] if result else {}
+    if result:
+        return PhaseChangeResult.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Session phase not found")
 
 
 # ====================================================================
@@ -910,7 +1051,7 @@ async def get_current_phase(session_id: str) -> Dict[str, Any]:
 # ====================================================================
 
 
-async def add_turn(session_id: str) -> Dict[str, int]:
+async def add_turn(session_id: str) -> TurnAddResult:
     """
     Turn 증가
 
@@ -918,15 +1059,18 @@ async def add_turn(session_id: str) -> Dict[str, int]:
         session_id: 세션 UUID
 
     Returns:
-        {"session_id": "uuid", "current_turn": 5}
+        TurnAddResult
     """
     sql_path = QUERY_DIR / "MANAGE" / "turn" / "add_turn.sql"
     result = await run_sql_query(sql_path, [session_id])
+    
+    # Check if result is empty or handle casting correctly
+    if result:
+        return TurnAddResult.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Session not found")
 
-    return result[0] if result else {}
 
-
-async def get_current_turn(session_id: str) -> Dict[str, Any]:
+async def get_current_turn(session_id: str) -> TurnAddResult:
     """
     현재 Turn 조회
 
@@ -939,7 +1083,9 @@ async def get_current_turn(session_id: str) -> Dict[str, Any]:
     sql_path = QUERY_DIR / "INQUIRY" / "Session_turn.sql"
     result = await run_sql_query(sql_path, [session_id])
 
-    return result[0] if result else {}
+    if result:
+        return TurnAddResult.model_validate(result[0])
+    raise HTTPException(status_code=404, detail="Session turn not found")
 
 
 # ====================================================================
@@ -947,7 +1093,7 @@ async def get_current_turn(session_id: str) -> Dict[str, Any]:
 # ====================================================================
 
 
-async def change_act(session_id: str, new_act: int) -> Dict[str, int]:
+async def change_act(session_id: str, new_act: int) -> ActChangeResult:
     """
     Act 변경
 
@@ -956,15 +1102,15 @@ async def change_act(session_id: str, new_act: int) -> Dict[str, int]:
         new_act: 새 Act 번호
 
     Returns:
-        {"session_id": "uuid", "current_act": 2}
+        ActChangeResult
     """
     sql_path = QUERY_DIR / "MANAGE" / "act" / "select_act.sql"
     await run_sql_command(sql_path, [session_id, new_act])
 
-    return {"session_id": session_id, "current_act": new_act}
+    return ActChangeResult(session_id=session_id, current_act=new_act)
 
 
-async def change_sequence(session_id: str, new_sequence: int) -> Dict[str, int]:
+async def change_sequence(session_id: str, new_sequence: int) -> SequenceChangeResult:
     """
     Sequence 변경
 
@@ -973,12 +1119,12 @@ async def change_sequence(session_id: str, new_sequence: int) -> Dict[str, int]:
         new_sequence: 새 Sequence 번호
 
     Returns:
-        {"session_id": "uuid", "current_sequence": 3}
+        SequenceChangeResult
     """
     sql_path = QUERY_DIR / "MANAGE" / "sequence" / "select_sequence.sql"
     await run_sql_command(sql_path, [session_id, new_sequence])
 
-    return {"session_id": session_id, "current_sequence": new_sequence}
+    return SequenceChangeResult(session_id=session_id, current_sequence=new_sequence)
 
 
 # ====================================================================
@@ -1050,17 +1196,20 @@ async def get_subgraph(
 # ====================================================================
 
 
-async def startup():
+async def startup() -> None:
     """FastAPI 시작 시 호출 - Connection Pool 및 AGE 그래프 초기화"""
     await DatabaseManager.get_pool()
     print("✅ Database connection pool initialized")
+
+    # SQL 쿼리 로드
+    load_all_queries()
 
     # Apache AGE 그래프 초기화
     await init_age_graph()
     print(f"✅ Apache AGE graph '{AGE_GRAPH_NAME}' ready")
 
 
-async def shutdown():
+async def shutdown() -> None:
     """FastAPI 종료 시 호출 - Connection Pool 정리"""
     await DatabaseManager.close_pool()
     print("🔒 Database connection pool closed")

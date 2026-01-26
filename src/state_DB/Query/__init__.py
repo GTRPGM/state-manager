@@ -1,7 +1,23 @@
 # src/gm/state_DB/Query/__init__.py
 # Query 모듈 초기화
 
-from .query import (
+from state_DB.Query.query import (
+    ActChangeResult,
+    EnemyHPUpdateResult,
+    EnemyInfo,
+    FullPlayerState,
+    InventoryItem,
+    LocationUpdateResult,
+    NPCAffinityUpdateResult,
+    NPCInfo,
+    NPCRelation,
+    PhaseChangeResult,
+    PlayerHPUpdateResult,
+    PlayerStats,
+    RemoveEntityResult,
+    SequenceChangeResult,
+    SessionInfo,
+    TurnAddResult,
     add_turn,
     change_act,
     # Phase/Turn/Act
@@ -48,6 +64,23 @@ from .query import (
 )
 
 __all__ = [
+    # Types
+    "ActChangeResult",
+    "EnemyHPUpdateResult",
+    "EnemyInfo",
+    "FullPlayerState",
+    "InventoryItem",
+    "LocationUpdateResult",
+    "NPCAffinityUpdateResult",
+    "NPCInfo",
+    "NPCRelation",
+    "PhaseChangeResult",
+    "PlayerHPUpdateResult",
+    "PlayerStats",
+    "RemoveEntityResult",
+    "SequenceChangeResult",
+    "SessionInfo",
+    "TurnAddResult",
     # 앱 생명주기
     "startup",
     "shutdown",

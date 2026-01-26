@@ -1,9 +1,8 @@
-# src/gm/state_DB/pipeline.py
-# State Manager Pipeline - GM/RuleEngine과의 연동 로직
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, ConfigDict
 
-from typing import Any, Dict, Optional
-
-from .Query import (
+from state_DB.schemas import Phase
+from state_DB.Query import (
     add_turn,
     change_act,
     change_phase,
@@ -22,7 +21,28 @@ from .Query import (
     update_npc_affinity,
     update_player_hp,
     update_player_stats,
+    PlayerStats,
 )
+
+# ====================================================================
+# Type Definitions (Pydantic Models)
+# ====================================================================
+
+class StateUpdateResult(BaseModel):
+    """상태 업데이트 결과 타입"""
+    status: str
+    message: str
+    updated_fields: List[str]
+    model_config = ConfigDict(from_attributes=True)
+
+class ApplyJudgmentSkipped(BaseModel):
+    """판정 적용 건너뜀 결과 타입"""
+    status: str
+    message: str
+    model_config = ConfigDict(from_attributes=True)
+
+ApplyJudgmentResult = Union[StateUpdateResult, ApplyJudgmentSkipped]
+
 
 # ====================================================================
 # 상태 스냅샷 관리
@@ -53,10 +73,10 @@ async def get_state_snapshot(session_id: str) -> Dict[str, Any]:
     session_info = await get_session_info(session_id)
 
     # 2. 플레이어 정보 (session_info에서 player_id 추출)
-    player_id = session_info.get(
-        "player_id"
-    )  # TODO: session에서 player_id 조회 방법 확인
-    player_stats = await get_player_stats(player_id) if player_id else {}
+    player_id = session_info.player_id
+    player_stats: Optional[PlayerStats] = None
+    if player_id:
+        player_stats = await get_player_stats(player_id)
 
     # 3. NPC 목록
     npcs = await get_session_npcs(session_id)
@@ -81,7 +101,7 @@ async def get_state_snapshot(session_id: str) -> Dict[str, Any]:
         "inventory": inventory,
         "phase": phase_info,
         "turn": turn_info,
-        "snapshot_timestamp": session_info.get("updated_at"),
+        "snapshot_timestamp": session_info.updated_at,
     }
 
     return snapshot
@@ -89,7 +109,7 @@ async def get_state_snapshot(session_id: str) -> Dict[str, Any]:
 
 async def write_state_snapshot(
     session_id: str, state_changes: Dict[str, Any]
-) -> Dict[str, str]:
+) -> StateUpdateResult:
     """
     GM이 요청하는 상태 저장 (Write 상태 조회 저장)
 
@@ -98,40 +118,34 @@ async def write_state_snapshot(
     Args:
         session_id: 세션 UUID
         state_changes: 변경할 상태들
-            {
-                "player_hp": -10,
-                "enemy_hp": {"enemy_uuid": -20},
-                "location": "Dark Forest",
-                "phase": "combat",
-                "turn_increment": True,
-                ...
-            }
 
     Returns:
-        {"status": "success", "message": "State updated"}
+        StateUpdateResult: 업데이트 결과
     """
-    results = []
+    results: List[str] = []
 
     # 플레이어 HP 변경
     if "player_hp" in state_changes:
         player_id = state_changes.get("player_id")
-        hp_change = state_changes["player_hp"]
-        await update_player_hp(
-            player_id=player_id,
-            session_id=session_id,
-            hp_change=hp_change,
-            reason=state_changes.get("hp_reason", "gm_action"),
-        )
-        results.append("player_hp_updated")
+        if player_id:
+            hp_change = state_changes["player_hp"]
+            await update_player_hp(
+                player_id=player_id,
+                session_id=session_id,
+                hp_change=hp_change,
+                reason=state_changes.get("hp_reason", "gm_action"),
+            )
+            results.append("player_hp_updated")
 
     # 플레이어 스탯 변경
     if "player_stats" in state_changes:
         player_id = state_changes.get("player_id")
-        stat_changes = state_changes["player_stats"]
-        await update_player_stats(
-            player_id=player_id, session_id=session_id, stat_changes=stat_changes
-        )
-        results.append("player_stats_updated")
+        if player_id:
+            stat_changes = state_changes["player_stats"]
+            await update_player_stats(
+                player_id=player_id, session_id=session_id, stat_changes=stat_changes
+            )
+            results.append("player_stats_updated")
 
     # Enemy HP 변경
     if "enemy_hp" in state_changes:
@@ -141,19 +155,20 @@ async def write_state_snapshot(
                 enemy_instance_id=enemy_id, session_id=session_id, hp_change=hp_change
             )
             # HP가 0 이하면 자동 처치
-            if result.get("current_hp", 1) <= 0:
+            if result.current_hp <= 0:
                 await defeat_enemy(enemy_instance_id=enemy_id, session_id=session_id)
         results.append("enemy_hp_updated")
 
     # NPC 호감도 변경
     if "npc_affinity" in state_changes:
         player_id = state_changes.get("player_id")
-        affinity_changes = state_changes["npc_affinity"]
-        for npc_id, affinity_change in affinity_changes.items():
-            await update_npc_affinity(
-                player_id=player_id, npc_id=npc_id, affinity_change=affinity_change
-            )
-        results.append("npc_affinity_updated")
+        if player_id:
+            affinity_changes = state_changes["npc_affinity"]
+            for npc_id, affinity_change in affinity_changes.items():
+                await update_npc_affinity(
+                    player_id=player_id, npc_id=npc_id, affinity_change=affinity_change
+                )
+            results.append("npc_affinity_updated")
 
     # 위치 변경
     if "location" in state_changes:
@@ -184,16 +199,11 @@ async def write_state_snapshot(
         await change_sequence(session_id=session_id, new_sequence=new_sequence)
         results.append("sequence_updated")
 
-    return {
-        "status": "success",
-        "message": f"State updated: {', '.join(results)}",
-        "updated_fields": results,
-    }
-
-
-# ====================================================================
-# Rule Engine 연동 파이프라인
-# ====================================================================
+    return StateUpdateResult(
+        status="success",
+        message=f"State updated: {', '.join(results)}",
+        updated_fields=results,
+    )
 
 
 async def request_rule_judgment(
@@ -249,7 +259,7 @@ async def request_rule_judgment(
 
 async def apply_rule_judgment(
     session_id: str, judgment: Dict[str, Any]
-) -> Dict[str, str]:
+) -> ApplyJudgmentResult:
     """
     Rule Engine의 판정 결과를 State DB에 반영 (판정 결과 수신)
 
@@ -260,10 +270,10 @@ async def apply_rule_judgment(
         judgment: Rule Engine의 판정 결과
 
     Returns:
-        적용 결과
+        ApplyJudgmentResult: 적용 결과
     """
     if not judgment.get("success"):
-        return {"status": "skipped", "message": "Judgment failed, no state changes"}
+        return ApplyJudgmentSkipped(status="skipped", message="Judgment failed, no state changes")
 
     # 판정 결과의 state_changes를 DB에 반영
     state_changes = judgment.get("state_changes", {})
@@ -274,181 +284,42 @@ async def apply_rule_judgment(
 
 
 # ====================================================================
-# Phase별 행동 처리 파이프라인
-# ====================================================================
-
-
-async def process_combat_action(
-    session_id: str, player_id: str, action: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    전투 행동 처리 파이프라인
-
-    Flow:
-        1. 현재 상태 조회
-        2. Rule Engine 판정 요청
-        3. 판정 결과 반영
-        4. Turn 증가
-
-    Args:
-        session_id: 세션 UUID
-        player_id: 플레이어 UUID
-        action: 행동 정보 {"action_type": "attack", "target": "enemy_uuid"}
-
-    Returns:
-        처리 결과
-    """
-    # 1. 현재 Phase 확인
-    phase_info = await get_current_phase(session_id)
-    if phase_info.get("current_phase") != "combat":
-        return {
-            "status": "error",
-            "message": f"Current phase is {phase_info.get('current_phase')},not combat",
-        }
-
-    # 2. Rule Engine 판정 요청
-    action["player_id"] = player_id
-    judgment = await request_rule_judgment(session_id, action)
-
-    # 3. 판정 결과 반영
-    apply_result = await apply_rule_judgment(session_id, judgment)
-
-    # 4. 최종 상태 스냅샷 반환
-    final_state = await get_state_snapshot(session_id)
-
-    return {
-        "status": "success",
-        "judgment": judgment,
-        "apply_result": apply_result,
-        "final_state": final_state,
-    }
-
-
-async def process_exploration_action(
-    session_id: str, player_id: str, action: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    탐색 행동 처리 파이프라인
-
-    Args:
-        session_id: 세션 UUID
-        player_id: 플레이어 UUID
-        action: 행동 정보 {"action_type": "move", "direction": "north"}
-
-    Returns:
-        처리 결과
-    """
-    # Phase 확인
-    phase_info = await get_current_phase(session_id)
-    if phase_info.get("current_phase") != "exploration":
-        return {
-            "status": "error",
-            "message": f"Current phase is {phase_info.get('current_phase')},"
-            "not exploration",
-        }
-
-    # Rule Engine 판정
-    action["player_id"] = player_id
-    judgment = await request_rule_judgment(session_id, action)
-
-    # 판정 결과 반영
-    apply_result = await apply_rule_judgment(session_id, judgment)
-
-    # 최종 상태
-    final_state = await get_state_snapshot(session_id)
-
-    return {
-        "status": "success",
-        "judgment": judgment,
-        "apply_result": apply_result,
-        "final_state": final_state,
-    }
-
-
-async def process_dialogue_action(
-    session_id: str, player_id: str, action: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    대화 행동 처리 파이프라인
-
-    Args:
-        session_id: 세션 UUID
-        player_id: 플레이어 UUID
-        action: 행동 정보 {"action_type": "talk", "npc_id": "npc_uuid", "choice": 1}
-
-    Returns:
-        처리 결과
-    """
-    # Phase 확인
-    phase_info = await get_current_phase(session_id)
-    if phase_info.get("current_phase") != "dialogue":
-        return {
-            "status": "error",
-            "message": f"Current phase is {phase_info.get('current_phase')},"
-            "not dialogue",
-        }
-
-    # Rule Engine 판정
-    action["player_id"] = player_id
-    judgment = await request_rule_judgment(session_id, action)
-
-    # 판정 결과 반영
-    apply_result = await apply_rule_judgment(session_id, judgment)
-
-    # 최종 상태
-    final_state = await get_state_snapshot(session_id)
-
-    return {
-        "status": "success",
-        "judgment": judgment,
-        "apply_result": apply_result,
-        "final_state": final_state,
-    }
-
-
-async def process_rest_action(
-    session_id: str, player_id: str, action: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    휴식 행동 처리 파이프라인
-
-    Args:
-        session_id: 세션 UUID
-        player_id: 플레이어 UUID
-        action: 행동 정보 {"action_type": "rest"}
-
-    Returns:
-        처리 결과
-    """
-    # Phase 확인
-    phase_info = await get_current_phase(session_id)
-    if phase_info.get("current_phase") != "rest":
-        return {
-            "status": "error",
-            "message": f"Current phase is {phase_info.get('current_phase')}, not rest",
-        }
-
-    # Rule Engine 판정
-    action["player_id"] = player_id
-    judgment = await request_rule_judgment(session_id, action)
-
-    # 판정 결과 반영
-    apply_result = await apply_rule_judgment(session_id, judgment)
-
-    # 최종 상태
-    final_state = await get_state_snapshot(session_id)
-
-    return {
-        "status": "success",
-        "judgment": judgment,
-        "apply_result": apply_result,
-        "final_state": final_state,
-    }
-
-
-# ====================================================================
 # 범용 행동 처리 (Phase 자동 판별)
 # ====================================================================
+
+
+async def _process_generic_action(
+    session_id: str, player_id: str, action: Dict[str, Any], current_phase: str
+) -> Dict[str, Any]:
+    """
+    범용 행동 처리 로직
+
+    Args:
+        session_id: 세션 UUID
+        player_id: 플레이어 UUID
+        action: 행동 정보
+        current_phase: 현재 Phase
+
+    Returns:
+        처리 결과
+    """
+    # Rule Engine 판정
+    action["player_id"] = player_id
+    judgment = await request_rule_judgment(session_id, action)
+
+    # 판정 결과 반영
+    apply_result = await apply_rule_judgment(session_id, judgment)
+
+    # 최종 상태
+    final_state = await get_state_snapshot(session_id)
+
+    return {
+        "status": "success",
+        "phase": current_phase,
+        "judgment": judgment,
+        "apply_result": apply_result,
+        "final_state": final_state,
+    }
 
 
 async def process_action(
@@ -467,22 +338,18 @@ async def process_action(
     """
     # 현재 Phase 조회
     phase_info = await get_current_phase(session_id)
-    current_phase = phase_info.get("current_phase")
-
-    # Phase에 따른 분기
-    if current_phase == "combat":
-        return await process_combat_action(session_id, player_id, action)
-    elif current_phase == "exploration":
-        return await process_exploration_action(session_id, player_id, action)
-    elif current_phase == "dialogue":
-        return await process_dialogue_action(session_id, player_id, action)
-    elif current_phase == "rest":
-        return await process_rest_action(session_id, player_id, action)
-    else:
+    current_phase_str = phase_info.current_phase
+    
+    try:
+        current_phase = Phase(current_phase_str)
+    except ValueError:
         return {
             "status": "error",
-            "message": f"Unknown phase: {current_phase}",
+            "message": f"Unknown phase: {current_phase_str}",
         }
+
+    # Phase에 관계없이 공통 로직 처리 (Phase별 특수 로직이 있다면 여기서 분기)
+    return await _process_generic_action(session_id, player_id, action, current_phase.value)
 
 
 # ====================================================================
@@ -505,13 +372,13 @@ async def process_combat_end(session_id: str, victory: bool) -> Dict[str, Any]:
 
     if victory:
         # 승리: Phase를 exploration으로 변경
-        state_changes["phase"] = "exploration"
+        state_changes["phase"] = Phase.EXPLORATION.value
 
         # 모든 적 제거
         enemies = await get_session_enemies(session_id, active_only=True)
         for enemy in enemies:
             await remove_enemy(
-                enemy_instance_id=enemy["enemy_instance_id"], session_id=session_id
+                enemy_instance_id=enemy.enemy_instance_id, session_id=session_id
             )
 
         # 보상 지급 (TODO: 실제 보상 로직)
@@ -519,7 +386,7 @@ async def process_combat_end(session_id: str, victory: bool) -> Dict[str, Any]:
 
     else:
         # 패배: Phase를 rest로 변경 (게임 오버 로직은 GM이 처리)
-        state_changes["phase"] = "rest"
+        state_changes["phase"] = Phase.REST.value
 
     # 상태 반영
     result = await write_state_snapshot(session_id, state_changes)

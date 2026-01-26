@@ -1,15 +1,30 @@
 # src/gm/state_DB/router.py
 # 상태 관리 관련 API 엔드포인트 정의
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 
 # 공통 응답 래퍼 import
-from .custom import WrappedResponse
+from state_DB.custom import WrappedResponse
 
 # Query 함수 import
-from .Query import (
+from state_DB.Query import (
+    ActChangeResult,
+    EnemyHPUpdateResult,
+    EnemyInfo,
+    FullPlayerState,
+    InventoryItem,
+    LocationUpdateResult,
+    NPCAffinityUpdateResult,
+    NPCInfo,
+    NPCRelation,
+    PhaseChangeResult,
+    PlayerHPUpdateResult,
+    RemoveEntityResult,
+    SequenceChangeResult,
+    SessionInfo,
+    TurnAddResult,
     add_turn,
     change_act,
     change_phase,
@@ -40,7 +55,7 @@ from .Query import (
 )
 
 # Pydantic 스키마 import
-from .schemas import (
+from state_DB.schemas import (
     ActChangeRequest,
     EnemySpawnRequest,
     InventoryUpdateRequest,
@@ -80,7 +95,7 @@ state_router = APIRouter()
     summary="게임 세션 시작",
     description="새 게임 세션을 시작하고 초기 상태를 설정합니다.",
 )
-async def start_session(request: SessionStartRequest):
+async def start_session(request: SessionStartRequest) -> Dict[str, Any]:
     """
     새 게임 세션 시작
 
@@ -98,7 +113,7 @@ async def start_session(request: SessionStartRequest):
             current_sequence=request.current_sequence,
             location=request.location,
         )
-        return result
+        return {"status": "success", "data": result}
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=404, detail=f"SQL 파일을 찾을 수 없습니다: {str(e)}"
@@ -115,7 +130,7 @@ async def start_session(request: SessionStartRequest):
     summary="게임 세션 종료",
     description="진행 중인 게임 세션을 종료합니다.",
 )
-async def end_session(session_id: str):
+async def end_session(session_id: str) -> Dict[str, Any]:
     """
     게임 세션 종료
 
@@ -127,7 +142,7 @@ async def end_session(session_id: str):
     """
     try:
         result = await session_end(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"세션 종료 중 오류 발생: {str(e)}"
@@ -140,7 +155,7 @@ async def end_session(session_id: str):
     summary="게임 세션 일시정지",
     description="현재 게임 상태를 저장하고 세션을 일시정지합니다.",
 )
-async def pause_session(session_id: str):
+async def pause_session(session_id: str) -> Dict[str, Any]:
     """
     게임 세션 일시정지
 
@@ -152,7 +167,7 @@ async def pause_session(session_id: str):
     """
     try:
         result = await session_pause(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"세션 일시정지 중 오류 발생: {str(e)}"
@@ -165,7 +180,7 @@ async def pause_session(session_id: str):
     summary="게임 세션 재개",
     description="일시정지된 게임 세션을 재개합니다.",
 )
-async def resume_session(session_id: str):
+async def resume_session(session_id: str) -> Dict[str, Any]:
     """
     게임 세션 재개
 
@@ -177,7 +192,7 @@ async def resume_session(session_id: str):
     """
     try:
         result = await session_resume(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"세션 재개 중 오류 발생: {str(e)}"
@@ -190,7 +205,7 @@ async def resume_session(session_id: str):
     summary="활성 세션 목록 조회",
     description="현재 진행 중인 게임 세션 목록을 조회합니다.",
 )
-async def get_active_sessions_endpoint():
+async def get_active_sessions_endpoint() -> Dict[str, Any]:
     """
     활성 세션 목록 조회
 
@@ -212,7 +227,7 @@ async def get_active_sessions_endpoint():
     summary="세션 상세 정보 조회",
     description="특정 세션의 상세 정보를 조회합니다.",
 )
-async def get_session(session_id: str):
+async def get_session(session_id: str) -> Dict[str, Any]:
     """
     세션 상세 정보 조회
 
@@ -228,7 +243,7 @@ async def get_session(session_id: str):
             raise HTTPException(
                 status_code=404, detail=f"Session ID {session_id}를 찾을 수 없습니다."
             )
-        return result
+        return {"status": "success", "data": result}
     except HTTPException:
         raise
     except Exception as e:
@@ -248,7 +263,7 @@ async def get_session(session_id: str):
     summary="플레이어 현재 상태 조회",
     description="플레이어의 현재 상태(HP, 골드, 아이템, NPC 관계)를 조회합니다.",
 )
-async def get_player(player_id: str):
+async def get_player(player_id: str) -> Dict[str, Any]:
     """
     플레이어 전체 상태 조회 (요구사항 스펙)
 
@@ -272,15 +287,15 @@ async def get_player(player_id: str):
 
         # 플레이어가 존재하지 않는 경우
         if (
-            result["player"]["hp"] == 0
-            and result["player"]["gold"] == 0
-            and not result["player"]["items"]
+            result.player.hp == 0
+            and result.player.gold == 0
+            and not result.player.items
         ):
             raise HTTPException(
                 status_code=404, detail=f"Player ID {player_id}를 찾을 수 없습니다."
             )
 
-        return result
+        return {"status": "success", "data": result}
     except HTTPException:
         raise
     except Exception as e:
@@ -291,11 +306,11 @@ async def get_player(player_id: str):
 
 @state_router.get(
     "/session/{session_id}/inventory",
-    response_model=WrappedResponse[List[dict]],
+    response_model=WrappedResponse[List[InventoryItem]],
     summary="세션 인벤토리 조회",
     description="세션의 플레이어 인벤토리를 조회합니다.",
 )
-async def get_inventory(session_id: str):
+async def get_inventory(session_id: str) -> Dict[str, Any]:
     """
     세션 인벤토리 조회
 
@@ -307,7 +322,7 @@ async def get_inventory(session_id: str):
     """
     try:
         result = await get_session_inventory(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"인벤토리 조회 중 오류 발생: {str(e)}"
@@ -316,11 +331,11 @@ async def get_inventory(session_id: str):
 
 @state_router.get(
     "/session/{session_id}/npcs",
-    response_model=WrappedResponse[List[dict]],
+    response_model=WrappedResponse[List[NPCInfo]],
     summary="세션 NPC 목록 조회",
     description="세션의 NPC 목록을 조회합니다.",
 )
-async def get_npcs(session_id: str):
+async def get_npcs(session_id: str) -> Dict[str, Any]:
     """
     세션 NPC 목록 조회
 
@@ -332,7 +347,7 @@ async def get_npcs(session_id: str):
     """
     try:
         result = await get_session_npcs(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"NPC 조회 중 오류 발생: {str(e)}"
@@ -341,11 +356,11 @@ async def get_npcs(session_id: str):
 
 @state_router.get(
     "/session/{session_id}/enemies",
-    response_model=WrappedResponse[List[dict]],
+    response_model=WrappedResponse[List[EnemyInfo]],
     summary="세션 Enemy 목록 조회",
     description="세션의 Enemy 목록을 조회합니다.",
 )
-async def get_enemies(session_id: str, active_only: bool = True):
+async def get_enemies(session_id: str, active_only: bool = True) -> Dict[str, Any]:
     """
     세션 Enemy 목록 조회
 
@@ -358,7 +373,7 @@ async def get_enemies(session_id: str, active_only: bool = True):
     """
     try:
         result = await get_session_enemies(session_id, active_only)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Enemy 조회 중 오류 발생: {str(e)}"
@@ -367,11 +382,11 @@ async def get_enemies(session_id: str, active_only: bool = True):
 
 @state_router.get(
     "/player/{player_id}/npc-relations",
-    response_model=WrappedResponse[List[dict]],
+    response_model=WrappedResponse[List[NPCRelation]],
     summary="플레이어 NPC 호감도 조회",
     description="플레이어의 NPC 호감도를 조회합니다.",
 )
-async def get_player_npc_relations(player_id: str):
+async def get_player_npc_relations(player_id: str) -> Dict[str, Any]:
     """
     플레이어 NPC 호감도 조회
 
@@ -383,7 +398,7 @@ async def get_player_npc_relations(player_id: str):
     """
     try:
         result = await get_npc_relations(player_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"NPC 호감도 조회 중 오류 발생: {str(e)}"
@@ -396,7 +411,7 @@ async def get_player_npc_relations(player_id: str):
     summary="아이템 정보 조회",
     description="아이템 정보를 조회합니다.item_id를 지정하면 특정 아이템만 조회합니다.",
 )
-async def get_items(item_id: Optional[int] = None):
+async def get_items(item_id: Optional[int] = None) -> Dict[str, Any]:
     """
     아이템 정보 조회
 
@@ -408,7 +423,7 @@ async def get_items(item_id: Optional[int] = None):
     """
     try:
         result = await get_item_info(item_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"아이템 조회 중 오류 발생: {str(e)}"
@@ -422,11 +437,11 @@ async def get_items(item_id: Optional[int] = None):
 
 @state_router.put(
     "/player/{player_id}/hp",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[PlayerHPUpdateResult],
     summary="플레이어 HP 업데이트",
     description="플레이어의 HP를 변경합니다.",
 )
-async def update_player_hp_endpoint(player_id: str, request: PlayerHPUpdateRequest):
+async def update_player_hp_endpoint(player_id: str, request: PlayerHPUpdateRequest) -> Dict[str, Any]:
     """
     플레이어 HP 업데이트
 
@@ -444,7 +459,7 @@ async def update_player_hp_endpoint(player_id: str, request: PlayerHPUpdateReque
             hp_change=request.hp_change,
             reason=request.reason,
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"HP 업데이트 중 오류 발생: {str(e)}"
@@ -453,13 +468,13 @@ async def update_player_hp_endpoint(player_id: str, request: PlayerHPUpdateReque
 
 @state_router.put(
     "/player/{player_id}/stats",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[Dict[str, Any]],
     summary="플레이어 스탯 업데이트",
     description="플레이어의 스탯을 변경합니다.",
 )
 async def update_player_stats_endpoint(
     player_id: str, request: PlayerStatsUpdateRequest
-):
+) -> Dict[str, Any]:
     """
     플레이어 스탯 업데이트
 
@@ -476,7 +491,7 @@ async def update_player_stats_endpoint(
             session_id=request.session_id,
             stat_changes=request.stat_changes,
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"스탯 업데이트 중 오류 발생: {str(e)}"
@@ -489,7 +504,7 @@ async def update_player_stats_endpoint(
     summary="인벤토리 업데이트",
     description="플레이어의 인벤토리에 아이템을 추가하거나 제거합니다.",
 )
-async def update_inventory(request: InventoryUpdateRequest):
+async def update_inventory(request: InventoryUpdateRequest) -> Dict[str, Any]:
     """
     플레이어 인벤토리 업데이트
 
@@ -509,7 +524,7 @@ async def update_inventory(request: InventoryUpdateRequest):
             item_id=request.item_id,
             quantity=request.quantity,
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"인벤토리 업데이트 중 오류 발생: {str(e)}"
@@ -518,11 +533,11 @@ async def update_inventory(request: InventoryUpdateRequest):
 
 @state_router.put(
     "/npc/affinity",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[NPCAffinityUpdateResult],
     summary="NPC 호감도 업데이트",
     description="플레이어와 NPC의 호감도를 변경합니다.",
 )
-async def update_npc_affinity_endpoint(request: NPCAffinityUpdateRequest):
+async def update_npc_affinity_endpoint(request: NPCAffinityUpdateRequest) -> Dict[str, Any]:
     """
     NPC 호감도 업데이트
 
@@ -542,7 +557,7 @@ async def update_npc_affinity_endpoint(request: NPCAffinityUpdateRequest):
             npc_id=request.npc_id,
             affinity_change=request.affinity_change,
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"호감도 업데이트 중 오류 발생: {str(e)}"
@@ -551,11 +566,11 @@ async def update_npc_affinity_endpoint(request: NPCAffinityUpdateRequest):
 
 @state_router.put(
     "/session/{session_id}/location",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[LocationUpdateResult],
     summary="위치 업데이트",
     description="세션의 현재 위치를 변경합니다.",
 )
-async def update_location_endpoint(session_id: str, request: LocationUpdateRequest):
+async def update_location_endpoint(session_id: str, request: LocationUpdateRequest) -> Dict[str, Any]:
     """
     위치 업데이트
 
@@ -570,7 +585,7 @@ async def update_location_endpoint(session_id: str, request: LocationUpdateReque
         result = await update_location(
             session_id=session_id, new_location=request.new_location
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"위치 업데이트 중 오류 발생: {str(e)}"
@@ -584,11 +599,11 @@ async def update_location_endpoint(session_id: str, request: LocationUpdateReque
 
 @state_router.post(
     "/session/{session_id}/enemy/spawn",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[Dict[str, Any]],
     summary="적 생성",
     description="세션에 새로운 적을 생성합니다.",
 )
-async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest):
+async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest) -> Dict[str, Any]:
     """
     적 생성
 
@@ -600,8 +615,8 @@ async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest):
         생성된 적 정보
     """
     try:
-        result = await spawn_enemy(session_id=session_id, enemy_data=request.dict())
-        return result
+        result = await spawn_enemy(session_id=session_id, enemy_data=request.model_dump())
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"적 생성 중 오류 발생: {str(e)}"
@@ -610,11 +625,11 @@ async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest):
 
 @state_router.delete(
     "/session/{session_id}/enemy/{enemy_instance_id}",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[RemoveEntityResult],
     summary="적 제거",
     description="세션에서 적을 제거합니다.",
 )
-async def remove_enemy_endpoint(session_id: str, enemy_instance_id: str):
+async def remove_enemy_endpoint(session_id: str, enemy_instance_id: str) -> Dict[str, Any]:
     """
     적 제거
 
@@ -629,7 +644,7 @@ async def remove_enemy_endpoint(session_id: str, enemy_instance_id: str):
         result = await remove_enemy(
             enemy_instance_id=enemy_instance_id, session_id=session_id
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"적 제거 중 오류 발생: {str(e)}"
@@ -643,11 +658,11 @@ async def remove_enemy_endpoint(session_id: str, enemy_instance_id: str):
 
 @state_router.post(
     "/session/{session_id}/npc/spawn",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[Dict[str, Any]],
     summary="NPC 생성",
     description="세션에 새로운 NPC를 생성합니다.",
 )
-async def spawn_npc_endpoint(session_id: str, request: NPCSpawnRequest):
+async def spawn_npc_endpoint(session_id: str, request: NPCSpawnRequest) -> Dict[str, Any]:
     """
     NPC 생성
 
@@ -659,8 +674,8 @@ async def spawn_npc_endpoint(session_id: str, request: NPCSpawnRequest):
         생성된 NPC 정보
     """
     try:
-        result = await spawn_npc(session_id=session_id, npc_data=request.dict())
-        return result
+        result = await spawn_npc(session_id=session_id, npc_data=request.model_dump())
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"NPC 생성 중 오류 발생: {str(e)}"
@@ -669,11 +684,11 @@ async def spawn_npc_endpoint(session_id: str, request: NPCSpawnRequest):
 
 @state_router.delete(
     "/session/{session_id}/npc/{npc_instance_id}",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[RemoveEntityResult],
     summary="NPC 제거",
     description="세션에서 NPC를 제거합니다.",
 )
-async def remove_npc_endpoint(session_id: str, npc_instance_id: str):
+async def remove_npc_endpoint(session_id: str, npc_instance_id: str) -> Dict[str, Any]:
     """
     NPC 제거
 
@@ -688,7 +703,7 @@ async def remove_npc_endpoint(session_id: str, npc_instance_id: str):
         result = await remove_npc(
             npc_instance_id=npc_instance_id, session_id=session_id
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"NPC 제거 중 오류 발생: {str(e)}"
@@ -702,11 +717,11 @@ async def remove_npc_endpoint(session_id: str, npc_instance_id: str):
 
 @state_router.put(
     "/session/{session_id}/phase",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[PhaseChangeResult],
     summary="Phase 변경",
     description="세션의 현재 Phase를 변경합니다.",
 )
-async def change_phase_endpoint(session_id: str, request: PhaseChangeRequest):
+async def change_phase_endpoint(session_id: str, request: PhaseChangeRequest) -> Dict[str, Any]:
     """
     Phase 변경
 
@@ -719,7 +734,7 @@ async def change_phase_endpoint(session_id: str, request: PhaseChangeRequest):
     """
     try:
         result = await change_phase(session_id=session_id, new_phase=request.new_phase)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Phase 변경 중 오류 발생: {str(e)}"
@@ -728,11 +743,11 @@ async def change_phase_endpoint(session_id: str, request: PhaseChangeRequest):
 
 @state_router.get(
     "/session/{session_id}/phase",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[Dict[str, Any]],
     summary="현재 Phase 조회",
     description="세션의 현재 Phase를 조회합니다.",
 )
-async def get_phase(session_id: str):
+async def get_phase(session_id: str) -> Dict[str, Any]:
     """
     현재 Phase 조회
 
@@ -744,7 +759,7 @@ async def get_phase(session_id: str):
     """
     try:
         result = await get_current_phase(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Phase 조회 중 오류 발생: {str(e)}"
@@ -753,11 +768,11 @@ async def get_phase(session_id: str):
 
 @state_router.post(
     "/session/{session_id}/turn/add",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[TurnAddResult],
     summary="Turn 증가",
     description="세션의 Turn을 1 증가시킵니다.",
 )
-async def add_turn_endpoint(session_id: str):
+async def add_turn_endpoint(session_id: str) -> Dict[str, Any]:
     """
     Turn 증가
 
@@ -769,7 +784,7 @@ async def add_turn_endpoint(session_id: str):
     """
     try:
         result = await add_turn(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Turn 증가 중 오류 발생: {str(e)}"
@@ -778,11 +793,11 @@ async def add_turn_endpoint(session_id: str):
 
 @state_router.get(
     "/session/{session_id}/turn",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[Dict[str, Any]],
     summary="현재 Turn 조회",
     description="세션의 현재 Turn을 조회합니다.",
 )
-async def get_turn(session_id: str):
+async def get_turn(session_id: str) -> Dict[str, Any]:
     """
     현재 Turn 조회
 
@@ -794,7 +809,7 @@ async def get_turn(session_id: str):
     """
     try:
         result = await get_current_turn(session_id)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Turn 조회 중 오류 발생: {str(e)}"
@@ -803,11 +818,11 @@ async def get_turn(session_id: str):
 
 @state_router.put(
     "/session/{session_id}/act",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[ActChangeResult],
     summary="Act 변경",
     description="세션의 현재 Act를 변경합니다.",
 )
-async def change_act_endpoint(session_id: str, request: ActChangeRequest):
+async def change_act_endpoint(session_id: str, request: ActChangeRequest) -> Dict[str, Any]:
     """
     Act 변경
 
@@ -820,7 +835,7 @@ async def change_act_endpoint(session_id: str, request: ActChangeRequest):
     """
     try:
         result = await change_act(session_id=session_id, new_act=request.new_act)
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Act 변경 중 오류 발생: {str(e)}"
@@ -829,11 +844,11 @@ async def change_act_endpoint(session_id: str, request: ActChangeRequest):
 
 @state_router.put(
     "/session/{session_id}/sequence",
-    response_model=WrappedResponse[dict],
+    response_model=WrappedResponse[SequenceChangeResult],
     summary="Sequence 변경",
     description="세션의 현재 Sequence를 변경합니다.",
 )
-async def change_sequence_endpoint(session_id: str, request: SequenceChangeRequest):
+async def change_sequence_endpoint(session_id: str, request: SequenceChangeRequest) -> Dict[str, Any]:
     """
     Sequence 변경
 
@@ -848,7 +863,7 @@ async def change_sequence_endpoint(session_id: str, request: SequenceChangeReque
         result = await change_sequence(
             session_id=session_id, new_sequence=request.new_sequence
         )
-        return result
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Sequence 변경 중 오류 발생: {str(e)}"
