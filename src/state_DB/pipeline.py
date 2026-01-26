@@ -1,8 +1,9 @@
 from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel, ConfigDict
 
-from state_DB.schemas import Phase
 from state_DB.Query import (
+    PlayerStats,
     add_turn,
     change_act,
     change_phase,
@@ -21,25 +22,30 @@ from state_DB.Query import (
     update_npc_affinity,
     update_player_hp,
     update_player_stats,
-    PlayerStats,
 )
+from state_DB.schemas import Phase
 
 # ====================================================================
 # Type Definitions (Pydantic Models)
 # ====================================================================
 
+
 class StateUpdateResult(BaseModel):
     """상태 업데이트 결과 타입"""
+
     status: str
     message: str
     updated_fields: List[str]
     model_config = ConfigDict(from_attributes=True)
 
+
 class ApplyJudgmentSkipped(BaseModel):
     """판정 적용 건너뜀 결과 타입"""
+
     status: str
     message: str
     model_config = ConfigDict(from_attributes=True)
+
 
 ApplyJudgmentResult = Union[StateUpdateResult, ApplyJudgmentSkipped]
 
@@ -273,7 +279,9 @@ async def apply_rule_judgment(
         ApplyJudgmentResult: 적용 결과
     """
     if not judgment.get("success"):
-        return ApplyJudgmentSkipped(status="skipped", message="Judgment failed, no state changes")
+        return ApplyJudgmentSkipped(
+            status="skipped", message="Judgment failed, no state changes"
+        )
 
     # 판정 결과의 state_changes를 DB에 반영
     state_changes = judgment.get("state_changes", {})
@@ -339,7 +347,7 @@ async def process_action(
     # 현재 Phase 조회
     phase_info = await get_current_phase(session_id)
     current_phase_str = phase_info.current_phase
-    
+
     try:
         current_phase = Phase(current_phase_str)
     except ValueError:
@@ -349,7 +357,9 @@ async def process_action(
         }
 
     # Phase에 관계없이 공통 로직 처리 (Phase별 특수 로직이 있다면 여기서 분기)
-    return await _process_generic_action(session_id, player_id, action, current_phase.value)
+    return await _process_generic_action(
+        session_id, player_id, action, current_phase.value
+    )
 
 
 # ====================================================================

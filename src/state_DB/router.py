@@ -11,9 +11,7 @@ from state_DB.custom import WrappedResponse
 # Query 함수 import
 from state_DB.Query import (
     ActChangeResult,
-    EnemyHPUpdateResult,
     EnemyInfo,
-    FullPlayerState,
     InventoryItem,
     LocationUpdateResult,
     NPCAffinityUpdateResult,
@@ -23,7 +21,6 @@ from state_DB.Query import (
     PlayerHPUpdateResult,
     RemoveEntityResult,
     SequenceChangeResult,
-    SessionInfo,
     TurnAddResult,
     add_turn,
     change_act,
@@ -441,7 +438,9 @@ async def get_items(item_id: Optional[int] = None) -> Dict[str, Any]:
     summary="플레이어 HP 업데이트",
     description="플레이어의 HP를 변경합니다.",
 )
-async def update_player_hp_endpoint(player_id: str, request: PlayerHPUpdateRequest) -> Dict[str, Any]:
+async def update_player_hp_endpoint(
+    player_id: str, request: PlayerHPUpdateRequest
+) -> Dict[str, Any]:
     """
     플레이어 HP 업데이트
 
@@ -537,7 +536,9 @@ async def update_inventory(request: InventoryUpdateRequest) -> Dict[str, Any]:
     summary="NPC 호감도 업데이트",
     description="플레이어와 NPC의 호감도를 변경합니다.",
 )
-async def update_npc_affinity_endpoint(request: NPCAffinityUpdateRequest) -> Dict[str, Any]:
+async def update_npc_affinity_endpoint(
+    request: NPCAffinityUpdateRequest,
+) -> Dict[str, Any]:
     """
     NPC 호감도 업데이트
 
@@ -570,7 +571,9 @@ async def update_npc_affinity_endpoint(request: NPCAffinityUpdateRequest) -> Dic
     summary="위치 업데이트",
     description="세션의 현재 위치를 변경합니다.",
 )
-async def update_location_endpoint(session_id: str, request: LocationUpdateRequest) -> Dict[str, Any]:
+async def update_location_endpoint(
+    session_id: str, request: LocationUpdateRequest
+) -> Dict[str, Any]:
     """
     위치 업데이트
 
@@ -603,7 +606,9 @@ async def update_location_endpoint(session_id: str, request: LocationUpdateReque
     summary="적 생성",
     description="세션에 새로운 적을 생성합니다.",
 )
-async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest) -> Dict[str, Any]:
+async def spawn_enemy_endpoint(
+    session_id: str, request: EnemySpawnRequest
+) -> Dict[str, Any]:
     """
     적 생성
 
@@ -615,7 +620,9 @@ async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest) -> D
         생성된 적 정보
     """
     try:
-        result = await spawn_enemy(session_id=session_id, enemy_data=request.model_dump())
+        result = await spawn_enemy(
+            session_id=session_id, enemy_data=request.model_dump()
+        )
         return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(
@@ -629,7 +636,9 @@ async def spawn_enemy_endpoint(session_id: str, request: EnemySpawnRequest) -> D
     summary="적 제거",
     description="세션에서 적을 제거합니다.",
 )
-async def remove_enemy_endpoint(session_id: str, enemy_instance_id: str) -> Dict[str, Any]:
+async def remove_enemy_endpoint(
+    session_id: str, enemy_instance_id: str
+) -> Dict[str, Any]:
     """
     적 제거
 
@@ -662,7 +671,9 @@ async def remove_enemy_endpoint(session_id: str, enemy_instance_id: str) -> Dict
     summary="NPC 생성",
     description="세션에 새로운 NPC를 생성합니다.",
 )
-async def spawn_npc_endpoint(session_id: str, request: NPCSpawnRequest) -> Dict[str, Any]:
+async def spawn_npc_endpoint(
+    session_id: str, request: NPCSpawnRequest
+) -> Dict[str, Any]:
     """
     NPC 생성
 
@@ -721,7 +732,9 @@ async def remove_npc_endpoint(session_id: str, npc_instance_id: str) -> Dict[str
     summary="Phase 변경",
     description="세션의 현재 Phase를 변경합니다.",
 )
-async def change_phase_endpoint(session_id: str, request: PhaseChangeRequest) -> Dict[str, Any]:
+async def change_phase_endpoint(
+    session_id: str, request: PhaseChangeRequest
+) -> Dict[str, Any]:
     """
     Phase 변경
 
@@ -822,7 +835,9 @@ async def get_turn(session_id: str) -> Dict[str, Any]:
     summary="Act 변경",
     description="세션의 현재 Act를 변경합니다.",
 )
-async def change_act_endpoint(session_id: str, request: ActChangeRequest) -> Dict[str, Any]:
+async def change_act_endpoint(
+    session_id: str, request: ActChangeRequest
+) -> Dict[str, Any]:
     """
     Act 변경
 
@@ -848,7 +863,9 @@ async def change_act_endpoint(session_id: str, request: ActChangeRequest) -> Dic
     summary="Sequence 변경",
     description="세션의 현재 Sequence를 변경합니다.",
 )
-async def change_sequence_endpoint(session_id: str, request: SequenceChangeRequest) -> Dict[str, Any]:
+async def change_sequence_endpoint(
+    session_id: str, request: SequenceChangeRequest
+) -> Dict[str, Any]:
     """
     Sequence 변경
 

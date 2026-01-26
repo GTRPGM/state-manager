@@ -2,17 +2,18 @@
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
+import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
-import asyncpg
 
 from state_DB.configs.setting import AGE_GRAPH_NAME, DB_CONFIG
 
 # ====================================================================
 # Type Definitions (Pydantic Models)
 # ====================================================================
+
 
 class SessionInfo(BaseModel):
     session_id: str
@@ -22,16 +23,18 @@ class SessionInfo(BaseModel):
     current_sequence: int
     location: str
     status: str
-    created_at: Any # datetime
-    updated_at: Any # datetime
+    created_at: Any  # datetime
+    updated_at: Any  # datetime
     model_config = ConfigDict(from_attributes=True)
+
 
 class InventoryItem(BaseModel):
     player_id: str
     item_id: int
     quantity: int
-    acquired_at: Any # datetime
+    acquired_at: Any  # datetime
     model_config = ConfigDict(from_attributes=True)
+
 
 class NPCInfo(BaseModel):
     npc_id: str
@@ -41,11 +44,13 @@ class NPCInfo(BaseModel):
     tags: List[str]
     model_config = ConfigDict(from_attributes=True)
 
+
 class NPCRelation(BaseModel):
     npc_id: str
     npc_name: str
     affinity_score: int
     model_config = ConfigDict(from_attributes=True)
+
 
 class EnemyInfo(BaseModel):
     enemy_instance_id: str
@@ -56,16 +61,19 @@ class EnemyInfo(BaseModel):
     is_active: bool
     model_config = ConfigDict(from_attributes=True)
 
+
 class PlayerStateNumeric(BaseModel):
     HP: Optional[int] = None
     MP: Optional[int] = None
     gold: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
 
+
 class PlayerState(BaseModel):
     numeric: PlayerStateNumeric
     boolean: Dict[str, bool]
     model_config = ConfigDict(from_attributes=True)
+
 
 class PlayerStats(BaseModel):
     player_id: str
@@ -75,16 +83,19 @@ class PlayerStats(BaseModel):
     tags: List[str]
     model_config = ConfigDict(from_attributes=True)
 
+
 class PlayerStateResponse(BaseModel):
     hp: int
     gold: int
     items: List[int]
     model_config = ConfigDict(from_attributes=True)
 
+
 class FullPlayerState(BaseModel):
     player: PlayerStateResponse
     player_npc_relations: List[NPCRelation]
     model_config = ConfigDict(from_attributes=True)
+
 
 class PlayerHPUpdateResult(BaseModel):
     player_id: str
@@ -94,11 +105,13 @@ class PlayerHPUpdateResult(BaseModel):
     hp_change: int
     model_config = ConfigDict(from_attributes=True)
 
+
 class NPCAffinityUpdateResult(BaseModel):
     player_id: str
     npc_id: str
     new_affinity: int
     model_config = ConfigDict(from_attributes=True)
+
 
 class EnemyHPUpdateResult(BaseModel):
     enemy_instance_id: str
@@ -106,47 +119,56 @@ class EnemyHPUpdateResult(BaseModel):
     is_defeated: bool
     model_config = ConfigDict(from_attributes=True)
 
+
 class DefeatEnemyResult(BaseModel):
     status: str
     enemy_id: str
     model_config = ConfigDict(from_attributes=True)
+
 
 class LocationUpdateResult(BaseModel):
     session_id: str
     location: str
     model_config = ConfigDict(from_attributes=True)
 
+
 class RemoveEntityResult(BaseModel):
     status: str
     model_config = ConfigDict(from_attributes=True)
+
 
 class PhaseChangeResult(BaseModel):
     session_id: str
     current_phase: str
     model_config = ConfigDict(from_attributes=True)
 
+
 class TurnAddResult(BaseModel):
     session_id: str
     current_turn: int
     model_config = ConfigDict(from_attributes=True)
 
+
 class ActChangeResult(BaseModel):
     session_id: str
-    current_phase: str = "" # Default to empty if not provided
+    current_phase: str = ""  # Default to empty if not provided
     current_act: int
     model_config = ConfigDict(from_attributes=True)
+
 
 class SequenceChangeResult(BaseModel):
     session_id: str
     current_sequence: int
     model_config = ConfigDict(from_attributes=True)
-    
+
+
 class SpawnResult(BaseModel):
     # Common fields for spawned entities
-    id: str # instance id
+    id: str  # instance id
     name: str
     model_config = ConfigDict(from_attributes=True)
-    
+
+
 class FunctionResult(BaseModel):
     # Generic result for function calls
     result: Any
@@ -162,6 +184,7 @@ QUERY_DIR = Path(__file__).parent
 
 # SQL 쿼리 캐시
 SQL_CACHE: Dict[str, str] = {}
+
 
 def load_all_queries() -> None:
     """QUERY_DIR 내의 모든 .sql 파일을 읽어 캐시에 저장"""
@@ -295,10 +318,10 @@ async def run_sql_query(
         # 캐시에 없으면 파일 읽기 (개발 중 핫 리로드 지원 등을 위해)
         if not sql_path.exists():
             raise FileNotFoundError(f"SQL file not found: {sql_path}")
-        
+
         with open(sql_path, "r", encoding="utf-8") as f:
             query = f.read()
-            # 런타임에 읽은 것도 캐시에 추가? 
+            # 런타임에 읽은 것도 캐시에 추가?
             # 일단은 추가하여 다음 호출 시 빠르게 함
             SQL_CACHE[sql_key] = query
 
@@ -314,7 +337,9 @@ async def run_sql_query(
     return [dict(row) for row in rows]
 
 
-async def run_sql_command(sql_path: str | Path, params: Optional[List[Any]] = None) -> str:
+async def run_sql_command(
+    sql_path: str | Path, params: Optional[List[Any]] = None
+) -> str:
     """
     INSERT/UPDATE/DELETE 쿼리 실행 (결과 없음)
 
@@ -477,7 +502,7 @@ async def session_start(
     # 생성된 세션 정보 조회
     sql_path = QUERY_DIR / "INQUIRY" / "Session_show.sql"
     session_info_list = await run_sql_query(sql_path, [session_id])
-    
+
     if not session_info_list:
         raise Exception("Failed to retrieve session info")
 
@@ -824,7 +849,9 @@ async def update_npc_affinity(
             new_affinity=result[0].get("new_affinity", 0),
         )
     else:
-        return NPCAffinityUpdateResult(player_id=player_id, npc_id=npc_id, new_affinity=0)
+        return NPCAffinityUpdateResult(
+            player_id=player_id, npc_id=npc_id, new_affinity=0
+        )
 
 
 # ====================================================================
@@ -931,7 +958,9 @@ async def spawn_enemy(session_id: str, enemy_data: Dict[str, Any]) -> SpawnResul
     if result:
         # DB returns enemy_instance_id, mapping it to SpawnResult.id
         row = result[0]
-        return SpawnResult(id=row.get("enemy_instance_id", ""), name=row.get("name", ""))
+        return SpawnResult(
+            id=row.get("enemy_instance_id", ""), name=row.get("name", "")
+        )
     raise HTTPException(status_code=500, detail="Failed to spawn enemy")
 
 
@@ -1063,7 +1092,7 @@ async def add_turn(session_id: str) -> TurnAddResult:
     """
     sql_path = QUERY_DIR / "MANAGE" / "turn" / "add_turn.sql"
     result = await run_sql_query(sql_path, [session_id])
-    
+
     # Check if result is empty or handle casting correctly
     if result:
         return TurnAddResult.model_validate(result[0])

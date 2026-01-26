@@ -11,8 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field
 # Enums
 # ====================================================================
 
+
 class Phase(str, Enum):
     """게임 진행 단계 (Phase)"""
+
     EXPLORATION = "exploration"
     COMBAT = "combat"
     DIALOGUE = "dialogue"
@@ -573,7 +575,9 @@ class APIKeyCreateRequest(BaseModel):
         json_schema_extra={"example": "Production Key"},
     )
 
-    model_config = ConfigDict(json_schema_extra={"example": {"key_name": "Production Key"}})
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"key_name": "Production Key"}}
+    )
 
 
 class APIKeyCreateResponse(BaseModel):
