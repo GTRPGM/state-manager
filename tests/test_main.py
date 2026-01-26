@@ -13,8 +13,9 @@ async def test_root(async_client: AsyncClient):
             "message": "반갑습니다. GTRPGM 상태 관리자입니다!",
             "service": "State Manager",
             "version": "1.0.0",
-        }
+        },
     }
+
 
 @pytest.mark.asyncio
 async def test_health_check(async_client: AsyncClient):
