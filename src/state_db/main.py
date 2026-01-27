@@ -2,7 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, Dict
 
 from fastapi import FastAPI, HTTPException, Request
 from starlette.responses import JSONResponse
@@ -27,9 +27,12 @@ logger = logging.getLogger("uvicorn.error")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """서버 생명주기 관리"""
+    import asyncio
+
     from state_db.infrastructure import shutdown, startup
 
-    await startup()
+    # DB 연결 및 초기화를 백그라운드 태스크로 실행
+    asyncio.create_task(startup())
     yield
     await shutdown()
 
@@ -124,6 +127,28 @@ def read_root() -> Dict[str, str]:
 async def health_check() -> Dict[str, str]:
     """헬스체크 엔드포인트 (로드밸런서/모니터링용)"""
     return {"status": "healthy"}
+
+
+@app.get("/health/db", description="DB 연결 상태 확인", summary="DB 헬스체크")
+async def db_health_check() -> Dict[str, Any]:
+    """데이터베이스 연결 상태를 실시간으로 확인합니다."""
+    from state_db.infrastructure import run_sql_query
+
+    try:
+        # 매우 가벼운 쿼리로 연결 확인
+        await run_sql_query("SELECT 1")
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "message": "DB 연결이 정상입니다.",
+        }
+    except Exception as e:
+        logger.error(f"❌ DB Health Check Failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "database": "disconnected",
+            "detail": str(e),
+        }
 
 
 # ====================================================================
