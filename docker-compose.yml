@@ -1,33 +1,33 @@
 services:
   state-manager:
-    image: ${REGISTRY}/${IMAGE_NAME}:latest
+    build: .
+    image: ${IMAGE_NAME}
     container_name: state-manager
     restart: unless-stopped
-    
+
     ports:
-      - "${PORT}:${PORT}"  
-    
+      - "${PORT}:${PORT}"
+
     environment:
-      POSTGRES_SERVER: postgres 
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-      
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
       APP_HOST: 0.0.0.0
       APP_PORT: ${PORT}
       APP_ENV: production
-    
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 20s
-    
-    depends_on:
-      postgres:
-        condition: service_healthy
-    
+
     networks:
       - platform-net
 

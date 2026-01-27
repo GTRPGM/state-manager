@@ -1,36 +1,42 @@
 # src/gm/state_db/main.py
 # GTRPGM 상태 관리 FastAPI 서버
 
+import logging
+import traceback
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
+# [수정] 최상단에서 Query와 API_ROUTERS 임포트를 제거했습니다.
 from state_db.configs import (
-    API_ROUTERS,
     APP_ENV,
     APP_PORT,
     CORS_ORIGINS,
     LOGGING_CONFIG,
 )
+from state_db.configs.exceptions import init_exception_handlers
 from state_db.custom import CustomJSONResponse
-from state_db.Query import shutdown as db_shutdown
-from state_db.Query import startup as db_startup
+
+logger = logging.getLogger("uvicorn.error")
+
 
 # ====================================================================
 # 앱 생명주기 이벤트 (Lifespan)
 # ====================================================================
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """서버 생명주기 관리: 시작 시 DB 연결, 종료 시 정리"""
-    # Startup logic
+    """서버 생명주기 관리: 함수 내부에서 임포트하여 순환 참조 방지"""
+    # [수정] 실행 시점에 필요한 함수만 임포트
+    from state_db.Query import startup as db_startup
+    from state_db.Query import shutdown as db_shutdown
+
     await db_startup()
-    # await create_main_tables()  # 테이블 이미 생성됨
     yield
-    # Shutdown logic
     await db_shutdown()
 
 
@@ -46,29 +52,64 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 # ====================================================================
-# CORS 미들웨어 설정
+# 전역 에러 로깅 미들웨어
 # ====================================================================
+
+@app.middleware("http")
+async def error_logging_middleware(request: Request, call_next):
+    # 이제 에러 로그는 핸들러가 담당하므로 미들웨어는 통과만 시킵니다.
+    response = await call_next(request)
+    return response
+
+
+init_exception_handlers(app)
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,  # 허용할 출처 목록
-    allow_credentials=True,  # 쿠키 등 자격 증명 허용 여부
-    allow_methods=["*"],  # 모든 HTTP 메서드 허용
-    allow_headers=["*"],  # 모든 HTTP 헤더 허용
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ====================================================================
+# HTTPException 전용 핸들러
+# ====================================================================
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # 여기서 로그를 남겨야 터미널에 에러가 찍힙니다.
+    logger.error(f"❌ HTTP {exc.status_code} Error: {request.method} {request.url.path}")
+    logger.error(f"Detail: {exc.detail}")
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "error",
+            "message": "요청 처리 중 오류가 발생했습니다.",
+            "detail": exc.detail
+        }
+    )
+
+# ====================================================================
 # 라우터 등록
 # ====================================================================
 
-# 라우터 등록
-for router in API_ROUTERS:
-    app.include_router(
-        router,
-        prefix="/state",
-        tags=["State Management"],
-    )
+def register_routers(app: FastAPI):
+    # [수정] 이 시점에 로드하면 Query 모듈이 이미 준비되어 순환 참조가 발생하지 않습니다.
+    from state_db.configs.api_routers import API_ROUTERS
+    for router in API_ROUTERS:
+        app.include_router(
+            router,
+            prefix="/state",
+            tags=["State Management"],
+        )
+
+
+register_routers(app)
 
 # ====================================================================
 # 루트 엔드포인트

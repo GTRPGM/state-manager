@@ -6,7 +6,7 @@ LOGGING_CONFIG = {
     "disable_existing_loggers": False,  # State Manager: False로 변경
     "formatters": {
         "default": {
-            "()": "uvicorn.logging.DefaultFormatter",
+            "()": "src.state_db.configs.color_hint_formatter.ColorHintFormatter",
             "fmt": "%(levelprefix)s %(message)s",
             "use_colors": True,
         },
