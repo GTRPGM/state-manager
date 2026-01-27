@@ -1,23 +1,18 @@
--- --------------------------------------------------------------------
--- 2-4. Session 기본 통계
--- 용도: 대시보드 표시
--- --------------------------------------------------------------------
+-- 세션 상세 정보 조회
+-- SessionInfo 모델 필드에 맞춰 모든 필요 컬럼 반환
 
 SELECT
     session_id,
+    scenario_id,
+    current_act,
+    current_sequence,
     current_phase,
     current_turn,
-
-    -- 세션 진행 시간
-    NOW() - started_at AS session_duration,
-
-    -- Phase별 Turn 수 (서브쿼리)
-    (SELECT COUNT(*) FROM turn_history th
-     WHERE th.session_id = s.session_id
-       AND th.phase_at_turn = 'combat') AS combat_turns,
-
-    (SELECT COUNT(*) FROM turn_history th
-     WHERE th.session_id = s.session_id
-       AND th.phase_at_turn = 'exploration') AS exploration_turns
-FROM session s
+    location,
+    status,
+    started_at,
+    ended_at,
+    created_at,
+    updated_at
+FROM session
 WHERE session_id = $1;
