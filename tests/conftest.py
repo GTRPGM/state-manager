@@ -39,10 +39,12 @@ def mock_db_pool():
     # DatabaseManager.get_pool()이 이 mock_pool을 반환하도록 설정
     with (
         patch(
-            "state_db.Query.query.DatabaseManager.get_pool",
+            "state_db.infrastructure.database.DatabaseManager.get_pool",
             new=AsyncMock(return_value=mock_pool),
         ),
-        patch("state_db.Query.query.DatabaseManager.get_connection") as mock_get_conn,
+        patch(
+            "state_db.infrastructure.database.DatabaseManager.get_connection"
+        ) as mock_get_conn,
     ):
         # get_connection 자체가 컨텍스트 매니저임
         mock_get_conn.return_value.__aenter__.return_value = mock_conn
@@ -56,8 +58,11 @@ async def async_client(mock_db_pool) -> AsyncGenerator[AsyncClient, None]:
     """
     FastAPI 앱 테스트를 위한 비동기 클라이언트
     """
-    # DB startup 이벤트 무력화 (Mock 사용하므로)
-    with patch("state_db.main.db_startup", new=AsyncMock()):
+    # DB startup/shutdown 이벤트 무력화 (Mock 사용하므로)
+    with (
+        patch("state_db.infrastructure.startup", new=AsyncMock()),
+        patch("state_db.infrastructure.shutdown", new=AsyncMock()),
+    ):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
