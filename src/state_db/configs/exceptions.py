@@ -7,7 +7,6 @@ from starlette.responses import JSONResponse
 
 logger = logging.getLogger("uvicorn.error")
 
-
 def init_exception_handlers(app: FastAPI):
     """FastAPI 앱에 에러 핸들러들을 등록합니다."""
 
