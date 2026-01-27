@@ -82,7 +82,7 @@ def load_queries(query_dir: Path) -> None:
 async def run_sql_query(
     sql_path: Union[str, Path], params: Optional[List[Any]] = None
 ) -> List[Dict[str, Any]]:
-    """SELECT 쿼리 실행"""
+    """SELECT 쿼리 실행 (파일 경로 기반)"""
     sql_path = Path(sql_path).resolve()
     sql_key = str(sql_path)
 
@@ -94,6 +94,13 @@ async def run_sql_query(
             query = f.read()
             SQL_CACHE[sql_key] = query
 
+    return await run_raw_query(query, params)
+
+
+async def run_raw_query(
+    query: str, params: Optional[List[Any]] = None
+) -> List[Dict[str, Any]]:
+    """원시 SQL 쿼리 문자열 실행"""
     async with DatabaseManager.get_connection() as conn:
         await set_age_path(conn)
         if params:
@@ -106,7 +113,7 @@ async def run_sql_query(
 async def run_sql_command(
     sql_path: Union[str, Path], params: Optional[List[Any]] = None
 ) -> str:
-    """INSERT/UPDATE/DELETE 명령 실행"""
+    """INSERT/UPDATE/DELETE 명령 실행 (파일 경로 기반)"""
     sql_path = Path(sql_path).resolve()
     sql_key = str(sql_path)
 
@@ -118,6 +125,11 @@ async def run_sql_command(
             query = f.read()
             SQL_CACHE[sql_key] = query
 
+    return await run_raw_command(query, params)
+
+
+async def run_raw_command(query: str, params: Optional[List[Any]] = None) -> str:
+    """원시 SQL 명령 문자열 실행"""
     async with DatabaseManager.get_connection() as conn:
         await set_age_path(conn)
         if params:
