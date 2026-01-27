@@ -1,0 +1,43 @@
+services:
+  state-manager:
+    build: .
+    container_name: state-manager
+    restart: unless-stopped
+
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+
+    environment:
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_USER: ${DB_USER}
+      DB_PORT: ${DB_PORT}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      BE_ROUTER_PORT: "8010"
+      GM_PORT: "8020"
+      SCENARIO_PORT: "8040"
+      RULE_PORT: "8050"
+      LLM_ROUTER_PORT: "8060"
+      WEB_PORT: "8080"
+      REDIS_PORT: "6379"
+      APP_HOST: 0.0.0.0
+      APP_PORT: ${APP_PORT}
+      APP_ENV: production
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+
+    networks:
+      - platform-net
+
+networks:
+  platform-net:
+    name: platform-net
+    external: true

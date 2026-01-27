@@ -45,7 +45,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_player_updated_at
+CREATE TRIGGER IF NOT EXISTS trg_player_updated_at
 BEFORE UPDATE ON player
 FOR EACH ROW
 EXECUTE FUNCTION update_player_updated_at();
