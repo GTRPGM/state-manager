@@ -2,12 +2,10 @@
 # GTRPGM 상태 관리 FastAPI 서버
 
 import logging
-import traceback
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
@@ -28,12 +26,13 @@ logger = logging.getLogger("uvicorn.error")
 # 앱 생명주기 이벤트 (Lifespan)
 # ====================================================================
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """서버 생명주기 관리: 함수 내부에서 임포트하여 순환 참조 방지"""
     # [수정] 실행 시점에 필요한 함수만 임포트
-    from state_db.Query import startup as db_startup
     from state_db.Query import shutdown as db_shutdown
+    from state_db.Query import startup as db_startup
 
     await db_startup()
     yield
@@ -57,6 +56,7 @@ app = FastAPI(
 # 전역 에러 로깅 미들웨어
 # ====================================================================
 
+
 @app.middleware("http")
 async def error_logging_middleware(request: Request, call_next):
     # 이제 에러 로그는 핸들러가 담당하므로 미들웨어는 통과만 시킵니다.
@@ -79,10 +79,13 @@ app.add_middleware(
 # HTTPException 전용 핸들러
 # ====================================================================
 
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     # 여기서 로그를 남겨야 터미널에 에러가 찍힙니다.
-    logger.error(f"❌ HTTP {exc.status_code} Error: {request.method} {request.url.path}")
+    logger.error(
+        f"❌ HTTP {exc.status_code} Error: {request.method} {request.url.path}"
+    )
     logger.error(f"Detail: {exc.detail}")
 
     return JSONResponse(
@@ -90,17 +93,21 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={
             "status": "error",
             "message": "요청 처리 중 오류가 발생했습니다.",
-            "detail": exc.detail
-        }
+            "detail": exc.detail,
+        },
     )
+
 
 # ====================================================================
 # 라우터 등록
 # ====================================================================
 
+
 def register_routers(app: FastAPI):
-    # [수정] 이 시점에 로드하면 Query 모듈이 이미 준비되어 순환 참조가 발생하지 않습니다.
+    # [수정] 이 시점에 로드하면 Query 모듈이 이미 준비되어
+    # 순환 참조가 발생하지 않습니다.
     from state_db.configs.api_routers import API_ROUTERS
+
     for router in API_ROUTERS:
         app.include_router(
             router,

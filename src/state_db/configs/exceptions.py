@@ -1,10 +1,12 @@
 import logging
 import traceback
-from fastapi import FastAPI, Request, HTTPException
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 
 logger = logging.getLogger("uvicorn.error")
+
 
 def init_exception_handlers(app: FastAPI):
     """FastAPI 앱에 에러 핸들러들을 등록합니다."""
@@ -24,7 +26,9 @@ def init_exception_handlers(app: FastAPI):
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
-        logger.error(f"⚠️ HTTP {exc.status_code} Error: {request.method} {request.url.path}")
+        logger.error(
+            f"⚠️ HTTP {exc.status_code} Error: {request.method} {request.url.path}"
+        )
         logger.error(f"Detail: {exc.detail}")
         return JSONResponse(
             status_code=exc.status_code,
@@ -36,7 +40,9 @@ def init_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         errors = exc.errors()
         error_details = []
         for error in errors:

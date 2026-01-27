@@ -1,5 +1,6 @@
-import logging
 import copy
+import logging
+
 from uvicorn.logging import DefaultFormatter
 
 
@@ -16,6 +17,8 @@ class ColorHintFormatter(DefaultFormatter):
 
         # 메시지 내의 'HINT:'를 찾아 색상 코드 삽입
         if isinstance(record_copy.msg, str) and "HINT:" in record_copy.msg:
-            record_copy.msg = record_copy.msg.replace("HINT:", f"{self.YELLOW}HINT:{self.RESET}")
+            record_copy.msg = record_copy.msg.replace(
+                "HINT:", f"{self.YELLOW}HINT:{self.RESET}"
+            )
 
         return super().format(record_copy)

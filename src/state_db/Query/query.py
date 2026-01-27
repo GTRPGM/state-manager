@@ -3,6 +3,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 import asyncpg
 from fastapi import HTTPException
@@ -489,9 +490,17 @@ async def session_start(
     Returns:
         SessionInfo
     """
+    # scenario_id를 UUID 객체로 변환 (PostgreSQL UUID 타입 매칭을 위해)
+    try:
+        scenario_uuid = UUID(scenario_id)
+    except (ValueError, AttributeError) as e:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid scenario_id format: {scenario_id}"
+        ) from e
+
     # create_session 함수 호출
     result = await execute_sql_function(
-        "create_session", [scenario_id, current_act, current_sequence, location]
+        "create_session", [scenario_uuid, current_act, current_sequence, location]
     )
 
     session_id = result[0].get("create_session") if result else None
@@ -1232,6 +1241,13 @@ async def startup() -> None:
 
     # SQL 쿼리 로드
     load_all_queries()
+
+    # 메인 테이블 및 함수 생성
+    try:
+        await create_main_tables()
+        print("✅ Main tables and functions ready")
+    except Exception as e:
+        print(f"⚠️  Table initialization warning: {e}")
 
     # Apache AGE 그래프 초기화
     await init_age_graph()
