@@ -3,44 +3,47 @@
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
 # ====================================================================
 # PostgreSQL 데이터베이스 설정
 # ====================================================================
-DB_USER = os.getenv("DB_USER", "state_user")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "state_password")
-DB_NAME = os.getenv("DB_NAME", "state_db")
-DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = int(os.getenv("DB_PORT"))
 
 # Apache AGE 그래프 설정
-AGE_GRAPH_NAME = os.getenv("AGE_GRAPH_NAME", "state_db")
+AGE_GRAPH_NAME = os.getenv("AGE_GRAPH_NAME")
 
 # ====================================================================
 # 서버 설정
 # ====================================================================
-APP_HOST = os.getenv("APP_HOST", "127.0.0.1")  # local: 127.0.0.1, prod: 0.0.0.0
-APP_PORT = int(os.getenv("APP_PORT", "8030"))  # State Manager 포트 (팀 표준)
-APP_ENV = os.getenv("APP_ENV", "local")  # local, dev, prod
+APP_HOST = os.getenv("APP_HOST")  # local: 127.0.0.1, prod: 0.0.0.0
+APP_PORT = int(os.getenv("APP_PORT"))  # State Manager 포트 (팀 표준)
+APP_ENV = os.getenv("APP_ENV")  # local, dev, prod
 
 # ====================================================================
 # 원격 호스트 설정
 # ====================================================================
-REMOTE_HOST = os.getenv("REMOTE_HOST", "localhost")
+REMOTE_HOST = os.getenv("REMOTE_HOST")
 
 # ====================================================================
 # 팀 서비스 포트 표준 (CORS 및 서비스 간 통신용)
 # ====================================================================
 # 서비스 포트
-BE_ROUTER_PORT = int(os.getenv("BE_ROUTER_PORT", "8010"))
-GM_PORT = int(os.getenv("GM_PORT", "8020"))
+BE_ROUTER_PORT = int(os.getenv("BE_ROUTER_PORT"))
+GM_PORT = int(os.getenv("GM_PORT"))
 STATE_PORT = APP_PORT  # 8030 (현재 서비스)
-SCENARIO_PORT = int(os.getenv("SCENARIO_PORT", "8040"))
-RULE_PORT = int(os.getenv("RULE_PORT", "8050"))
-LLM_ROUTER_PORT = int(os.getenv("LLM_ROUTER_PORT", "8060"))
-WEB_PORT = int(os.getenv("WEB_PORT", "8080"))
+SCENARIO_PORT = int(os.getenv("SCENARIO_PORT"))
+RULE_PORT = int(os.getenv("RULE_PORT"))
+LLM_ROUTER_PORT = int(os.getenv("LLM_ROUTER_PORT"))
+WEB_PORT = int(os.getenv("WEB_PORT"))
 
 # 데이터베이스 포트
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PORT = int(os.getenv("REDIS_PORT"))
 
 # ====================================================================
 # CORS 허용 출처 설정

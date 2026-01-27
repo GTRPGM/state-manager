@@ -10,7 +10,6 @@ from starlette.middleware.cors import CORSMiddleware
 from state_db.configs import (
     API_ROUTERS,
     APP_ENV,
-    APP_HOST,
     APP_PORT,
     CORS_ORIGINS,
     LOGGING_CONFIG,
@@ -99,9 +98,11 @@ async def health_check() -> Dict[str, str]:
 if __name__ == "__main__":
     import uvicorn
 
+    effective_host = "127.0.0.1" if APP_ENV == "local" else "0.0.0.0"
+
     uvicorn.run(
         "main:app",
-        host=APP_HOST,
+        host=effective_host,
         port=APP_PORT,
         reload=(APP_ENV == "local"),
         log_config=LOGGING_CONFIG,
