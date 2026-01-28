@@ -255,6 +255,66 @@ class ItemInfoResponse(BaseModel):
     )
 
 
+class ItemEarnRequest(BaseModel):
+    """아이템 획득 요청"""
+
+    session_id: str = Field(
+        ...,
+        description="세션 UUID",
+        json_schema_extra={"example": "session-uuid-123"},
+    )
+    player_id: str = Field(
+        ...,
+        description="플레이어 UUID",
+        json_schema_extra={"example": "player-uuid-123"},
+    )
+    item_id: int = Field(..., description="아이템 ID", json_schema_extra={"example": 1})
+    quantity: int = Field(
+        default=1, description="획득 수량", json_schema_extra={"example": 1}
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "session_id": "session-uuid-123",
+                "player_id": "player-uuid-123",
+                "item_id": 1,
+                "quantity": 1,
+            }
+        }
+    )
+
+
+class ItemUseRequest(BaseModel):
+    """아이템 사용 요청"""
+
+    session_id: str = Field(
+        ...,
+        description="세션 UUID",
+        json_schema_extra={"example": "session-uuid-123"},
+    )
+    player_id: str = Field(
+        ...,
+        description="플레이어 UUID",
+        json_schema_extra={"example": "player-uuid-123"},
+    )
+    item_id: int = Field(..., description="아이템 ID", json_schema_extra={"example": 1})
+    quantity: int = Field(
+        default=1, description="사용 수량", json_schema_extra={"example": 1}
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "session_id": "session-uuid-123",
+                "player_id": "player-uuid-123",
+                "item_id": 1,
+                "quantity": 1,
+            }
+        }
+    )
+
+
 # ====================================================================
 # 플레이어 상태 관련 스키마 (요구사항 스펙 기준)
 # ====================================================================
@@ -487,6 +547,30 @@ class EnemySpawnRequest(BaseModel):
                 "attack": 10,
                 "defense": 5,
                 "tags": ["enemy", "goblin"],
+            }
+        }
+    )
+
+
+class EnemyHPUpdateRequest(BaseModel):
+    """적 HP 업데이트 요청"""
+
+    session_id: str = Field(
+        ...,
+        description="세션 UUID",
+        json_schema_extra={"example": "session-uuid-123"},
+    )
+    hp_change: int = Field(
+        ...,
+        description="HP 변화량 (양수: 회복, 음수: 피해)",
+        json_schema_extra={"example": -20},
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "session_id": "session-uuid-123",
+                "hp_change": -20,
             }
         }
     )

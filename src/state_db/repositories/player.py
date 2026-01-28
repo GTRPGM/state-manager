@@ -85,3 +85,25 @@ class PlayerRepository(BaseRepository):
         return NPCAffinityUpdateResult(
             player_id=player_id, npc_id=npc_id, new_affinity=new_affinity
         )
+
+    async def earn_item(
+        self, session_id: str, player_id: str, item_id: int, quantity: int
+    ) -> Dict[str, Any]:
+        sql_path = self.query_dir / "UPDATE" / "earn_item.sql"
+        result = await run_sql_query(
+            sql_path, [session_id, player_id, item_id, quantity]
+        )
+        if result:
+            return result[0]
+        return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
+
+    async def use_item(
+        self, session_id: str, player_id: str, item_id: int, quantity: int
+    ) -> Dict[str, Any]:
+        sql_path = self.query_dir / "UPDATE" / "use_item.sql"
+        result = await run_sql_query(
+            sql_path, [session_id, player_id, item_id, quantity]
+        )
+        if result:
+            return result[0]
+        return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
