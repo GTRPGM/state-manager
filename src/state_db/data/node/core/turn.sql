@@ -8,15 +8,15 @@
 CREATE TABLE IF NOT EXISTS turn (
     history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL,
-    
+
     turn_number INTEGER NOT NULL,
     phase_at_turn phase_type NOT NULL,
     turn_type VARCHAR(50) NOT NULL,
     state_changes JSONB,
     related_entities UUID[],
-    
+
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     CONSTRAINT fk_turn_session FOREIGN KEY (session_id)
         REFERENCES session(session_id) ON DELETE CASCADE
 );
@@ -29,7 +29,7 @@ COMMENT ON TABLE turn IS 'Turn별 상태 변경 이력 추적 (트랜잭션 단�
 
 
 -- ====================================================================
--- 2. Session 생성 시 초기 Turn 생성 & session 종료시 turn 초기화 
+-- 2. Session 생성 시 초기 Turn 생성 & session 종료시 turn 초기화
 -- ====================================================================
 
 CREATE OR REPLACE FUNCTION initialize_turn()

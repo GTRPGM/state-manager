@@ -88,7 +88,7 @@ BEGIN
     LIMIT 1;
 
     IF v_player_id IS NOT NULL THEN
-        FOR v_npc_record IN 
+        FOR v_npc_record IN
             SELECT npc_id FROM npc WHERE session_id = NEW.session_id
         LOOP
             INSERT INTO player_npc_relations (

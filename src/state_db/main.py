@@ -7,7 +7,6 @@ from typing import Any, AsyncGenerator, Dict
 from fastapi import FastAPI, HTTPException, Request
 from starlette.responses import JSONResponse
 
-# [수정] 최상단에서 Query와 API_ROUTERS 임포트를 제거했습니다.
 from state_db.configs import (
     APP_ENV,
     APP_PORT,
@@ -18,7 +17,6 @@ from state_db.custom import CustomJSONResponse
 
 logger = logging.getLogger("uvicorn.error")
 
-
 # ====================================================================
 # 앱 생명주기 이벤트 (Lifespan)
 # ====================================================================
@@ -26,14 +24,30 @@ logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """서버 생명주기 관리"""
-    import asyncio
-
+    """
+    서버 생명주기 관리
+    멱등성을 보장하며 DB 테이블을 생성하고 초기화합니다.
+    """
     from state_db.infrastructure import shutdown, startup
 
-    # DB 연결 및 초기화를 백그라운드 태스크로 실행
-    asyncio.create_task(startup())
+    try:
+        # 1. DB 연결 및 기초 테이블 생성 (멱등성 확보)
+        # startup() 내부에서 CREATE TABLE IF NOT EXISTS 로직을 수행하도록 설계 권장
+        await startup()
+
+        # 2. 추가적인 초기화 쿼리 (필요 시)
+        # 예: 기본 설정값이 없는 경우에만 삽입
+        # await run_raw_query("INSERT INTO settings ... ON CONFLICT DO NOTHING")
+
+        logger.info("🚀 Database initialization completed successfully.")
+    except Exception as e:
+        logger.error(f"❌ Critical Error during startup: {str(e)}")
+        # 초기화 실패 시 서버 실행을 중단하는 것이 안전합니다.
+        raise e
+
     yield
+
+    # 서버 종료 시 연결 정리
     await shutdown()
 
 
@@ -51,13 +65,12 @@ app = FastAPI(
 
 
 # ====================================================================
-# 전역 에러 로깅 미들웨어
+# 전역 에러 로깅 미들웨어 및 예외 처리
 # ====================================================================
 
 
 @app.middleware("http")
 async def error_logging_middleware(request: Request, call_next):
-    # 이제 에러 로그는 핸들러가 담당하므로 미들웨어는 통과만 시킵니다.
     response = await call_next(request)
     return response
 
@@ -65,14 +78,8 @@ async def error_logging_middleware(request: Request, call_next):
 init_exception_handlers(app)
 
 
-# ====================================================================
-# HTTPException 전용 핸들러
-# ====================================================================
-
-
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    # 여기서 로그를 남겨야 터미널에 에러가 찍힙니다.
     logger.error(
         f"❌ HTTP {exc.status_code} Error: {request.method} {request.url.path}"
     )
@@ -89,13 +96,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 
 # ====================================================================
-# 라우터 등록 | Query 폴더명 대로 분리해서 구축해야 함
+# 라우터 등록
 # ====================================================================
 
 
 def register_routers(app: FastAPI):
-    # [수정] 이 시점에 로드하면 Query 모듈이 이미 준비되어
-    # 순환 참조가 발생하지 않습니다.
     from state_db.configs.api_routers import API_ROUTERS
 
     for router in API_ROUTERS:
@@ -106,20 +111,19 @@ def register_routers(app: FastAPI):
                 tags=["State Management"],
             )
         else:
-            # 혹시 모를 에러 방지를 위해 예외 처리
             logger.error(f"❌ 라우터 객체를 찾을 수 없습니다: {router.__name__}")
 
 
 register_routers(app)
 
+
 # ====================================================================
-# 루트 엔드포인트
+# 루트 및 헬스체크 엔드포인트
 # ====================================================================
 
 
 @app.get("/", description="서버 연결 확인", summary="테스트 - 서버 연결을 확인합니다.")
 def read_root() -> Dict[str, str]:
-    """서버 상태 확인용 루트 엔드포인트"""
     return {
         "message": "반갑습니다. GTRPGM 상태 관리자입니다!",
         "service": "State Manager",
@@ -127,24 +131,15 @@ def read_root() -> Dict[str, str]:
     }
 
 
-@app.get("/health", description="헬스체크", summary="서버 헬스체크")
-async def health_check() -> Dict[str, str]:
-    """헬스체크 엔드포인트 (로드밸런서/모니터링용)"""
-    return {"status": "healthy"}
-
-
 @app.get("/health/db", description="DB 연결 상태 확인", summary="DB 헬스체크")
 async def db_health_check() -> Dict[str, Any]:
-    """데이터베이스 연결 상태를 실시간으로 확인합니다."""
     from state_db.infrastructure import run_raw_query
 
     try:
-        # 매우 가벼운 쿼리로 연결 확인
         await run_raw_query("SELECT 1")
         return {
             "status": "healthy",
             "database": "connected",
-            "message": "DB 연결이 정상입니다.",
         }
     except Exception as e:
         logger.error(f"❌ DB Health Check Failed: {str(e)}")
@@ -156,14 +151,13 @@ async def db_health_check() -> Dict[str, Any]:
 
 
 # ====================================================================
-# 서버 실행 (개발 환경)
+# 서버 실행
 # ====================================================================
 
 if __name__ == "__main__":
     import uvicorn
 
     effective_host = "127.0.0.1" if APP_ENV == "local" else "0.0.0.0"
-
     uvicorn.run(
         "main:app",
         host=effective_host,

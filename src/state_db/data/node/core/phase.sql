@@ -8,14 +8,14 @@
 CREATE TABLE IF NOT EXISTS phase(
     history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL,
-    
+
     previous_phase phase_type,
     new_phase phase_type NOT NULL,
     turn_at_transition INTEGER NOT NULL,
     transition_reason TEXT,
-    
+
     transitioned_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     CONSTRAINT fk_phase_session FOREIGN KEY (session_id)
         REFERENCES session(session_id) ON DELETE CASCADE,
     CONSTRAINT check_phase_change CHECK (previous_phase IS DISTINCT FROM new_phase)
