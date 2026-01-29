@@ -1,6 +1,6 @@
 import time
 import uuid
-
+import json
 import requests
 
 BASE_URL = "http://localhost:8030"
@@ -14,6 +14,20 @@ class APIVerifier:
         self.player_id = None
         self.npc_instance_id = None
         self.enemy_instance_id = None
+        self.null_fields = []
+
+    def find_nulls(self, data, path=""):
+        if isinstance(data, dict):
+            for k, v in data.items():
+                new_path = f"{path}.{k}" if path else k
+                if v is None:
+                    self.null_fields.append(new_path)
+                else:
+                    self.find_nulls(v, new_path)
+        elif isinstance(data, list):
+            for i, v in enumerate(data):
+                new_path = f"{path}[{i}]"
+                self.find_nulls(v, new_path)
 
     def check(self, name, method, path, payload=None, params=None):
         start_time = time.time()
@@ -56,6 +70,11 @@ class APIVerifier:
             )
             if status == "FAIL":
                 print(f"  [!] {name} Failed: {res_data}")
+            
+            # Null Check
+            if isinstance(res_data, dict) and "data" in res_data:
+                self.find_nulls(res_data["data"], f"{name}:data")
+
             return res_data
         except Exception as e:
             self.results.append(
@@ -71,7 +90,7 @@ class APIVerifier:
 
     def print_summary(self):
         print("\n" + "=" * 80)
-        print(f"{'Endpoint Name':<35} | {'Method':<6} | {'Status':<6} | {'MS':<8}")
+        print(f"{ 'Endpoint Name':<35} | {'Method':<6} | {'Status':<6} | {'MS':<8}")
         print("-" * 80)
         for r in self.results:
             name = r["name"]
@@ -80,6 +99,13 @@ class APIVerifier:
             ms = r.get("ms", 0)
             print(f"{name:<35} | {method:<6} | {status:<6} | {ms:<8}")
         print("=" * 80 + "\n")
+
+        if self.null_fields:
+            print("\n[WARNING] Found NULL values in responses:")
+            for field in self.null_fields:
+                print(f" - {field}")
+        else:
+            print("\n[OK] No NULL values found in responses.")
 
     def run(self):
         # 1. Inject Scenario
@@ -147,14 +173,19 @@ class APIVerifier:
         res = self.check("Start Session", "POST", "/state/session/start", start_data)
         if res and "data" in res:
             self.session_id = res["data"]["session_id"]
-            self.player_id = res["data"]["player_id"]
+            if "player_id" in res["data"]:
+                self.player_id = res["data"]["player_id"]
+            else:
+                # If player_id is not in start response, fetch it from session info or active sessions
+                s_info = self.check("Get Session Info", "GET", f"/state/session/{self.session_id}")
+                if s_info and "data" in s_info:
+                    self.player_id = s_info["data"].get("player_id")
 
         # 3. Inquiry Endpoints
         print("[3] Testing Inquiry Endpoints...")
         self.check("List All Sessions", "GET", "/state/sessions")
         self.check("List Active Sessions", "GET", "/state/sessions/active")
-        self.check("Get Session Info", "GET", f"/state/session/{self.session_id}")
-
+        
         if self.player_id:
             self.check("Get Player State", "GET", f"/state/player/{self.player_id}")
 

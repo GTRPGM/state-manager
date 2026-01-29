@@ -84,7 +84,7 @@ class PlayerRepository(BaseRepository):
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
     async def get_npc_relations(self, player_id: str) -> List[NPCRelation]:
-        sql_path = self.query_dir / "INQUIRY" / "relations" / "Check_affinity.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Npc_relations.sql"
         results = await run_sql_query(sql_path, [player_id])
         return [NPCRelation.model_validate(row) for row in results]
 
