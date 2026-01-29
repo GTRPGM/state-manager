@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS item (
 
     -- 세션 참조
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
+    scenario_id UUID NOT NULL,
+    scenario_item_id UUID NOT NULL,
 
     name VARCHAR(20) NOT NULL,
     description TEXT DEFAULT '',
@@ -26,6 +28,8 @@ CREATE TABLE IF NOT EXISTS item (
 
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_item_session_id ON item(session_id);
+CREATE INDEX IF NOT EXISTS idx_item_scenario_id ON item(scenario_id);
+CREATE INDEX IF NOT EXISTS idx_item_scenario_item_id ON item(scenario_item_id);
 CREATE INDEX IF NOT EXISTS idx_item_type ON item(item_type);
 
 -- 주석
