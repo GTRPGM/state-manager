@@ -16,7 +16,7 @@ from state_db.repositories.base import BaseRepository
 class EntityRepository(BaseRepository):
     # NPC
     async def get_session_npcs(self, session_id: str) -> List[NPCInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_npc.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc-r.sql"
         results = await run_sql_query(sql_path, [session_id])
         return [NPCInfo.model_validate(row) for row in results]
 
@@ -33,7 +33,7 @@ class EntityRepository(BaseRepository):
         result = await run_sql_query(sql_path, params)
         if result:
             return SpawnResult(
-                id=result[0].get("npc_instance_id", ""), name=result[0].get("name", "")
+                id=result[0].get("id", ""), name=result[0].get("name", "")
             )
         raise HTTPException(status_code=500, detail="Failed to spawn NPC")
 
@@ -48,7 +48,7 @@ class EntityRepository(BaseRepository):
     async def get_session_enemies(
         self, session_id: str, active_only: bool = True
     ) -> List[EnemyInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_enemy.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_enemy.sql"
         results = await run_sql_query(sql_path, [session_id, active_only])
         return [EnemyInfo.model_validate(row) for row in results]
 
@@ -67,7 +67,7 @@ class EntityRepository(BaseRepository):
         result = await run_sql_query(sql_path, params)
         if result:
             return SpawnResult(
-                id=result[0].get("enemy_instance_id", ""),
+                id=result[0].get("id", ""),
                 name=result[0].get("name", ""),
             )
         raise HTTPException(status_code=500, detail="Failed to spawn enemy")
@@ -75,11 +75,12 @@ class EntityRepository(BaseRepository):
     async def update_enemy_hp(
         self, session_id: str, enemy_instance_id: str, hp_change: int
     ) -> EnemyHPUpdateResult:
-        sql_path = self.query_dir / "UPDATE" / "update_enemy_hp.sql"
+        sql_path = self.query_dir / "UPDATE" / "enemy" / "update_enemy_hp.sql"
         result = await run_sql_query(
             sql_path, [enemy_instance_id, session_id, hp_change]
         )
         if result:
+            # SQL에서 반환하는 필드명과 모델 필드명이 일치해야 함
             return EnemyHPUpdateResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Enemy or Session not found")
 
@@ -91,5 +92,5 @@ class EntityRepository(BaseRepository):
         return RemoveEntityResult()
 
     async def defeat_enemy(self, session_id: str, enemy_instance_id: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "defeated_enemy.sql"
+        sql_path = self.query_dir / "UPDATE" / "defeated_enemy-r.sql"
         await run_sql_command(sql_path, [enemy_instance_id, session_id])

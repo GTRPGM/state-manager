@@ -3,10 +3,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 
-# Mock data
-MOCK_SESSION_ID = "test-session-id"
-MOCK_PLAYER_ID = "test-player-id"
-MOCK_NPC_ID = "test-npc-id"
+# Mock data - 유효한 UUID 형식 사용
+MOCK_SESSION_ID = "550e8400-e29b-41d4-a716-446655440001"
+MOCK_PLAYER_ID = "550e8400-e29b-41d4-a716-446655440002"
+MOCK_NPC_ID = "550e8400-e29b-41d4-a716-446655440004"
+MOCK_ENEMY_ID = "550e8400-e29b-41d4-a716-446655440003"
 MOCK_ITEM_ID = 5
 
 
@@ -26,7 +27,7 @@ async def test_update_player_hp(async_client: AsyncClient):
     ):
         response = await async_client.put(
             f"/state/player/{MOCK_PLAYER_ID}/hp",
-            json={"session_id": MOCK_SESSION_ID, "hp_change": -10},
+            json={"session_id": MOCK_SESSION_ID, "hp_change": -10, "reason": "combat"},
         )
 
         assert response.status_code == 200
@@ -112,9 +113,13 @@ async def test_update_npc_affinity(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_update_location(async_client: AsyncClient):
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "location": "Dark Forest",
+    }
     with patch(
         "state_db.repositories.SessionRepository.update_location",
-        new=AsyncMock(),
+        new=AsyncMock(return_value=mock_response),
     ) as mock_update:
         response = await async_client.put(
             f"/state/session/{MOCK_SESSION_ID}/location",
@@ -128,10 +133,6 @@ async def test_update_location(async_client: AsyncClient):
         mock_update.assert_called_once_with(MOCK_SESSION_ID, "Dark Forest")
 
 
-# Mock data for new tests
-MOCK_ENEMY_ID = "test-enemy-id"
-
-
 @pytest.mark.asyncio
 async def test_update_enemy_hp(async_client: AsyncClient):
     mock_response = {
@@ -140,6 +141,7 @@ async def test_update_enemy_hp(async_client: AsyncClient):
         "current_hp": 40,
         "max_hp": 50,
         "hp_change": -10,
+        "is_defeated": False,
     }
 
     with patch(
@@ -159,9 +161,13 @@ async def test_update_enemy_hp(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_defeat_enemy(async_client: AsyncClient):
+    mock_response = {
+        "enemy_instance_id": MOCK_ENEMY_ID,
+        "status": "defeated",
+    }
     with patch(
         "state_db.repositories.EntityRepository.defeat_enemy",
-        new=AsyncMock(),
+        new=AsyncMock(return_value=mock_response),
     ) as mock_defeat:
         response = await async_client.post(
             f"/state/enemy/{MOCK_ENEMY_ID}/defeat?session_id={MOCK_SESSION_ID}"

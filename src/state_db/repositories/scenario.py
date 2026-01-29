@@ -5,7 +5,11 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from state_db.infrastructure import SQL_CACHE, DatabaseManager, run_sql_query, set_age_path
+from state_db.infrastructure import (
+    SQL_CACHE,
+    DatabaseManager,
+    set_age_path,
+)
 from state_db.repositories.base import BaseRepository
 from state_db.schemas import ScenarioInjectRequest, ScenarioInjectResponse
 
@@ -47,7 +51,9 @@ class ScenarioRepository(BaseRepository):
                 )
 
                 if not scenario_row:
-                    raise HTTPException(status_code=500, detail="Failed to create scenario")
+                    raise HTTPException(
+                        status_code=500, detail="Failed to create scenario"
+                    )
 
                 scenario_id = str(scenario_row["scenario_id"])
 
@@ -75,7 +81,9 @@ class ScenarioRepository(BaseRepository):
                         npc_vertex_query,
                         json.dumps(
                             {
-                                "npc_id": str(UUID(int=0)),  # Master id is not used for vertex link usually, but we set it
+                                "npc_id": str(
+                                    UUID(int=0)
+                                ),  # Master id is not used for vertex link usually
                                 "session_id": "00000000-0000-0000-0000-000000000000",
                                 "scenario_id": scenario_id,
                                 "scenario_npc_id": npc.scenario_npc_id,

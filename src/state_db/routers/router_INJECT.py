@@ -17,7 +17,7 @@ def get_scenario_repo() -> ScenarioRepository:
     "/scenario/inject",
     response_model=WrappedResponse[ScenarioInjectResponse],
     summary="시나리오 및 마스터 데이터 주입",
-    description="시나리오 메타데이터와 NPC, 적, 아이템 등 마스터 데이터를 한 번에 주입합니다.",
+    description="시나리오 메타데이터와 마스터 데이터를 한 번에 주입합니다.",
 )
 async def inject_scenario(
     request: ScenarioInjectRequest,

@@ -1,8 +1,7 @@
 -- --------------------------------------------------------------------
 -- Session_enemy.sql
 -- 세션의 Enemy 목록 조회
--- 용도: 현재 세션에 존재하는 적 목록 확인
--- API: GET /state/session/{session_id}/enemies?active_only=true
+-- $1: session_id, $2: active_only
 -- --------------------------------------------------------------------
 
 SELECT
@@ -10,8 +9,9 @@ SELECT
     scenario_enemy_id,
     name,
     description,
-    (state->'numeric'->>'HP')::int AS hp,
-    tags
+    (state->'numeric'->>'HP')::int AS current_hp,
+    tags,
+    state
 FROM enemy
 WHERE session_id = $1
   AND ($2 = false OR (state->'numeric'->>'HP')::int > 0)

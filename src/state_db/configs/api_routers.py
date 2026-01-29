@@ -7,6 +7,7 @@ from state_db.routers import (
     router_MANAGE,
     router_START,
     router_TRACE,
+    router_TRACE_phase,
     router_UPDATE,
 )
 
@@ -17,5 +18,6 @@ API_ROUTERS = [
     router_INQUIRY,  # 조회
     router_UPDATE,  # 업데이트
     router_MANAGE,  # 관리
-    router_TRACE,  # 이력 추적
+    router_TRACE,  # 이력 추적 (Turn)
+    router_TRACE_phase,  # 이력 추적 (Phase)
 ]

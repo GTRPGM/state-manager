@@ -33,7 +33,7 @@ class APIVerifier:
             res_data = None
             try:
                 res_data = resp.json()
-            except:
+            except Exception:
                 res_data = resp.text
 
             # Check both HTTP code and business status field
@@ -74,9 +74,11 @@ class APIVerifier:
         print(f"{'Endpoint Name':<35} | {'Method':<6} | {'Status':<6} | {'MS':<8}")
         print("-" * 80)
         for r in self.results:
-            print(
-                f"{r['name']:<35} | {r.get('method', 'N/A'):<6} | {r['status']:<6} | {r.get('ms', 0):<8}"
-            )
+            name = r["name"]
+            method = r.get("method", "N/A")
+            status = r["status"]
+            ms = r.get("ms", 0)
+            print(f"{name:<35} | {method:<6} | {status:<6} | {ms:<8}")
         print("=" * 80 + "\n")
 
     def run(self):

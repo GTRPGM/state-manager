@@ -1,6 +1,11 @@
 """Shared dependency injection helpers for routers."""
 
-from state_db.repositories import EntityRepository, PlayerRepository, SessionRepository
+from state_db.repositories import (
+    EntityRepository,
+    PlayerRepository,
+    SessionRepository,
+    TraceRepository,
+)
 from state_db.services import StateService
 
 
@@ -14,6 +19,10 @@ def get_player_repo() -> PlayerRepository:
 
 def get_entity_repo() -> EntityRepository:
     return EntityRepository()
+
+
+def get_trace_repo() -> TraceRepository:
+    return TraceRepository()
 
 
 def get_state_service() -> StateService:

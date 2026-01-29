@@ -3,12 +3,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 
-# Mock data
-MOCK_SESSION_ID = "test-session-id"
-MOCK_PLAYER_ID = "test-player-id"
+# Mock data - 유효한 UUID 형식 사용
+MOCK_SESSION_ID = "550e8400-e29b-41d4-a716-446655440001"
+MOCK_PLAYER_ID = "550e8400-e29b-41d4-a716-446655440002"
 MOCK_SCENARIO_ID = "550e8400-e29b-41d4-a716-446655440000"
-MOCK_ENEMY_ID = "test-enemy-id"
-MOCK_NPC_ID = "test-npc-id"
+MOCK_ENEMY_ID = "550e8400-e29b-41d4-a716-446655440003"
+MOCK_NPC_ID = "550e8400-e29b-41d4-a716-446655440004"
 
 
 @pytest.mark.asyncio
@@ -20,6 +20,8 @@ async def test_get_active_sessions(async_client: AsyncClient):
             "player_id": MOCK_PLAYER_ID,
             "current_act": 1,
             "current_sequence": 1,
+            "current_phase": "exploration",
+            "current_turn": 1,
             "status": "active",
         }
     ]
@@ -44,6 +46,8 @@ async def test_get_session(async_client: AsyncClient):
         "player_id": MOCK_PLAYER_ID,
         "current_act": 1,
         "current_sequence": 1,
+        "current_phase": "exploration",
+        "current_turn": 1,
         "location": "Starting Town",
         "status": "active",
     }
@@ -109,7 +113,7 @@ async def test_get_npcs(async_client: AsyncClient):
             "npc_id": MOCK_NPC_ID,
             "name": "Test NPC",
             "description": "A test NPC",
-            "hp": 100,
+            "current_hp": 100,
             "tags": [],
         }
     ]
@@ -131,9 +135,8 @@ async def test_get_enemies(async_client: AsyncClient):
     mock_enemies = [
         {
             "enemy_instance_id": MOCK_ENEMY_ID,
-            "enemy_id": 1,
+            "scenario_enemy_id": MOCK_SCENARIO_ID,
             "name": "Test Enemy",
-            "hp": 50,
             "current_hp": 50,
             "is_active": True,
         }
@@ -195,7 +198,7 @@ async def test_get_all_sessions(async_client: AsyncClient):
             "status": "active",
         },
         {
-            "session_id": "test-session-id-2",
+            "session_id": "550e8400-e29b-41d4-a716-446655440099",
             "scenario_id": MOCK_SCENARIO_ID,
             "player_id": MOCK_PLAYER_ID,
             "current_act": 2,

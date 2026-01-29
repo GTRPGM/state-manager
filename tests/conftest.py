@@ -1,10 +1,10 @@
 import os
-from typing import AsyncGenerator
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from testcontainers.postgres import PostgresContainer
 
+from state_db.infrastructure import shutdown, startup
 from state_db.main import app
 
 # 테스트 환경 변수 설정
@@ -16,54 +16,46 @@ def anyio_backend():
     return "asyncio"
 
 
-@pytest.fixture
-def mock_db_pool():
+@pytest.fixture(scope="session")
+def postgres_container():
     """
-    DatabaseManager의 커넥션 풀을 Mocking합니다.
-    실제 DB에 연결하지 않고 쿼리 실행을 흉내냅니다.
+    postgres-ex 이미지를 사용하여 임시 컨테이너를 띄웁니다.
+    세션 전체에서 하나만 유지하여 성능 최적화.
     """
-    # Mock Connection 객체 생성
-    mock_conn = AsyncMock()
-    mock_conn.fetch.return_value = []
-    mock_conn.fetchrow.return_value = None
-    mock_conn.execute.return_value = "COMMAND OK"
+    with PostgresContainer("postgres-ex", port=5432) as postgres:
+        os.environ["DB_HOST"] = postgres.get_container_host_ip()
+        os.environ["DB_PORT"] = str(postgres.get_exposed_port(5432))
+        os.environ["DB_USER"] = postgres.username
+        os.environ["DB_PASSWORD"] = postgres.password
+        os.environ["DB_NAME"] = postgres.dbname
 
-    # 트랜잭션/커넥션 컨텍스트 매니저 지원
-    mock_conn.__aenter__.return_value = mock_conn
-    mock_conn.__aexit__.return_value = None
-
-    # Pool Acquire 컨텍스트 매니저 지원
-    mock_pool = AsyncMock()
-    mock_pool.acquire.return_value = mock_conn
-
-    # DatabaseManager.get_pool()이 이 mock_pool을 반환하도록 설정
-    with (
-        patch(
-            "state_db.infrastructure.database.DatabaseManager.get_pool",
-            new=AsyncMock(return_value=mock_pool),
-        ),
-        patch(
-            "state_db.infrastructure.database.DatabaseManager.get_connection"
-        ) as mock_get_conn,
-    ):
-        # get_connection 자체가 컨텍스트 매니저임
-        mock_get_conn.return_value.__aenter__.return_value = mock_conn
-        mock_get_conn.return_value.__aexit__.return_value = None
-
-        yield mock_conn
+        yield postgres
 
 
-@pytest.fixture
-async def async_client(mock_db_pool) -> AsyncGenerator[AsyncClient, None]:
+@pytest.fixture(scope="function")
+async def db_lifecycle(postgres_container):
     """
-    FastAPI 앱 테스트를 위한 비동기 클라이언트
+    테스트 함수마다 DB 초기화 및 정리.
     """
-    # DB startup/shutdown 이벤트 무력화 (Mock 사용하므로)
-    with (
-        patch("state_db.infrastructure.startup", new=AsyncMock()),
-        patch("state_db.infrastructure.shutdown", new=AsyncMock()),
-    ):
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            yield client
+    await startup()
+    yield
+    await shutdown()
+
+
+@pytest.fixture(scope="function")
+async def real_db_client(db_lifecycle) -> AsyncClient:
+    """
+    실제 컨테이너 DB를 사용하는 API 클라이언트.
+    """
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        yield client
+
+
+@pytest.fixture(scope="function")
+async def async_client(real_db_client: AsyncClient) -> AsyncClient:
+    """
+    기존 테스트와의 호환성을 위한 피스처 별칭.
+    """
+    return real_db_client
