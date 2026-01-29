@@ -41,6 +41,55 @@ session 테이블에 AFTER INSERT 트리거를 연결하여 세션 생성과 동
 무한 루프 방지: WHEN (NEW.session_id <> '0...0') 조건을 반드시 적용합니다.
 
 Phase 3: 데이터 수급 및 검증
+
 마스터 데이터 로드: 시나리오 원형 데이터를 session_id = '0...0'으로 입력합니다.
 
+
+
 동작 검증: 새 세션 생성 후 enemy 또는 npc 테이블에 해당 session_id를 가진 행들이 자동 생성되는지 확인합니다.
+
+
+
+4. 시나리오 주입 API (Scenario Injection API) - [진행 중]
+
+목적: 작가나 관리자가 시나리오 메타데이터와 마스터 엔티티(NPC, Enemy 등)를 한 번의 API 호출로 시스템에 등록할 수 있도록 합니다.
+
+
+
+기능:
+
+- 시나리오 기본 정보 등록 (Title, Description 등)
+
+- 마스터 NPC 데이터 등록 (Session 0)
+
+- 마스터 Enemy 데이터 등록 (Session 0)
+
+- (선택 사항) 초기 아이템 및 기타 환경 설정
+
+
+
+현황:
+
+
+
+- [x] 기반 DB 스키마 분석 완료 (npc, enemy가 session_id='0...0' 참조 확인)
+
+
+
+- [x] 시나리오 주입용 Pydantic 스키마 정의
+
+
+
+- [x] ScenarioRepository 구현 (시나리오 및 하위 엔티티 일괄 삽입)
+
+
+
+- [x] /state/scenario/inject 엔드포인트 구현 및 라우터 등록
+
+
+
+- [x] 테스트 코드 작성 및 검증
+
+
+
+

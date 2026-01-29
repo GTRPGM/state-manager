@@ -46,8 +46,8 @@ class DatabaseManager:
 
 
 async def set_age_path(conn: asyncpg.Connection) -> None:
-    """Apache AGE 사용을 위한 search_path 설정"""
-    await conn.execute('SET search_path = ag_catalog, "$user", public;')
+    """Apache AGE 사용을 위한 search_path 설정 (public을 우선하여 테이블 생성 위치 고정)"""
+    await conn.execute('SET search_path = public, ag_catalog, "$user";')
 
 
 async def init_age_graph() -> None:
@@ -182,8 +182,72 @@ async def startup() -> None:
     query_dir = Path(__file__).parent.parent / "Query"
     load_queries(query_dir)
 
-    # AGE 초기화
+    # 1. AGE 초기화
     await init_age_graph()
+
+    # 2. 스키마 초기화 (테이블 및 트리거 생성)
+    # B_ (Base) -> L_ (Logic) 순서로 실행
+    base_dir = query_dir / "BASE"
+
+    # 의존성을 고려한 실행 순서 정의
+    initial_tables = ["B_scenario.sql", "B_session.sql"]
+    entity_tables = [
+        "B_player.sql",
+        "B_npc.sql",
+        "B_enemy.sql",
+        "B_item.sql",
+        "B_phase.sql",
+        "B_turn.sql",
+    ]
+    relation_tables = [
+        "B_player_inventory.sql",
+        "B_player_npc_relations.sql",
+        "B_inventory.sql",
+    ]
+
+    async with DatabaseManager.get_connection() as conn:
+        await set_age_path(conn)
+
+        # 1단계: 기본 테이블
+        for filename in initial_tables:
+            file_path = base_dir / filename
+            if file_path.exists():
+                logger.info(f"Executing Stage 1 (Initial): {filename}")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    await conn.execute(f.read())
+
+        # 2단계: 주요 엔티티 테이블
+        for filename in entity_tables:
+            file_path = base_dir / filename
+            if file_path.exists():
+                logger.info(f"Executing Stage 2 (Entity): {filename}")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    await conn.execute(f.read())
+
+        # 3단계: 관계 및 기타 테이블
+        for filename in relation_tables:
+            file_path = base_dir / filename
+            if file_path.exists():
+                logger.info(f"Executing Stage 3 (Relation): {filename}")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    await conn.execute(f.read())
+
+        # 나머지 Base 파일들 (미처리된 것)
+        all_processed = set(initial_tables + entity_tables + relation_tables)
+        for file_path in base_dir.glob("B_*.sql"):
+            if file_path.name not in all_processed:
+                logger.info(f"Executing Stage 4 (Other Base): {file_path.name}")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    await conn.execute(f.read())
+
+        # 5단계: 로직 파일 (Triggers/Functions)
+        # 로직 파일은 대개 테이블이 모두 생성된 후 실행되어야 안전함
+        for file_path in sorted(base_dir.glob("L_*.sql")):
+            logger.info(f"Executing Stage 5 (Logic): {file_path.name}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                await conn.execute(f.read())
+
+    logger.info("✅ Database schema and logic initialization completed.")
 
 
 async def shutdown() -> None:

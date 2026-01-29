@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS npc (
     -- 엔티티 필수
-    npc_id UUID PRIMARY KEY,
+    npc_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type VARCHAR(50) NOT NULL DEFAULT 'npc',
     name VARCHAR(100) NOT NULL,
     description TEXT DEFAULT '',
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS npc (
     -- session/시나리오 참조
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
     scenario_id UUID NOT NULL,
-    scenario_npc_id UUID NOT NULL,
+    scenario_npc_id VARCHAR(100) NOT NULL,
 
     -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -38,16 +38,13 @@ CREATE TABLE IF NOT EXISTS npc (
     relations JSONB DEFAULT '[]'::jsonb
 );
 
+-- 만약 이미 테이블이 있다면 DEFAULT 추가
+ALTER TABLE npc ALTER COLUMN npc_id SET DEFAULT gen_random_uuid();
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_npc_session_id ON npc(session_id);
 CREATE INDEX IF NOT EXISTS idx_npc_scenario_id ON npc(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_npc_scenario_npc_id ON npc(scenario_npc_id);
-
--- 주석
-COMMENT ON TABLE npc IS '시나리오에서 정의된 NPC 테이블';
-COMMENT ON COLUMN npc.npc_id IS 'NPC 고유 ID (인스턴스)';
-COMMENT ON COLUMN npc.session_id IS 'NPC가 속한 세션 ID';
-COMMENT ON COLUMN npc.scenario_npc_id IS '시나리오에서의 NPC 템플릿 ID';
 
 -- 타임스탬프 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_npc_updated_at()

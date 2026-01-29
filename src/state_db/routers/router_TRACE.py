@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from state_db.custom import WrappedResponse
 from state_db.repositories import TraceRepository
 
-router = APIRouter()
+router = APIRouter(tags=["History & Trace"])
 
 
 def get_trace_repo() -> TraceRepository:

@@ -1,9 +1,26 @@
+import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Annotated, Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+# ====================================================================
+# Utilities
+# ====================================================================
+
+
+def parse_json(v: Any) -> Any:
+    if isinstance(v, str):
+        try:
+            return json.loads(v)
+        except json.JSONDecodeError:
+            return v
+    return v
+
+
+JsonField = Annotated[Any, BeforeValidator(parse_json)]
 
 # ====================================================================
 # Enums
@@ -56,28 +73,30 @@ class InventoryItem(BaseModel):
 
 
 class NPCInfo(BaseModel):
-    npc_id: str
+    npc_id: Union[str, UUID]
     name: str
     description: str
-    hp: int
+    hp: Optional[int] = None
     tags: List[str] = []
+    state: Optional[JsonField] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class NPCRelation(BaseModel):
-    npc_id: str
+    npc_id: Union[str, UUID]
     npc_name: Optional[str] = None
     affinity_score: int
     model_config = ConfigDict(from_attributes=True)
 
 
 class EnemyInfo(BaseModel):
-    enemy_instance_id: str
-    enemy_id: int
+    enemy_instance_id: Union[str, UUID]
+    scenario_enemy_id: Union[str, UUID]
     name: str
-    hp: int
-    current_hp: int
-    is_active: bool
+    description: str = ""
+    hp: Optional[int] = None
+    tags: List[str] = []
+    state: Optional[JsonField] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -100,10 +119,10 @@ class PlayerState(BaseModel):
 
 
 class PlayerStats(BaseModel):
-    player_id: str
+    player_id: Union[str, UUID]
     name: str
-    state: PlayerState
-    relations: List[Any] = []
+    state: Union[JsonField, PlayerState]
+    relations: Optional[JsonField] = []
     tags: List[str] = []
     model_config = ConfigDict(from_attributes=True)
 
@@ -127,7 +146,7 @@ class FullPlayerState(BaseModel):
 
 
 class PlayerHPUpdateResult(BaseModel):
-    player_id: str
+    player_id: Union[str, UUID]
     name: str
     current_hp: int
     max_hp: int

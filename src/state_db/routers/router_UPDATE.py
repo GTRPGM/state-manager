@@ -24,7 +24,7 @@ from state_db.schemas import (
 
 from .dependencies import get_entity_repo, get_player_repo, get_session_repo
 
-router = APIRouter()
+router = APIRouter(tags=["State Updates"])
 
 
 # ====================================================================

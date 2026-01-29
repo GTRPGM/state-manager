@@ -1,18 +1,19 @@
--- 세션 상세 정보 조회
--- SessionInfo 모델 필드에 맞춰 모든 필요 컬럼 반환
-
+-- 세션 상세 정보 조회 (플레이어 ID 포함)
 SELECT
-    session_id,
-    scenario_id,
-    current_act,
-    current_sequence,
-    current_phase,
-    current_turn,
-    location,
-    status,
-    started_at,
-    ended_at,
-    created_at,
-    updated_at
-FROM session
-WHERE session_id = $1;
+    s.session_id,
+    s.scenario_id,
+    p.player_id,
+    s.current_act,
+    s.current_sequence,
+    s.current_phase,
+    s.current_turn,
+    s.location,
+    s.status,
+    s.started_at,
+    s.ended_at,
+    s.created_at,
+    s.updated_at
+FROM session s
+LEFT JOIN player p ON s.session_id = p.session_id
+WHERE s.session_id = $1
+LIMIT 1;
