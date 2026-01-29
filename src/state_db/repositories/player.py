@@ -73,12 +73,12 @@ class PlayerRepository(BaseRepository):
         return await self.get_stats(player_id)
 
     async def get_inventory(self, session_id: str) -> List[InventoryItem]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_inventory-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_inventory.sql"
         results = await run_sql_query(sql_path, [session_id])
         return [InventoryItem.model_validate(row) for row in results]
 
     async def update_inventory(
-        self, player_id: str, item_id: int, quantity: int
+        self, player_id: str, item_id: str, quantity: int
     ) -> Dict[str, Any]:
         # TODO: 실제 SQL 파일 구현 필요
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
@@ -91,7 +91,7 @@ class PlayerRepository(BaseRepository):
     async def update_npc_affinity(
         self, player_id: str, npc_id: str, affinity_change: int
     ) -> NPCAffinityUpdateResult:
-        sql_path = self.query_dir / "UPDATE" / "update_npc_affinity-r.sql"
+        sql_path = self.query_dir / "UPDATE" / "relations" / "update_affinity.sql"
         result = await run_sql_query(sql_path, [player_id, npc_id, affinity_change])
         new_affinity = result[0].get("new_affinity", 0) if result else 0
         return NPCAffinityUpdateResult(
@@ -99,9 +99,9 @@ class PlayerRepository(BaseRepository):
         )
 
     async def earn_item(
-        self, session_id: str, player_id: str, item_id: int, quantity: int
+        self, session_id: str, player_id: str, item_id: str, quantity: int
     ) -> Dict[str, Any]:
-        sql_path = self.query_dir / "UPDATE" / "earn_item.sql"
+        sql_path = self.query_dir / "UPDATE" / "inventory" / "earn_item.sql"
         result = await run_sql_query(
             sql_path, [session_id, player_id, item_id, quantity]
         )
@@ -110,9 +110,9 @@ class PlayerRepository(BaseRepository):
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
     async def use_item(
-        self, session_id: str, player_id: str, item_id: int, quantity: int
+        self, session_id: str, player_id: str, item_id: str, quantity: int
     ) -> Dict[str, Any]:
-        sql_path = self.query_dir / "UPDATE" / "use_item.sql"
+        sql_path = self.query_dir / "UPDATE" / "inventory" / "use_item.sql"
         result = await run_sql_query(
             sql_path, [session_id, player_id, item_id, quantity]
         )

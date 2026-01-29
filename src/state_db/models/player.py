@@ -9,10 +9,12 @@ from .base import JsonField
 
 class InventoryItem(BaseModel):
     player_id: Optional[str] = None
-    item_id: int
+    item_id: Union[str, UUID]
     item_name: Optional[str] = None
+    description: Optional[str] = None
     quantity: int
     category: Optional[str] = None
+    item_state: Optional[Dict] = None
     acquired_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 

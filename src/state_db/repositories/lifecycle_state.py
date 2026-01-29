@@ -12,19 +12,19 @@ class LifecycleStateRepository(BaseRepository):
 
     # Phase
     async def change_phase(self, session_id: str, phase: str) -> PhaseChangeResult:
-        sql_path = self.query_dir / "UPDATE" / "phase" / "update_phase.sql"
+        sql_path = self.query_dir / "MANAGE" / "phase" / "change_phase.sql"
         await run_sql_command(sql_path, [session_id, phase])
         return PhaseChangeResult(session_id=session_id, current_phase=phase)
 
     async def get_phase(self, session_id: str) -> PhaseChangeResult:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_phase-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_phase.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return PhaseChangeResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Session phase not found")
 
     async def phase_check(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "phase" / "phase_check-r.sql"
+        sql_path = self.query_dir / "MANAGE" / "phase" / "phase_check.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -46,7 +46,7 @@ class LifecycleStateRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_turn(self, session_id: str) -> TurnAddResult:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return TurnAddResult.model_validate(result[0])

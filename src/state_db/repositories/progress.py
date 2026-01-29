@@ -12,18 +12,21 @@ class ProgressRepository(BaseRepository):
 
     # Location
     async def update_location(self, session_id: str, location: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "update_location-r.sql"
+        # [dev 반영] 경로 및 파일명 변경
+        sql_path = self.query_dir / "MANAGE" / "location" / "location_change.sql"
         await run_sql_command(sql_path, [session_id, location])
 
     async def get_location(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Location_now-r.sql"
+        # [dev 반영] -r 제거
+        sql_path = self.query_dir / "INQUIRY" / "Location_now.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_progress(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Progress_get-r.sql"
+        # [dev 반영] -r 제거
+        sql_path = self.query_dir / "INQUIRY" / "Progress_get.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -36,7 +39,8 @@ class ProgressRepository(BaseRepository):
         return ActChangeResult(session_id=session_id, current_act=act)
 
     async def get_act(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Current_act-r.sql"
+        # [dev 반영] -r 제거
+        sql_path = self.query_dir / "INQUIRY" / "Current_act.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -72,7 +76,8 @@ class ProgressRepository(BaseRepository):
         return SequenceChangeResult(session_id=session_id, current_sequence=sequence)
 
     async def get_sequence(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Current_sequence-r.sql"
+        # [dev 반영] -r 제거
+        sql_path = self.query_dir / "INQUIRY" / "Current_sequence.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]

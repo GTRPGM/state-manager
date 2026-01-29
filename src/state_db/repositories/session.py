@@ -43,7 +43,8 @@ class SessionRepository(BaseRepository):
         await run_sql_command(sql_path, [session_id])
 
     async def get_info(self, session_id: str) -> SessionInfo:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return SessionInfo.model_validate(result[0])
@@ -55,16 +56,19 @@ class SessionRepository(BaseRepository):
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_all_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_paused_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_ended_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]

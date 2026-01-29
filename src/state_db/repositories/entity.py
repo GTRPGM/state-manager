@@ -16,7 +16,7 @@ from state_db.repositories.base import BaseRepository
 class EntityRepository(BaseRepository):
     # NPC
     async def get_session_npcs(self, session_id: str) -> List[NPCInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc.sql"
         results = await run_sql_query(sql_path, [session_id])
         return [NPCInfo.model_validate(row) for row in results]
 
@@ -92,5 +92,5 @@ class EntityRepository(BaseRepository):
         return RemoveEntityResult()
 
     async def defeat_enemy(self, session_id: str, enemy_instance_id: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "defeated_enemy-r.sql"
+        sql_path = self.query_dir / "UPDATE" / "defeated_enemy.sql"
         await run_sql_command(sql_path, [enemy_instance_id, session_id])

@@ -1,27 +1,18 @@
--- [작업] 아이템 습득 및 턴/로그 통합 기록
--- [설명] 인벤토리에 수량을 반영하고, record_state_change를 통해 턴을 넘깁니다.
+-- --------------------------------------------------------------------
+-- earn_item.sql
+-- 아이템 습득 처리
+-- $1: session_id, $2: player_id, $3: item_id, $4: quantity
+-- --------------------------------------------------------------------
 
-BEGIN;
-
--- 1. 인벤토리 수량 반영 (UPSERT)
+-- 인벤토리 수량 반영 (UPSERT)
 INSERT INTO player_inventory (player_id, item_id, quantity)
-VALUES (:player_id, :item_id, :amount)
+VALUES ($2, $3, $4)
 ON CONFLICT (player_id, item_id)
-DO UPDATE SET 
+DO UPDATE SET
     quantity = player_inventory.quantity + EXCLUDED.quantity,
-    updated_at = NOW();
-
--- 2. 통합 턴 기록 및 전진
--- state_changes에 습득 정보를, related_entities에 관련 ID를 포함
-SELECT record_state_change(
-    :session_id, 
-    'item_acquisition', 
-    jsonb_build_object(
-        'inventory_added', ARRAY[:item_id],
-        'added_quantity', :amount,
-        'message', (SELECT name FROM item WHERE item_id = :item_id) || '을(를) 얻었습니다.'
-    ),
-    ARRAY[:player_id, :item_id]::UUID[]
-);
-
-COMMIT;
+    updated_at = NOW()
+RETURNING
+    player_id,
+    item_id,
+    quantity,
+    updated_at;
