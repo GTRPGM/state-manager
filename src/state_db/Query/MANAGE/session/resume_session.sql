@@ -1,2 +1,5 @@
--- 일시정지된 세션을 다시 활성화
-SELECT resume_session(:session_id);
+-- resume_session.sql
+UPDATE session
+SET status = 'active',
+    paused_at = NULL
+WHERE session_id = $1::UUID;

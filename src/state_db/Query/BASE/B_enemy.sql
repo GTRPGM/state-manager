@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS enemy (
     -- 엔티티 필수
-    enemy_id UUID PRIMARY KEY,
+    enemy_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type VARCHAR(50) NOT NULL DEFAULT 'enemy',
     name VARCHAR(100) NOT NULL,
     description TEXT DEFAULT '',
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS enemy (
     -- session/시나리오 참조
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
     scenario_id UUID NOT NULL,
-    scenario_enemy_id UUID NOT NULL,  -- 시나리오 내 Enemy ID
+    scenario_enemy_id VARCHAR(100) NOT NULL,  -- 시나리오 내 Enemy ID
 
     -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -41,16 +41,13 @@ CREATE TABLE IF NOT EXISTS enemy (
     dropped_items UUID[] DEFAULT ARRAY[]::UUID[]
 );
 
+-- 만약 이미 테이블이 있다면 DEFAULT 추가
+ALTER TABLE enemy ALTER COLUMN enemy_id SET DEFAULT gen_random_uuid();
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_enemy_session_id ON enemy(session_id);
 CREATE INDEX IF NOT EXISTS idx_enemy_scenario_id ON enemy(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_enemy_scenario_enemy_id ON enemy(scenario_enemy_id);
-
--- 주석
-COMMENT ON TABLE enemy IS '시나리오에서 정의된 적(Enemy) 테이블';
-COMMENT ON COLUMN enemy.enemy_id IS 'Enemy 고유 ID (인스턴스)';
-COMMENT ON COLUMN enemy.session_id IS 'Enemy가 속한 세션 ID';
-COMMENT ON COLUMN enemy.scenario_enemy_id IS '시나리오에서의 Enemy 템플릿 ID';
 
 -- 타임스탬프 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_enemy_updated_at()

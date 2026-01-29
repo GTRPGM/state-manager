@@ -1,2 +1,5 @@
--- 세션을 종료 상태로 변경
-SELECT end_session(:session_id);
+-- end_session.sql
+UPDATE session
+SET status = 'ended',
+    ended_at = NOW()
+WHERE session_id = $1::UUID;

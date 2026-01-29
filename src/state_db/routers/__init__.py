@@ -8,9 +8,17 @@ This package contains separated routers organized by Query folder structure:
 - router_TRACE: History tracking and analysis (Query/TRACE)
 """
 
-from . import router_INQUIRY, router_MANAGE, router_START, router_TRACE, router_UPDATE
+from . import (
+    router_INJECT,
+    router_INQUIRY,
+    router_MANAGE,
+    router_START,
+    router_TRACE,
+    router_UPDATE,
+)
 
 __all__ = [
+    "router_INJECT",
     "router_START",
     "router_INQUIRY",
     "router_UPDATE",

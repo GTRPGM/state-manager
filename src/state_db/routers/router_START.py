@@ -11,7 +11,7 @@ from state_db.schemas import SessionStartRequest
 
 from .dependencies import get_session_repo
 
-router = APIRouter()
+router = APIRouter(tags=["Session Lifecycle"])
 
 
 @router.post(
