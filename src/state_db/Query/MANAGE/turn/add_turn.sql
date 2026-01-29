@@ -1,10 +1,9 @@
--- --------------------------------------------------------------------
--- 4-1. Turn 진행 (상태 변경 트랜잭션 commit 시)
--- 용도: RuleEngine 판정 후 상태 확정 시 호출
--- --------------------------------------------------------------------
-
--- Turn 증가 함수 호출
-SELECT advance_turn($1);  -- session_id
-
--- 반환값: 새로운 turn_number (INTEGER)
--- 예: 6
+-- [작업] RuleEngine 판정 후 상태 확정 시 호출
+-- [기능] 1. session 테이블의 current_turn 1 증가
+--       2. 증가된 번호로 turn 테이블에 신규 이력 생성
+SELECT record_state_change(
+    :session_id, 
+    :turn_type,        -- 'action', 'event', 'system', 'combat_action' 등
+    :state_changes,    -- JSONB 데이터 (예: '{"player_hp": -10, "gold": 50}')
+    :related_entities  -- UUID[] (영향을 받은 엔티티 ID 배열, 생략 가능)
+);
