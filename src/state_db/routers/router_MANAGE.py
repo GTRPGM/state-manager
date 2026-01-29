@@ -13,7 +13,12 @@ from state_db.models import (
     SpawnResult,
     TurnAddResult,
 )
-from state_db.repositories import EntityRepository, SessionRepository
+from state_db.repositories import (
+    EntityRepository,
+    LifecycleStateRepository,
+    ProgressRepository,
+    SessionRepository,
+)
 from state_db.schemas import (
     ActChangeRequest,
     EnemySpawnRequest,
@@ -22,7 +27,12 @@ from state_db.schemas import (
     SequenceChangeRequest,
 )
 
-from .dependencies import get_entity_repo, get_session_repo
+from .dependencies import (
+    get_entity_repo,
+    get_lifecycle_repo,
+    get_progress_repo,
+    get_session_repo,
+)
 
 router = APIRouter(tags=["Session Management"])
 
@@ -133,7 +143,7 @@ async def remove_npc_endpoint(
 async def change_phase_endpoint(
     session_id: str,
     request: PhaseChangeRequest,
-    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+    repo: Annotated[LifecycleStateRepository, Depends(get_lifecycle_repo)],
 ) -> Dict[str, Any]:
     result = await repo.change_phase(session_id, request.new_phase)
     return {"status": "success", "data": result}
@@ -143,7 +153,8 @@ async def change_phase_endpoint(
     "/session/{session_id}/turn/add", response_model=WrappedResponse[TurnAddResult]
 )
 async def add_turn_endpoint(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str,
+    repo: Annotated[LifecycleStateRepository, Depends(get_lifecycle_repo)],
 ) -> Dict[str, Any]:
     result = await repo.add_turn(session_id)
     return {"status": "success", "data": result}
@@ -160,7 +171,7 @@ async def add_turn_endpoint(
 async def change_act_endpoint(
     session_id: str,
     request: ActChangeRequest,
-    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
 ) -> Dict[str, Any]:
     result = await repo.change_act(session_id, request.new_act)
     return {"status": "success", "data": result}
@@ -173,7 +184,7 @@ async def change_act_endpoint(
 async def change_sequence_endpoint(
     session_id: str,
     request: SequenceChangeRequest,
-    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
 ) -> Dict[str, Any]:
     result = await repo.change_sequence(session_id, request.new_sequence)
     return {"status": "success", "data": result}
@@ -183,7 +194,7 @@ async def change_sequence_endpoint(
     "/session/{session_id}/act/add", response_model=WrappedResponse[ActChangeResult]
 )
 async def add_act_endpoint(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.add_act(session_id)
     return {"status": "success", "data": result}
@@ -193,7 +204,7 @@ async def add_act_endpoint(
     "/session/{session_id}/act/back", response_model=WrappedResponse[ActChangeResult]
 )
 async def back_act_endpoint(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.back_act(session_id)
     return {"status": "success", "data": result}
@@ -204,7 +215,7 @@ async def back_act_endpoint(
     response_model=WrappedResponse[SequenceChangeResult],
 )
 async def add_sequence_endpoint(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.add_sequence(session_id)
     return {"status": "success", "data": result}
@@ -215,7 +226,7 @@ async def add_sequence_endpoint(
     response_model=WrappedResponse[SequenceChangeResult],
 )
 async def back_sequence_endpoint(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.back_sequence(session_id)
     return {"status": "success", "data": result}

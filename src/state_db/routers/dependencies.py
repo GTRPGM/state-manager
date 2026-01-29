@@ -2,7 +2,9 @@
 
 from state_db.repositories import (
     EntityRepository,
+    LifecycleStateRepository,
     PlayerRepository,
+    ProgressRepository,
     ScenarioRepository,
     SessionRepository,
     TraceRepository,
@@ -12,6 +14,14 @@ from state_db.services import StateService
 
 def get_session_repo() -> SessionRepository:
     return SessionRepository()
+
+
+def get_progress_repo() -> ProgressRepository:
+    return ProgressRepository()
+
+
+def get_lifecycle_repo() -> LifecycleStateRepository:
+    return LifecycleStateRepository()
 
 
 def get_player_repo() -> PlayerRepository:

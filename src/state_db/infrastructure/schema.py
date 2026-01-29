@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from .database import DatabaseManager, set_age_path
+from .connection import DatabaseManager, set_age_path
 
 logger = logging.getLogger("state_db.infrastructure.schema")
 
