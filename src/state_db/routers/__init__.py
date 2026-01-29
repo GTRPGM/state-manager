@@ -14,6 +14,7 @@ from . import (
     router_MANAGE,
     router_START,
     router_TRACE,
+    router_TRACE_phase,
     router_UPDATE,
 )
 
@@ -24,4 +25,5 @@ __all__ = [
     "router_UPDATE",
     "router_MANAGE",
     "router_TRACE",
+    "router_TRACE_phase",
 ]
