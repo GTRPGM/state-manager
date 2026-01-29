@@ -734,7 +734,9 @@ class APIKeyDeleteResponse(BaseModel):
 class ScenarioInjectNPC(BaseModel):
     """시나리오 주입용 NPC 정보"""
 
-    scenario_npc_id: str = Field(..., description="시나리오 내 고유 NPC ID (UUID 형식 권장)")
+    scenario_npc_id: str = Field(
+        ..., description="시나리오 내 고유 NPC ID (UUID 형식 권장)"
+    )
     name: str = Field(..., description="NPC 이름")
     description: str = Field(default="", description="NPC 설명")
     tags: List[str] = Field(default=["npc"], description="태그 목록")
@@ -763,7 +765,9 @@ class ScenarioInjectEnemy(BaseModel):
         },
         description="Enemy 초기 상태 (JSONB)",
     )
-    dropped_items: List[str] = Field(default_factory=list, description="드롭 아이템 UUID 목록")
+    dropped_items: List[str] = Field(
+        default_factory=list, description="드롭 아이템 UUID 목록"
+    )
 
 
 class ScenarioInjectItem(BaseModel):
@@ -773,7 +777,9 @@ class ScenarioInjectItem(BaseModel):
     name: str = Field(..., description="아이템 이름")
     description: str = Field(default="", description="아이템 설명")
     item_type: str = Field(default="misc", description="아이템 타입")
-    meta: Dict[str, Any] = Field(default_factory=dict, description="아이템 메타 정보 (JSONB)")
+    meta: Dict[str, Any] = Field(
+        default_factory=dict, description="아이템 메타 정보 (JSONB)"
+    )
 
 
 class ScenarioInjectRelation(BaseModel):
@@ -799,8 +805,12 @@ class ScenarioInjectRequest(BaseModel):
     total_acts: int = Field(default=3, description="총 Act 수", ge=1)
 
     npcs: List[ScenarioInjectNPC] = Field(default_factory=list, description="NPC 목록")
-    enemies: List[ScenarioInjectEnemy] = Field(default_factory=list, description="Enemy 목록")
-    items: List[ScenarioInjectItem] = Field(default_factory=list, description="아이템 목록")
+    enemies: List[ScenarioInjectEnemy] = Field(
+        default_factory=list, description="Enemy 목록"
+    )
+    items: List[ScenarioInjectItem] = Field(
+        default_factory=list, description="아이템 목록"
+    )
     relations: List[ScenarioInjectRelation] = Field(
         default_factory=list, description="관계(Edge) 목록"
     )
@@ -822,7 +832,10 @@ class ScenarioInjectRequest(BaseModel):
                         "name": "Old Hermit",
                         "description": "A wise man living in the woods.",
                         "tags": ["npc", "quest-giver"],
-                        "state": {"numeric": {"HP": 50, "MP": 100, "SAN": 50}, "boolean": {}},
+                        "state": {
+                            "numeric": {"HP": 50, "MP": 100, "SAN": 50},
+                            "boolean": {},
+                        },
                     }
                 ],
                 "enemies": [
