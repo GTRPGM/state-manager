@@ -86,7 +86,7 @@ class SessionRepository(WorldStateRepository):
     # Session Utilities
 
     async def phase_check(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "phase" / "phase_check.sql"
+        sql_path = self.query_dir / "MANAGE" / "phase" / "phase_check-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]

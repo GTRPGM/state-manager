@@ -34,7 +34,7 @@ class WorldStateRepository(BaseRepository):
 
     # Phase
     async def change_phase(self, session_id: str, phase: str) -> PhaseChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "phase" / "change_phase.sql"
+        sql_path = self.query_dir / "UPDATE" / "phase" / "update_phase.sql"
         await run_sql_command(sql_path, [session_id, phase])
         return PhaseChangeResult(session_id=session_id, current_phase=phase)
 
@@ -46,7 +46,7 @@ class WorldStateRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session phase not found")
 
     async def is_action_allowed(self, session_id: str, action: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "phase" / "is_action_allowed.sql"
+        sql_path = self.query_dir / "INQUIRY" / "phase" / "ALLOWED_by_phase.sql"
         result = await run_sql_query(sql_path, [session_id, action])
         if result:
             return result[0]
