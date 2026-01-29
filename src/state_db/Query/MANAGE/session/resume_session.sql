@@ -1,9 +1,2 @@
--- --------------------------------------------------------------------
--- 7-3. Session 재개
--- 용도: 일시정지된 게임 재개
--- API: POST /state/session/{session_id}/resume
--- --------------------------------------------------------------------
-
-SELECT resume_session($1);  -- session_id
-
--- 반환값: BOOLEAN
+-- 일시정지된 세션을 다시 활성화
+SELECT resume_session(:session_id);

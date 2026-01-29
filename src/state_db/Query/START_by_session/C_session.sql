@@ -1,3 +1,7 @@
--- 신규 세션 생성 (이 쿼리 하나로 트리거가 작동하여 Player, Turn 0, Phase 0, Enemy 복제가 연쇄 발생)
-INSERT INTO session (session_id, scenario_id, current_phase, status)
-VALUES ('{target_session_uuid}', '{target_scenario_uuid}', 'exploration', 'active');
+-- create_session 함수를 사용하여 세션 생성 (Enemy 자동 복제 트리거 발생)
+SELECT create_session(
+    :scenario_id, 
+    :current_act, 
+    :current_sequence, 
+    :location
+);
