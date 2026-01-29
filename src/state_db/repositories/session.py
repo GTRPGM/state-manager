@@ -78,7 +78,7 @@ class SessionRepository(BaseRepository):
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_progress(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Progress_get.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Progress_get-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -87,11 +87,11 @@ class SessionRepository(BaseRepository):
     # Location
 
     async def update_location(self, session_id: str, location: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "update_location.sql"
+        sql_path = self.query_dir / "UPDATE" / "update_location-r.sql"
         await run_sql_command(sql_path, [session_id, location])
 
     async def get_location(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Location_now.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Location_now-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -155,7 +155,7 @@ class SessionRepository(BaseRepository):
     # Act
 
     async def change_act(self, session_id: str, act: int) -> ActChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "act" / "select_act-r.sql"
+        sql_path = self.query_dir / "MANAGE" / "act" / "select_act.sql"
         await run_sql_command(sql_path, [session_id, act])
         return ActChangeResult(session_id=session_id, current_act=act)
 
@@ -174,7 +174,7 @@ class SessionRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_act(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Current_act.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Current_act-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -192,7 +192,7 @@ class SessionRepository(BaseRepository):
     async def change_sequence(
         self, session_id: str, sequence: int
     ) -> SequenceChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "sequence" / "select_sequence-r.sql"
+        sql_path = self.query_dir / "MANAGE" / "sequence" / "select_sequence.sql"
         await run_sql_command(sql_path, [session_id, sequence])
         return SequenceChangeResult(session_id=session_id, current_sequence=sequence)
 
@@ -211,7 +211,7 @@ class SessionRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_sequence(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Current_sequence.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Current_sequence-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
