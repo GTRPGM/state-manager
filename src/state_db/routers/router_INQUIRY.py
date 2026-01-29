@@ -18,7 +18,7 @@ from state_db.repositories import EntityRepository, PlayerRepository, SessionRep
 
 from .dependencies import get_entity_repo, get_player_repo, get_session_repo
 
-router = APIRouter()
+router = APIRouter(tags=["State Inquiry"])
 
 
 # ====================================================================

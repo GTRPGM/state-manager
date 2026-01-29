@@ -1,10 +1,5 @@
--- --------------------------------------------------------------------
--- 7-1. Session 일시정지 (스냅샷 자동 생성)
--- 용도: 게임 임시 중단
--- API: POST /state/session/{session_id}/pause
--- --------------------------------------------------------------------
-
-SELECT pause_session($1);  -- session_id
-
--- 반환값: BOOLEAN
--- 트리거로 자동으로 session_snapshot 생성됨
+-- pause_session.sql
+UPDATE session
+SET status = 'paused',
+    paused_at = NOW()
+WHERE session_id = $1::UUID;

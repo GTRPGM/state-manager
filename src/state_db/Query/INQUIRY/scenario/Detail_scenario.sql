@@ -1,0 +1,1 @@
+SELECT * FROM scenario WHERE scenario_id = :scenario_id;

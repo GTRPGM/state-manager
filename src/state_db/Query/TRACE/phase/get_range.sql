@@ -1,14 +1,11 @@
--- 특정 Turn 범위의 Phase 전환 조회
--- 용도: "Turn 5~15 사이에 Phase가 몇 번 바뀌었나"
--- API: GET /trace/session/{session_id}/phases/range?start_turn=5&end_turn=15
-
+-- [용도] 특정 Turn 범위 내에서 발생한 Phase 전환 추적
 SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
     transition_reason,
     transitioned_at
-FROM phase_history
-WHERE session_id = $1
-  AND turn_at_transition BETWEEN $2 AND $3
+FROM phase
+WHERE session_id = :session_id
+  AND turn_at_transition BETWEEN :start_turn AND :end_turn
 ORDER BY turn_at_transition ASC;

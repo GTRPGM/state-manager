@@ -1,7 +1,3 @@
--- 가장 최근 Phase 전환 조회
--- 용도: "마지막으로 Phase가 바뀐 게 언제였지?"
--- API: GET /trace/session/{session_id}/phase/latest
-
 SELECT
     previous_phase,
     new_phase,

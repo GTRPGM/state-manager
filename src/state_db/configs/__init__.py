@@ -1,7 +1,6 @@
 # src/gm/state_db/configs/__init__.py
 # 설정 모듈 초기화
 
-from state_db.configs.api_routers import API_ROUTERS
 from state_db.configs.logging_config import LOGGING_CONFIG
 from state_db.configs.setting import (
     AGE_GRAPH_NAME,
@@ -18,8 +17,6 @@ from state_db.configs.setting import (
 )
 
 __all__ = [
-    # API Routers
-    "API_ROUTERS",
     # Logging
     "LOGGING_CONFIG",
     # Server

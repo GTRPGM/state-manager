@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "act_concept.json",
+  "title": "Act Concept Schema",
+  "description": "플레이 세션 내 초기화 단위로, session이 선택한 story의 하위 단위이며 sequence/phase 초기화에 사용된다.",
+  "type": "object",
+  "required": ["id", "entity_type", "meta"],
+
+  "properties": {
+    "id": {
+      "description": "Act 고유 식별자",
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_type": {
+      "description": "엔티티 유형",
+      "type": "string",
+      "enum": ["act"]
+    },
+    "meta": {
+      "description": "엔티티 공통 메타데이터",
+      "type": "object",
+      "required": ["created_at", "updated_at"],
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "description": "Act 상태 및 초기화 관련 값",
+      "type": "object",
+      "properties": {
+        "current_sequence": {
+          "description": "이 act에서 시작하는 sequence 번호",
+          "type": "integer",
+          "default": 1
+        },
+        "current_phase": {
+          "description": "이 act 시작 시 session이 설정할 phase",
+          "type": "string",
+          "enum": ["exploration","combat","dialogue","rest"],
+          "default": "exploration"
+        },
+        "location": {
+          "description": "이 act에서 기본으로 설정되는 위치",
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "relations": {
+      "description": "다른 엔티티와의 관계 정보",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "default": {}
+    }
+  },
+
+  "additionalProperties": false,
+  "ownership": {
+    "definition": "story",
+    "selection": "session"
+  },
+  "used_by": ["GM","ScenarioWriter","RuleEngine","play_cache","play_log_DB"]
+}

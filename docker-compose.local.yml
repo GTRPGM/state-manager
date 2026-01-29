@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres-ex
+    container_name: gtrpgm-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=parking_db
+    ports:
+      - "5435:5432"
+    networks:
+      - gtrpgm-net
+
+  state-manager:
+    build: .
+    container_name: state-manager
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8030:8030"
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=parking_db
+      - DB_PORT=5432
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8030
+      - APP_ENV=local
+      - AGE_GRAPH_NAME=state_db
+    networks:
+      - gtrpgm-net
+
+networks:
+  gtrpgm-net:
+    driver: bridge

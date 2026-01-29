@@ -46,13 +46,17 @@ class DatabaseManager:
 
 
 async def set_age_path(conn: asyncpg.Connection) -> None:
-    """Apache AGE 사용을 위한 search_path 설정"""
-    await conn.execute('SET search_path = ag_catalog, "$user", public;')
+    """Apache AGE 사용을 위한 search_path 설정 (public 테이블 우선)"""
+    await conn.execute('SET search_path = public, ag_catalog, "$user";')
 
 
 async def init_age_graph() -> None:
     """Apache AGE 그래프 초기화"""
     async with DatabaseManager.get_connection() as conn:
+        # 0. extension 로드 및 기초 설정
+        await conn.execute("CREATE EXTENSION IF NOT EXISTS age CASCADE;")
+        await conn.execute("LOAD 'age';")
+
         await set_age_path(conn)
         graph_exists = await conn.fetchval(
             "SELECT EXISTS (SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1)",
@@ -159,11 +163,13 @@ async def run_cypher_query(
     cypher: str, params: Optional[List[Any]] = None
 ) -> List[Dict[str, Any]]:
     """Cypher 쿼리 실행"""
+    import json
+
     async with DatabaseManager.get_connection() as conn:
         await set_age_path(conn)
         wrapped_query = f"""
-            SELECT result::jsonb
-            FROM cypher('{AGE_GRAPH_NAME}', $$
+            SELECT result::text as result
+            FROM ag_catalog.cypher('{AGE_GRAPH_NAME}'::name, $$
                 {cypher}
             $$) AS (result agtype);
         """
@@ -171,19 +177,25 @@ async def run_cypher_query(
             rows = await conn.fetch(wrapped_query, *params)
         else:
             rows = await conn.fetch(wrapped_query)
-    return [row["result"] for row in rows]
+
+    return [json.loads(row["result"]) for row in rows]
 
 
 async def startup() -> None:
     """애플리케이션 시작 시 초기화"""
+    from .schema import initialize_schema
+
     await DatabaseManager.get_pool()
 
     # 쿼리 로드 (상위 폴더의 Query 디렉토리)
     query_dir = Path(__file__).parent.parent / "Query"
     load_queries(query_dir)
 
-    # AGE 초기화
+    # 1. AGE 초기화
     await init_age_graph()
+
+    # 2. 스키마 초기화 (테이블 및 트리거 생성)
+    await initialize_schema(query_dir)
 
 
 async def shutdown() -> None:

@@ -1,7 +1,3 @@
--- 특정 Phase로의 전환 이력만 조회
--- 용도: "언제 combat으로 전환했는지" 확인
--- API: GET /trace/session/{session_id}/phases/by-phase?phase=combat
-
 SELECT
     previous_phase,
     new_phase,

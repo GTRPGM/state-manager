@@ -105,11 +105,8 @@ def register_routers(app: FastAPI):
 
     for router in API_ROUTERS:
         if hasattr(router, "router"):
-            app.include_router(
-                router.router,
-                prefix="/state",
-                tags=["State Management"],
-            )
+            # 개별 라우터에서 정의한 tags를 사용하도록 수정
+            app.include_router(router.router, prefix="/state")
         else:
             logger.error(f"❌ 라우터 객체를 찾을 수 없습니다: {router.__name__}")
 
@@ -129,6 +126,11 @@ def read_root() -> Dict[str, str]:
         "service": "State Manager",
         "version": "1.0.0",
     }
+
+
+@app.get("/health", description="서버 헬스체크", summary="헬스체크")
+def health_check() -> Dict[str, str]:
+    return {"status": "healthy"}
 
 
 @app.get("/health/db", description="DB 연결 상태 확인", summary="DB 헬스체크")
