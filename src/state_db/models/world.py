@@ -1,4 +1,5 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -18,6 +19,9 @@ class PhaseChangeResult(BaseModel):
 class TurnAddResult(BaseModel):
     session_id: str
     current_turn: int
+    phase_at_turn: Optional[str] = None
+    turn_type: Optional[str] = None
+    created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 

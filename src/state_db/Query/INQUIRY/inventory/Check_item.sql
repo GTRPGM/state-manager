@@ -1,4 +1,9 @@
--- [용도] 특정 아이템(예: 포션, 열쇠)이 충분히 있는지 확인
+-- --------------------------------------------------------------------
+-- Check_item.sql
+-- 특정 아이템(예: 포션, 열쇠)이 충분히 있는지 확인
+-- $1: player_id, $2: item_id
+-- --------------------------------------------------------------------
+
 SELECT quantity
 FROM player_inventory
-WHERE player_id = :player_id AND item_id = :item_id;
+WHERE player_id = $1 AND item_id = $2;

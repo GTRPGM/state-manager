@@ -50,7 +50,7 @@ class SessionRepository(WorldStateRepository):
     # Session Query
 
     async def get_info(self, session_id: str) -> SessionInfo:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return SessionInfo.model_validate(result[0])
@@ -62,22 +62,22 @@ class SessionRepository(WorldStateRepository):
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_all_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_paused_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_ended_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_progress(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Progress_get-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Progress_get.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]

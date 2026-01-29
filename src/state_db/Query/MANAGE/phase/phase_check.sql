@@ -1,8 +1,14 @@
 -- --------------------------------------------------------------------
--- 2-3. Session의 현재 Turn 정보 조회
--- 용도: 상태 변경 트랜잭션의 기준점 확인
+-- phase_check.sql
+-- 현재 세션의 페이즈 상태 확인
+-- $1: session_id
 -- --------------------------------------------------------------------
 
-SELECT current_turn
+SELECT
+    session_id,
+    current_phase,
+    current_turn,
+    status,
+    updated_at
 FROM session
 WHERE session_id = $1;

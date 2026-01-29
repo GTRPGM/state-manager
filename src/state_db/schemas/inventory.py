@@ -9,10 +9,12 @@ class InventoryUpdateRequest(BaseModel):
     player_id: str = Field(
         ...,
         description="플레이어 UUID",
-        json_schema_extra={"example": "player-uuid-123"},
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440002"},
     )
-    item_id: int = Field(
-        ..., description="아이템 ID", gt=0, json_schema_extra={"example": 5}
+    item_id: str = Field(
+        ...,
+        description="아이템 UUID",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440003"},
     )
     quantity: int = Field(
         ...,
@@ -22,7 +24,11 @@ class InventoryUpdateRequest(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"player_id": "player-uuid-123", "item_id": 5, "quantity": 3}
+            "example": {
+                "player_id": "550e8400-e29b-41d4-a716-446655440002",
+                "item_id": "550e8400-e29b-41d4-a716-446655440003",
+                "quantity": 3,
+            }
         }
     )
 
@@ -30,7 +36,7 @@ class InventoryUpdateRequest(BaseModel):
 class InventoryItem(BaseModel):
     """인벤토리 아이템 정보"""
 
-    item_id: int = Field(description="아이템 ID")
+    item_id: str = Field(description="아이템 UUID")
     item_name: str = Field(description="아이템 이름")
     quantity: int = Field(description="보유 수량")
     category: Optional[str] = Field(None, description="아이템 카테고리")

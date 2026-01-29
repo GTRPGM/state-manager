@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ItemInfoResponse(BaseModel):
     """아이템 정보 응답"""
 
-    item_id: int = Field(description="아이템 ID")
+    item_id: str = Field(description="아이템 UUID")
     item_name: str = Field(description="아이템 이름")
     description: Optional[str] = Field(None, description="아이템 설명")
     category: Optional[str] = Field(None, description="아이템 카테고리")
@@ -15,7 +15,7 @@ class ItemInfoResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "item_id": 1,
+                "item_id": "550e8400-e29b-41d4-a716-446655440000",
                 "item_name": "Health Potion",
                 "description": "Restores 50 HP",
                 "category": "consumable",
@@ -31,14 +31,18 @@ class ItemEarnRequest(BaseModel):
     session_id: str = Field(
         ...,
         description="세션 UUID",
-        json_schema_extra={"example": "session-uuid-123"},
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440001"},
     )
     player_id: str = Field(
         ...,
         description="플레이어 UUID",
-        json_schema_extra={"example": "player-uuid-123"},
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440002"},
     )
-    item_id: int = Field(..., description="아이템 ID", json_schema_extra={"example": 1})
+    item_id: str = Field(
+        ...,
+        description="아이템 UUID",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440003"},
+    )
     quantity: int = Field(
         default=1, description="획득 수량", json_schema_extra={"example": 1}
     )
@@ -46,9 +50,9 @@ class ItemEarnRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "session_id": "session-uuid-123",
-                "player_id": "player-uuid-123",
-                "item_id": 1,
+                "session_id": "550e8400-e29b-41d4-a716-446655440001",
+                "player_id": "550e8400-e29b-41d4-a716-446655440002",
+                "item_id": "550e8400-e29b-41d4-a716-446655440003",
                 "quantity": 1,
             }
         }
@@ -61,14 +65,18 @@ class ItemUseRequest(BaseModel):
     session_id: str = Field(
         ...,
         description="세션 UUID",
-        json_schema_extra={"example": "session-uuid-123"},
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440001"},
     )
     player_id: str = Field(
         ...,
         description="플레이어 UUID",
-        json_schema_extra={"example": "player-uuid-123"},
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440002"},
     )
-    item_id: int = Field(..., description="아이템 ID", json_schema_extra={"example": 1})
+    item_id: str = Field(
+        ...,
+        description="아이템 UUID",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440003"},
+    )
     quantity: int = Field(
         default=1, description="사용 수량", json_schema_extra={"example": 1}
     )
@@ -76,9 +84,9 @@ class ItemUseRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "session_id": "session-uuid-123",
-                "player_id": "player-uuid-123",
-                "item_id": 1,
+                "session_id": "550e8400-e29b-41d4-a716-446655440001",
+                "player_id": "550e8400-e29b-41d4-a716-446655440002",
+                "item_id": "550e8400-e29b-41d4-a716-446655440003",
                 "quantity": 1,
             }
         }

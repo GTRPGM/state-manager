@@ -18,11 +18,11 @@ class WorldStateRepository(BaseRepository):
 
     # Location
     async def update_location(self, session_id: str, location: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "update_location-r.sql"
+        sql_path = self.query_dir / "MANAGE" / "location" / "location_change.sql"
         await run_sql_command(sql_path, [session_id, location])
 
     async def get_location(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Location_now-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Location_now.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -39,7 +39,7 @@ class WorldStateRepository(BaseRepository):
         return PhaseChangeResult(session_id=session_id, current_phase=phase)
 
     async def get_phase(self, session_id: str) -> PhaseChangeResult:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_phase-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_phase.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return PhaseChangeResult.model_validate(result[0])
@@ -61,7 +61,7 @@ class WorldStateRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_turn(self, session_id: str) -> TurnAddResult:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return TurnAddResult.model_validate(result[0])
@@ -74,7 +74,7 @@ class WorldStateRepository(BaseRepository):
         return ActChangeResult(session_id=session_id, current_act=act)
 
     async def get_act(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Current_act-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Current_act.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -89,7 +89,7 @@ class WorldStateRepository(BaseRepository):
         return SequenceChangeResult(session_id=session_id, current_sequence=sequence)
 
     async def get_sequence(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Current_sequence-r.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Current_sequence.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]

@@ -1,7 +1,7 @@
 -- --------------------------------------------------------------------
--- Session_active.sql
--- 활성 세션 조회 (플레이어 ID 포함)
--- 용도: 현재 진행 중인 세션 목록 확인
+-- Session_paused.sql
+-- 일시정지된 세션 조회 (플레이어 ID 포함)
+-- 용도: 일시정지 상태의 세션 목록 확인
 -- --------------------------------------------------------------------
 
 SELECT
@@ -20,5 +20,5 @@ SELECT
     s.updated_at
 FROM session s
 LEFT JOIN player p ON s.session_id = p.session_id
-WHERE s.status = 'active'
+WHERE s.status = 'paused'
 ORDER BY s.started_at DESC;
