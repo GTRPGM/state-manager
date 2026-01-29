@@ -3,6 +3,7 @@
 -- 플레이어 엔티티 테이블 구조 (Base)
 -- ====================================================================
 
+
 CREATE TABLE IF NOT EXISTS player (
     -- 엔티티 필수
     player_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

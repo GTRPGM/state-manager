@@ -1,9 +1,3 @@
-from .auth import (
-    APIKeyCreateRequest,
-    APIKeyCreateResponse,
-    APIKeyDeleteResponse,
-    APIKeyInfo,
-)
 from .base import (
     EnemyBase,
     EntityBase,
@@ -27,12 +21,15 @@ from .player import (
     PlayerStatsUpdateRequest,
 )
 from .scenario import (
+    ScenarioActInject,
+    ScenarioInfo,
     ScenarioInjectEnemy,
     ScenarioInjectItem,
     ScenarioInjectNPC,
     ScenarioInjectRelation,
     ScenarioInjectRequest,
     ScenarioInjectResponse,
+    ScenarioSequenceInject,
 )
 from .session import (
     SessionEndResponse,
@@ -84,14 +81,13 @@ __all__ = [
     "PhaseChangeRequest",
     "ActChangeRequest",
     "SequenceChangeRequest",
-    "APIKeyCreateRequest",
-    "APIKeyCreateResponse",
-    "APIKeyInfo",
-    "APIKeyDeleteResponse",
+    "ScenarioActInject",
+    "ScenarioSequenceInject",
     "ScenarioInjectNPC",
     "ScenarioInjectEnemy",
     "ScenarioInjectItem",
     "ScenarioInjectRelation",
     "ScenarioInjectRequest",
     "ScenarioInjectResponse",
+    "ScenarioInfo",
 ]

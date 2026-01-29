@@ -72,6 +72,7 @@ async def init_age_graph() -> None:
 def load_queries(query_dir: Path) -> None:
     """특정 디렉토리의 SQL 파일들을 캐시에 로드"""
     global SQL_CACHE
+    SQL_CACHE.clear()  # 기존 캐시 초기화 (수정 사항 반영 보장)
     count = 0
     for sql_file in query_dir.rglob("*.sql"):
         try:

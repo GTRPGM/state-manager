@@ -84,26 +84,42 @@ class APIVerifier:
     def run(self):
         # 1. Inject Scenario
         print("[1] Injecting Scenario...")
+        # 기획자가 작성하듯 직관적인 ID 사용
         scenario_data = {
-            "title": "Full Verification Scenario",
+            "title": "Intuitiveness Test Scenario",
+            "acts": [
+                {
+                    "id": "act-1",
+                    "name": "시작의 마을",
+                    "description": "평화로운 마을에서 시작합니다.",
+                    "sequences": ["seq-tavern", "seq-field"],
+                }
+            ],
+            "sequences": [
+                {
+                    "id": "seq-tavern",
+                    "name": "주점 대화",
+                    "location_name": "광장 주점",
+                    "description": "술 냄새가 진동하는 주점입니다.",
+                    "exit_triggers": ["NPC와 대화 완료"],
+                    "npcs": ["npc-merchant-kim"],
+                    "enemies": [],
+                    "items": [],
+                }
+            ],
             "npcs": [
                 {
-                    "scenario_npc_id": str(uuid.uuid4()),
-                    "name": "Merchant Kim",
-                    "description": "Helper",
+                    "scenario_npc_id": "npc-merchant-kim",
+                    "name": "상인 김씨",
+                    "description": "물건을 파는 상인입니다.",
+                    "state": {"numeric": {"HP": 100}},
                 }
             ],
-            "enemies": [
-                {
-                    "scenario_enemy_id": str(uuid.uuid4()),
-                    "name": "Wild Wolf",
-                    "description": "Fierce",
-                }
-            ],
+            "enemies": [],
             "items": [
                 {
-                    "item_id": str(uuid.uuid4()),
-                    "name": "Basic Sword",
+                    "item_id": "item-basic-sword",
+                    "name": "녹슨 칼",
                     "item_type": "equipment",
                 }
             ],
@@ -114,9 +130,19 @@ class APIVerifier:
         )
         if res and "data" in res:
             self.scenario_id = res["data"]["scenario_id"]
+            print(f"  [DEBUG] Received Scenario ID: {self.scenario_id}")
+        else:
+            print(f"  [!] Failed to get scenario_id from injection response: {res}")
+            return
+
+        # 1.1 Scenario Inquiry
+        print("[1.1] Testing Scenario Inquiry...")
+        self.check("List Scenarios", "GET", "/state/scenarios")
+        self.check("Get Scenario Detail", "GET", f"/state/scenario/{self.scenario_id}")
 
         # 2. Session Start
         print("[2] Starting Session...")
+        print(f"  [DEBUG] Using Scenario ID for Session Start: {self.scenario_id}")
         start_data = {"scenario_id": self.scenario_id, "location": "Test Field"}
         res = self.check("Start Session", "POST", "/state/session/start", start_data)
         if res and "data" in res:

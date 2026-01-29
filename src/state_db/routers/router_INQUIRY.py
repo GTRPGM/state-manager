@@ -11,14 +11,47 @@ from state_db.models import (
     InventoryItem,
     NPCInfo,
     PhaseChangeResult,
+    ScenarioActInfo,
     SessionInfo,
     TurnAddResult,
 )
-from state_db.repositories import EntityRepository, PlayerRepository, SessionRepository
+from state_db.repositories import (
+    EntityRepository,
+    PlayerRepository,
+    ScenarioRepository,
+    SessionRepository,
+)
+from state_db.schemas import ScenarioInfo
 
-from .dependencies import get_entity_repo, get_player_repo, get_session_repo
+from .dependencies import (
+    get_entity_repo,
+    get_player_repo,
+    get_scenario_repo,
+    get_session_repo,
+)
 
 router = APIRouter(tags=["State Inquiry"])
+
+
+# ====================================================================
+# 시나리오 조회
+# ====================================================================
+
+
+@router.get("/scenarios", response_model=WrappedResponse[List[ScenarioInfo]])
+async def get_all_scenarios_endpoint(
+    repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)],
+) -> Dict[str, Any]:
+    result = await repo.get_all_scenarios()
+    return {"status": "success", "data": result}
+
+
+@router.get("/scenario/{scenario_id}", response_model=WrappedResponse[ScenarioInfo])
+async def get_scenario_endpoint(
+    scenario_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_scenario(scenario_id)
+    return {"status": "success", "data": result}
 
 
 # ====================================================================
@@ -148,6 +181,17 @@ async def get_act(
     session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_act(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/act/details", response_model=WrappedResponse[ScenarioActInfo]
+)
+async def get_current_act_details(
+    session_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    """현재 세션이 진행 중인 액트의 상세 정보(제목, 설명, 메타데이터)를 조회합니다."""
+    result = await repo.get_current_act_details(session_id)
     return {"status": "success", "data": result}
 
 

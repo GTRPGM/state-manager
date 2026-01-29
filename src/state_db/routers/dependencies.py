@@ -3,6 +3,7 @@
 from state_db.repositories import (
     EntityRepository,
     PlayerRepository,
+    ScenarioRepository,
     SessionRepository,
     TraceRepository,
 )
@@ -23,6 +24,10 @@ def get_entity_repo() -> EntityRepository:
 
 def get_trace_repo() -> TraceRepository:
     return TraceRepository()
+
+
+def get_scenario_repo() -> ScenarioRepository:
+    return ScenarioRepository()
 
 
 def get_state_service() -> StateService:

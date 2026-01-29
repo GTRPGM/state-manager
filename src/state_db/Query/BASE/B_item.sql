@@ -3,9 +3,10 @@
 -- 아이템 엔티티 테이블 구조 (Base)
 -- ====================================================================
 
+
 CREATE TABLE IF NOT EXISTS item (
     -- Rule Engine의 item 고유 ID
-    item_id UUID PRIMARY KEY,
+    item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     -- 엔티티 유형
     entity_type VARCHAR(10) NOT NULL DEFAULT 'item',
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS item (
     -- 세션 참조
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
     scenario_id UUID NOT NULL,
-    scenario_item_id UUID NOT NULL,
+    scenario_item_id VARCHAR(100) NOT NULL, -- 직관적 식별자 (예: 'ITEM_POTION_01')
 
     name VARCHAR(20) NOT NULL,
     description TEXT DEFAULT '',

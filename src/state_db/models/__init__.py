@@ -23,6 +23,7 @@ from .world import (
     ApplyJudgmentSkipped,
     LocationUpdateResult,
     PhaseChangeResult,
+    ScenarioActInfo,
     SequenceChangeResult,
     StateUpdateResult,
     TurnAddResult,

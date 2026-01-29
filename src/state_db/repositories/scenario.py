@@ -1,7 +1,6 @@
 import json
 import logging
 from typing import Any, Dict, List
-from uuid import UUID
 
 from fastapi import HTTPException
 
@@ -18,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 class ScenarioRepository(BaseRepository):
     def _get_query(self, path: Any) -> str:
-        """캐시에서 쿼리를 가져오거나 없으면 새로 로드"""
         query_path = str(path.resolve())
         if query_path not in SQL_CACHE:
             with open(query_path, "r", encoding="utf-8") as f:
@@ -28,140 +26,110 @@ class ScenarioRepository(BaseRepository):
     async def inject_scenario(
         self, request: ScenarioInjectRequest
     ) -> ScenarioInjectResponse:
-        """시나리오와 모든 마스터 데이터를 트랜잭션으로 주입"""
+        """최종 스키마 규격에 맞춰 주입 (Act-Sequence 명칭 사용)"""
 
         async with DatabaseManager.get_connection() as conn:
             await set_age_path(conn)
             async with conn.transaction():
-                # 1. 시나리오 삽입
-                scenario_query = self._get_query(
-                    self.query_dir / "MANAGE" / "scenario" / "inject_scenario.sql"
-                )
-
-                scenario_row = await conn.fetchrow(
-                    scenario_query,
+                # 1. 시나리오
+                scenario_id_row = await conn.fetchrow(
+                    "INSERT INTO scenario (title, description, is_published) VALUES ($1, $2, true) ON CONFLICT (title) DO UPDATE SET description = EXCLUDED.description, updated_at = NOW() RETURNING scenario_id",
                     request.title,
                     request.description,
-                    request.author,
-                    request.version,
-                    request.difficulty,
-                    request.genre,
-                    request.tags,
-                    request.total_acts,
+                )
+                scenario_id = str(scenario_id_row["scenario_id"])
+
+                # 2. 클린업
+                MASTER_SESSION_ID = "00000000-0000-0000-0000-000000000000"
+                await conn.execute(
+                    "DELETE FROM scenario_act WHERE scenario_id = $1", scenario_id
+                )
+                await conn.execute(
+                    "DELETE FROM scenario_sequence WHERE scenario_id = $1", scenario_id
+                )
+                await conn.execute(
+                    "DELETE FROM npc WHERE scenario_id = $1 AND session_id = $2",
+                    scenario_id,
+                    MASTER_SESSION_ID,
+                )
+                await conn.execute(
+                    "DELETE FROM enemy WHERE scenario_id = $1 AND session_id = $2",
+                    scenario_id,
+                    MASTER_SESSION_ID,
+                )
+                await conn.execute(
+                    "DELETE FROM item WHERE scenario_id = $1 AND session_id = $2",
+                    scenario_id,
+                    MASTER_SESSION_ID,
                 )
 
-                if not scenario_row:
-                    raise HTTPException(
-                        status_code=500, detail="Failed to create scenario"
-                    )
-
-                scenario_id = str(scenario_row["scenario_id"])
-
-                # 2. NPC 삽입
-                npc_query = self._get_query(
-                    self.query_dir / "MANAGE" / "npc" / "inject_master_npc.sql"
-                )
-                npc_vertex_query = self._get_query(
-                    self.query_dir / "MANAGE" / "npc" / "inject_vertex_npc.sql"
-                )
-
-                for npc in request.npcs:
-                    # SQL 테이블 삽입
+                # 3. Acts
+                for act in request.acts:
                     await conn.execute(
-                        npc_query,
-                        npc.name,
-                        npc.description,
+                        "INSERT INTO scenario_act (scenario_id, act_id, act_name, act_description, exit_criteria, sequence_ids) VALUES ($1, $2, $3, $4, $5, $6)",
                         scenario_id,
-                        npc.scenario_npc_id,
-                        npc.tags,
-                        json.dumps(npc.state),
-                    )
-                    # AGE 그래프 Vertex 생성
-                    await conn.execute(
-                        npc_vertex_query,
-                        json.dumps(
-                            {
-                                "npc_id": str(
-                                    UUID(int=0)
-                                ),  # Master id is not used for vertex link usually
-                                "session_id": "00000000-0000-0000-0000-000000000000",
-                                "scenario_id": scenario_id,
-                                "scenario_npc_id": npc.scenario_npc_id,
-                                "name": npc.name,
-                                "tags": npc.tags,
-                            }
-                        ),
+                        act.id,
+                        act.name,
+                        act.description,
+                        act.exit_criteria,
+                        act.sequences,
                     )
 
-                # 3. Enemy 삽입
-                enemy_query = self._get_query(
-                    self.query_dir / "MANAGE" / "enemy" / "inject_master_enemy.sql"
-                )
-                enemy_vertex_query = self._get_query(
-                    self.query_dir / "MANAGE" / "enemy" / "inject_vertex_enemy.sql"
-                )
-
-                for enemy in request.enemies:
-                    # SQL 테이블 삽입
+                # 4. Sequences & Entities (Inline Queries for precision)
+                for seq in request.sequences:
                     await conn.execute(
-                        enemy_query,
-                        enemy.name,
-                        enemy.description,
+                        "INSERT INTO scenario_sequence (scenario_id, sequence_id, sequence_name, location_name, description, goal, exit_triggers) VALUES ($1, $2, $3, $4, $5, $6, $7)",
                         scenario_id,
-                        enemy.scenario_enemy_id,
-                        enemy.tags,
-                        json.dumps(enemy.state),
-                        enemy.dropped_items,
-                    )
-                    # AGE 그래프 Vertex 생성
-                    await conn.execute(
-                        enemy_vertex_query,
-                        json.dumps(
-                            {
-                                "enemy_id": str(UUID(int=0)),
-                                "session_id": "00000000-0000-0000-0000-000000000000",
-                                "scenario_id": scenario_id,
-                                "scenario_enemy_id": enemy.scenario_enemy_id,
-                                "name": enemy.name,
-                                "tags": enemy.tags,
-                            }
-                        ),
+                        seq.id,
+                        seq.name,
+                        seq.location_name,
+                        seq.description,
+                        seq.goal,
+                        json.dumps(seq.exit_triggers),
                     )
 
-                # 4. Item 삽입
-                item_query = self._get_query(
-                    self.query_dir / "MANAGE" / "item" / "inject_master_item.sql"
-                )
+                    for npc_id in seq.npcs:
+                        n = next(
+                            (x for x in request.npcs if x.scenario_npc_id == npc_id),
+                            None,
+                        )
+                        if n:
+                            await conn.execute(
+                                "INSERT INTO npc (name, description, scenario_id, scenario_npc_id, session_id, assigned_sequence_id, assigned_location, tags, state) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                                n.name,
+                                n.description,
+                                scenario_id,
+                                n.scenario_npc_id,
+                                MASTER_SESSION_ID,
+                                seq.id,
+                                seq.location_name,
+                                n.tags,
+                                json.dumps(n.state),
+                            )
 
-                for item in request.items:
-                    await conn.execute(
-                        item_query,
-                        item.item_id,
-                        item.name,
-                        item.description,
-                        scenario_id,
-                        item.item_type,
-                        json.dumps(item.meta),
-                    )
-
-                # 5. Relation(Edge) 삽입
-                edge_query = self._get_query(
-                    self.query_dir / "MANAGE" / "scenario" / "inject_edge_relation.sql"
-                )
-                for rel in request.relations:
-                    await conn.execute(
-                        edge_query,
-                        json.dumps(
-                            {
-                                "session_id": "00000000-0000-0000-0000-000000000000",
-                                "from_id": rel.from_id,
-                                "to_id": rel.to_id,
-                                "relation_type": rel.relation_type,
-                                "affinity": rel.affinity,
-                                "meta": rel.meta,
-                            }
-                        ),
-                    )
+                    for enemy_id in seq.enemies:
+                        e = next(
+                            (
+                                x
+                                for x in request.enemies
+                                if x.scenario_enemy_id == enemy_id
+                            ),
+                            None,
+                        )
+                        if e:
+                            await conn.execute(
+                                "INSERT INTO enemy (name, description, scenario_id, scenario_enemy_id, session_id, assigned_sequence_id, assigned_location, tags, state, dropped_items) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                                e.name,
+                                e.description,
+                                scenario_id,
+                                e.scenario_enemy_id,
+                                MASTER_SESSION_ID,
+                                seq.id,
+                                seq.location_name,
+                                e.tags,
+                                json.dumps(e.state),
+                                e.dropped_items,
+                            )
 
                 return ScenarioInjectResponse(
                     scenario_id=scenario_id, title=request.title
@@ -169,7 +137,24 @@ class ScenarioRepository(BaseRepository):
 
     async def get_all_scenarios(self) -> List[Dict[str, Any]]:
         query = "SELECT * FROM scenario ORDER BY created_at DESC"
-        # run_sql_query는 내부적으로 파일을 읽으므로 원시 쿼리는 run_raw_query 사용 권장
         from state_db.infrastructure import run_raw_query
 
         return await run_raw_query(query)
+
+    async def get_scenario(self, scenario_id: str) -> Dict[str, Any]:
+        query = "SELECT * FROM scenario WHERE scenario_id = $1"
+        from state_db.infrastructure import run_raw_query
+
+        result = await run_raw_query(query, [scenario_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Scenario not found")
+
+    async def get_current_context(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "INQUIRY" / "session" / "get_current_context.sql"
+        from state_db.infrastructure import run_sql_query
+
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Current game context not found")

@@ -3,6 +3,7 @@
 -- Enemy 엔티티 테이블 구조 (Base)
 -- ====================================================================
 
+
 CREATE TABLE IF NOT EXISTS enemy (
     -- 엔티티 필수
     enemy_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -12,6 +13,8 @@ CREATE TABLE IF NOT EXISTS enemy (
 
     -- session/시나리오 참조
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
+    assigned_sequence_id VARCHAR(100), -- 배치된 시퀀스 ID
+    assigned_location VARCHAR(200),    -- 배치된 장소명
     scenario_id UUID NOT NULL,
     scenario_enemy_id VARCHAR(100) NOT NULL,  -- 시나리오 내 Enemy ID
 
@@ -44,20 +47,6 @@ CREATE TABLE IF NOT EXISTS enemy (
     -- 드롭 아이템
     dropped_items UUID[] DEFAULT ARRAY[]::UUID[]
 );
-
--- 만약 이미 테이블이 있다면 DEFAULT 추가
-ALTER TABLE enemy ALTER COLUMN enemy_id SET DEFAULT gen_random_uuid();
-
--- 신규 컬럼 추가 (이미 존재하지 않는 경우)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='enemy' AND column_name='is_defeated') THEN
-        ALTER TABLE enemy ADD COLUMN is_defeated BOOLEAN NOT NULL DEFAULT false;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='enemy' AND column_name='defeated_at') THEN
-        ALTER TABLE enemy ADD COLUMN defeated_at TIMESTAMP;
-    END IF;
-END $$;
 
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_enemy_session_id ON enemy(session_id);

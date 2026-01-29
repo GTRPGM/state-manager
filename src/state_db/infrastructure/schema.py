@@ -11,7 +11,12 @@ async def initialize_schema(query_dir: Path) -> None:
     base_dir = query_dir / "BASE"
 
     # 의존성을 고려한 실행 순서 정의
-    initial_tables = ["B_scenario.sql", "B_session.sql"]
+    initial_tables = [
+        "B_scenario.sql",
+        "B_session.sql",
+        "B_scenario_act.sql",
+        "B_scenario_sequence.sql",
+    ]
     entity_tables = [
         "B_player.sql",
         "B_npc.sql",

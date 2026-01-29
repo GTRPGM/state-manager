@@ -1,10 +1,12 @@
--- 세션 전체 목록 조회 (플레이어 ID 포함)
+-- 세션 전체 목록 조회
 SELECT
     s.session_id,
     s.scenario_id,
     p.player_id,
     s.current_act,
     s.current_sequence,
+    s.current_act_id,
+    s.current_sequence_id,
     s.current_phase,
     s.current_turn,
     s.location,
