@@ -45,20 +45,6 @@ async def get_recent_turns_endpoint(
 
 
 @router.get(
-    "/session/{session_id}/turn/{turn_number}",
-    response_model=WrappedResponse[Dict[str, Any]],
-)
-async def get_turn_details_endpoint(
-    session_id: str,
-    turn_number: int,
-    repo: Annotated[TraceRepository, Depends(get_trace_repo)],
-) -> Dict[str, Any]:
-    """특정 Turn의 상세 정보 조회"""
-    result = await repo.get_turn_details(session_id, turn_number)
-    return {"status": "success", "data": result}
-
-
-@router.get(
     "/session/{session_id}/turns/range",
     response_model=WrappedResponse[List[Dict[str, Any]]],
 )
@@ -75,13 +61,27 @@ async def get_turn_range_endpoint(
 
 @router.get(
     "/session/{session_id}/turn/latest",
-    response_model=WrappedResponse[Optional[Dict[str, Any]]],
+    response_model=WrappedResponse[Dict[str, Any]],
 )
 async def get_latest_turn_endpoint(
     session_id: str, repo: Annotated[TraceRepository, Depends(get_trace_repo)]
 ) -> Dict[str, Any]:
     """가장 최근 Turn 조회"""
     result = await repo.get_latest_turn(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/turn/{turn_number}",
+    response_model=WrappedResponse[Dict[str, Any]],
+)
+async def get_turn_details_endpoint(
+    session_id: str,
+    turn_number: int,
+    repo: Annotated[TraceRepository, Depends(get_trace_repo)],
+) -> Dict[str, Any]:
+    """특정 Turn의 상세 정보 조회"""
+    result = await repo.get_turn_details(session_id, turn_number)
     return {"status": "success", "data": result}
 
 

@@ -34,11 +34,20 @@ class PlayerRepository(BaseRepository):
 
         relations = await self.get_npc_relations(player_id)
 
-        # TODO: 인벤토리 실제 조회 로직 필요 (현재는 items=[] 고정)
+        # state가 dict인 경우와 객체인 경우를 모두 처리
+        state_data = stats.state
+        if isinstance(state_data, dict):
+            numeric = state_data.get("numeric", {})
+            hp = numeric.get("HP") or 0
+            gold = numeric.get("gold") or 0
+        else:
+            hp = state_data.numeric.HP or 0
+            gold = state_data.numeric.gold or 0
+
         return FullPlayerState(
             player=PlayerStateResponse(
-                hp=stats.state.numeric.HP or 0,
-                gold=stats.state.numeric.gold or 0,
+                hp=hp,
+                gold=gold,
                 items=[],
             ),
             player_npc_relations=relations,
@@ -56,12 +65,15 @@ class PlayerRepository(BaseRepository):
     async def update_stats(
         self, player_id: str, session_id: str, stat_changes: Dict[str, int]
     ) -> PlayerStats:
+        import json
+
         sql_path = self.query_dir / "UPDATE" / "update_player_stats.sql"
-        await run_sql_command(sql_path, [player_id, session_id, stat_changes])
+        params = [player_id, session_id, json.dumps(stat_changes)]
+        await run_sql_command(sql_path, params)
         return await self.get_stats(player_id)
 
     async def get_inventory(self, session_id: str) -> List[InventoryItem]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_inventory.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_inventory-r.sql"
         results = await run_sql_query(sql_path, [session_id])
         return [InventoryItem.model_validate(row) for row in results]
 

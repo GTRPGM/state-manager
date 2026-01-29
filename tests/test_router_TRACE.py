@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 
-# Mock data
-MOCK_SESSION_ID = "test-session-id"
+# Mock data - 유효한 UUID 형식 사용
+MOCK_SESSION_ID = "550e8400-e29b-41d4-a716-446655440001"
 MOCK_TURN_NUMBER = 5
 
 
@@ -123,8 +123,13 @@ async def test_get_turn_range(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_get_latest_turn(async_client: AsyncClient):
     mock_turn = {
+        "history_id": 10,
+        "session_id": MOCK_SESSION_ID,
         "turn_number": 10,
         "phase_at_turn": "rest",
+        "turn_type": "rest",
+        "state_changes": {},
+        "related_entities": [],
         "created_at": "2025-01-01T00:10:00",
     }
 

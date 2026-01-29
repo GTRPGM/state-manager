@@ -1,16 +1,16 @@
 -- --------------------------------------------------------------------
--- Session_npc.sql
+-- Session_npc-r.sql (수정 대상)
 -- 세션의 NPC 목록 조회
--- 용도: 현재 세션에 존재하는 모든 NPC 확인
--- API: GET /state/session/{session_id}/npcs
+-- $1: session_id
 -- --------------------------------------------------------------------
 
 SELECT
     npc_id,
     name,
     description,
-    (state->'numeric'->>'HP')::int AS hp,
-    tags
+    (state->'numeric'->>'HP')::int AS current_hp,
+    tags,
+    state
 FROM npc
 WHERE session_id = $1
-ORDER BY created_at ASC;
+ORDER BY name ASC;

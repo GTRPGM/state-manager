@@ -3,7 +3,9 @@
 -- 플레이어-NPC 관계 테이블 구조 (Base)
 -- ====================================================================
 
-CREATE TABLE IF NOT EXISTS player_npc_relations (
+DROP TABLE IF EXISTS player_npc_relations CASCADE;
+
+CREATE TABLE player_npc_relations (
     -- 복합 키 (플레이어와 NPC의 1:1 관계를 세션 내에서 정의)
     player_id UUID NOT NULL,
     npc_id UUID NOT NULL,

@@ -76,7 +76,7 @@ class NPCInfo(BaseModel):
     npc_id: Union[str, UUID]
     name: str
     description: str
-    hp: Optional[int] = None
+    current_hp: Optional[int] = None
     tags: List[str] = []
     state: Optional[JsonField] = None
     model_config = ConfigDict(from_attributes=True)
@@ -94,7 +94,7 @@ class EnemyInfo(BaseModel):
     scenario_enemy_id: Union[str, UUID]
     name: str
     description: str = ""
-    hp: Optional[int] = None
+    current_hp: Optional[int] = None
     tags: List[str] = []
     state: Optional[JsonField] = None
     model_config = ConfigDict(from_attributes=True)
@@ -162,7 +162,7 @@ class NPCAffinityUpdateResult(BaseModel):
 
 
 class EnemyHPUpdateResult(BaseModel):
-    enemy_instance_id: str
+    enemy_instance_id: Union[str, UUID]
     current_hp: int
     is_defeated: bool
     model_config = ConfigDict(from_attributes=True)
@@ -200,7 +200,7 @@ class SequenceChangeResult(BaseModel):
 
 
 class SpawnResult(BaseModel):
-    id: str
+    id: Union[str, UUID]
     name: str
     model_config = ConfigDict(from_attributes=True)
 

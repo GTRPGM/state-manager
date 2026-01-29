@@ -51,29 +51,29 @@ class SessionRepository(BaseRepository):
     # Session Query
 
     async def get_info(self, session_id: str) -> SessionInfo:
-        sql_path = self.query_dir / "INQUIRY" / "Session_show.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return SessionInfo.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_active_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_active.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_active.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_all_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_all.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all-r.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_paused_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_paused.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused-r.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_ended_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "Session_ended.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended-r.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
@@ -109,7 +109,7 @@ class SessionRepository(BaseRepository):
         return PhaseChangeResult(session_id=session_id, current_phase=phase)
 
     async def get_phase(self, session_id: str) -> PhaseChangeResult:
-        sql_path = self.query_dir / "INQUIRY" / "Session_phase.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_phase-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return PhaseChangeResult.model_validate(result[0])
@@ -139,7 +139,7 @@ class SessionRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_turn(self, session_id: str) -> TurnAddResult:
-        sql_path = self.query_dir / "INQUIRY" / "Session_turn.sql"
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn-r.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return TurnAddResult.model_validate(result[0])
@@ -155,7 +155,7 @@ class SessionRepository(BaseRepository):
     # Act
 
     async def change_act(self, session_id: str, act: int) -> ActChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "act" / "select_act.sql"
+        sql_path = self.query_dir / "MANAGE" / "act" / "select_act-r.sql"
         await run_sql_command(sql_path, [session_id, act])
         return ActChangeResult(session_id=session_id, current_act=act)
 
@@ -192,7 +192,7 @@ class SessionRepository(BaseRepository):
     async def change_sequence(
         self, session_id: str, sequence: int
     ) -> SequenceChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "sequence" / "select_sequence.sql"
+        sql_path = self.query_dir / "MANAGE" / "sequence" / "select_sequence-r.sql"
         await run_sql_command(sql_path, [session_id, sequence])
         return SequenceChangeResult(session_id=session_id, current_sequence=sequence)
 
