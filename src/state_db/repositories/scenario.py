@@ -33,7 +33,13 @@ class ScenarioRepository(BaseRepository):
             async with conn.transaction():
                 # 1. 시나리오
                 scenario_id_row = await conn.fetchrow(
-                    "INSERT INTO scenario (title, description, is_published) VALUES ($1, $2, true) ON CONFLICT (title) DO UPDATE SET description = EXCLUDED.description, updated_at = NOW() RETURNING scenario_id",
+                    """
+                    INSERT INTO scenario (title, description, is_published)
+                    VALUES ($1, $2, true)
+                    ON CONFLICT (title)
+                    DO UPDATE SET description = EXCLUDED.description, updated_at = NOW()
+                    RETURNING scenario_id
+                    """,
                     request.title,
                     request.description,
                 )
@@ -62,11 +68,27 @@ class ScenarioRepository(BaseRepository):
                     scenario_id,
                     MASTER_SESSION_ID,
                 )
+                # Graph Cleanup (Session 0 nodes for this scenario)
+                await conn.execute(
+                    f"""
+                    SELECT * FROM ag_catalog.cypher('state_db', $$
+                        MATCH (n)
+                        WHERE n.scenario_id = '{scenario_id}'
+                          AND n.session_id = '{MASTER_SESSION_ID}'
+                        DETACH DELETE n
+                    $$) AS (a agtype)
+                    """
+                )
 
                 # 3. Acts
                 for act in request.acts:
                     await conn.execute(
-                        "INSERT INTO scenario_act (scenario_id, act_id, act_name, act_description, exit_criteria, sequence_ids) VALUES ($1, $2, $3, $4, $5, $6)",
+                        """
+                        INSERT INTO scenario_act (
+                            scenario_id, act_id, act_name, act_description,
+                            exit_criteria, sequence_ids
+                        ) VALUES ($1, $2, $3, $4, $5, $6)
+                        """,
                         scenario_id,
                         act.id,
                         act.name,
@@ -78,7 +100,12 @@ class ScenarioRepository(BaseRepository):
                 # 4. Sequences & Entities (Inline Queries for precision)
                 for seq in request.sequences:
                     await conn.execute(
-                        "INSERT INTO scenario_sequence (scenario_id, sequence_id, sequence_name, location_name, description, goal, exit_triggers) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                        """
+                        INSERT INTO scenario_sequence (
+                            scenario_id, sequence_id, sequence_name,
+                            location_name, description, goal, exit_triggers
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        """,
                         scenario_id,
                         seq.id,
                         seq.name,
@@ -95,7 +122,13 @@ class ScenarioRepository(BaseRepository):
                         )
                         if n:
                             await conn.execute(
-                                "INSERT INTO npc (name, description, scenario_id, scenario_npc_id, session_id, assigned_sequence_id, assigned_location, tags, state) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                                """
+                                INSERT INTO npc (
+                                    name, description, scenario_id, scenario_npc_id,
+                                    session_id, assigned_sequence_id, assigned_location,
+                                    tags, state
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                                """,
                                 n.name,
                                 n.description,
                                 scenario_id,
@@ -105,6 +138,19 @@ class ScenarioRepository(BaseRepository):
                                 seq.location_name,
                                 n.tags,
                                 json.dumps(n.state),
+                            )
+                            # Graph Vertex (NPC)
+                            await conn.execute(
+                                f"""
+                                SELECT * FROM ag_catalog.cypher('state_db', $$
+                                    CREATE (:npc {{
+                                        name: '{n.name}',
+                                        scenario_id: '{scenario_id}',
+                                        scenario_npc_id: '{n.scenario_npc_id}',
+                                        session_id: '{MASTER_SESSION_ID}'
+                                    }})
+                                $$) AS (a agtype)
+                                """
                             )
 
                     for enemy_id in seq.enemies:
@@ -118,7 +164,13 @@ class ScenarioRepository(BaseRepository):
                         )
                         if e:
                             await conn.execute(
-                                "INSERT INTO enemy (name, description, scenario_id, scenario_enemy_id, session_id, assigned_sequence_id, assigned_location, tags, state, dropped_items) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                                """
+                                INSERT INTO enemy (
+                                    name, description, scenario_id, scenario_enemy_id,
+                                    session_id, assigned_sequence_id, assigned_location,
+                                    tags, state, dropped_items
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                """,
                                 e.name,
                                 e.description,
                                 scenario_id,
@@ -130,6 +182,62 @@ class ScenarioRepository(BaseRepository):
                                 json.dumps(e.state),
                                 e.dropped_items,
                             )
+                            # Graph Vertex (Enemy)
+                            await conn.execute(
+                                f"""
+                                SELECT * FROM ag_catalog.cypher('state_db', $$
+                                    CREATE (:enemy {{
+                                        name: '{e.name}',
+                                        scenario_id: '{scenario_id}',
+                                        scenario_enemy_id: '{e.scenario_enemy_id}',
+                                        session_id: '{MASTER_SESSION_ID}'
+                                    }})
+                                $$) AS (a agtype)
+                                """
+                            )
+
+                # 5. Items
+                for item in request.items:
+                    await conn.execute(
+                        """
+                        INSERT INTO item (
+                            session_id, scenario_id, scenario_item_id,
+                            name, description, item_type, meta
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        """,
+                        MASTER_SESSION_ID,
+                        scenario_id,
+                        item.item_id,
+                        item.name,
+                        item.description,
+                        item.item_type,
+                        json.dumps(item.meta),
+                    )
+
+                # 6. Relations (Graph Edges)
+                for rel in request.relations:
+                    await conn.execute(
+                        f"""
+                        SELECT * FROM ag_catalog.cypher('state_db', $$
+                            MATCH (v1), (v2)
+                            WHERE v1.session_id = '{MASTER_SESSION_ID}'
+                              AND (
+                                v1.scenario_npc_id = '{rel.from_id}'
+                                OR v1.scenario_enemy_id = '{rel.from_id}'
+                              )
+                              AND v2.session_id = '{MASTER_SESSION_ID}'
+                              AND (
+                                v2.scenario_npc_id = '{rel.to_id}'
+                                OR v2.scenario_enemy_id = '{rel.to_id}'
+                              )
+                            CREATE (v1)-[:RELATION {{
+                                relation_type: '{rel.relation_type}',
+                                affinity: {rel.affinity},
+                                session_id: '{MASTER_SESSION_ID}'
+                            }}]->(v2)
+                        $$) AS (a agtype)
+                        """
+                    )
 
                 return ScenarioInjectResponse(
                     scenario_id=scenario_id, title=request.title
