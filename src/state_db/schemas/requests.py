@@ -1,6 +1,6 @@
 from typing import Dict, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class PlayerHPUpdateRequest(BaseModel):
