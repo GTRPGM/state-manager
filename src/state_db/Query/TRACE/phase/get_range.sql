@@ -6,6 +6,6 @@ SELECT
     transition_reason,
     transitioned_at
 FROM phase
-WHERE session_id = :session_id
-  AND turn_at_transition BETWEEN :start_turn AND :end_turn
+WHERE session_id = $1
+  AND turn_at_transition BETWEEN $2 AND $3
 ORDER BY turn_at_transition ASC;

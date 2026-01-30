@@ -11,4 +11,4 @@ SELECT
     -- 턴당 평균 소요 시간 계산 (0으로 나누기 방지)
     (MAX(created_at) - MIN(created_at)) / NULLIF(COUNT(*), 0) AS avg_turn_duration
 FROM turn
-WHERE session_id = :session_id;
+WHERE session_id = $1;

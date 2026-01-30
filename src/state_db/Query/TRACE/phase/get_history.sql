@@ -1,5 +1,5 @@
 SELECT
-    history_id,
+    phase_id,
     session_id,
     previous_phase,
     new_phase,

@@ -6,6 +6,6 @@ SELECT
     t.state_changes, 
     t.created_at
 FROM turn t
-WHERE t.session_id = :session_id 
-  AND :item_id = ANY(t.related_entities)
+WHERE t.session_id = $1
+  AND $2 = ANY(t.related_entities)
 ORDER BY t.turn_number DESC;

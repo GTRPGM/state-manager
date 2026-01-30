@@ -6,11 +6,11 @@ WITH phase_summary AS (
         MIN(transitioned_at) AS first_visit,
         MAX(transitioned_at) AS last_visit
     FROM phase
-    WHERE session_id = :session_id
+    WHERE session_id = $1
     GROUP BY new_phase
 )
 SELECT
     ps.*,
-    (SELECT total_duration FROM get_phase_statistics(:session_id) WHERE phase = ps.new_phase) AS total_duration
+    (SELECT total_duration FROM get_phase_statistics($1) WHERE phase = ps.new_phase) AS total_duration
 FROM phase_summary ps
 ORDER BY total_duration DESC;
