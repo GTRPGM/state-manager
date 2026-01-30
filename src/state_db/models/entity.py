@@ -34,7 +34,7 @@ class EnemyInfo(BaseModel):
 
 
 class ItemInfo(BaseModel):
-    item_id: Union[str, UUID]
+    item_id: int
     scenario_item_id: str
     name: str
     description: str = ""

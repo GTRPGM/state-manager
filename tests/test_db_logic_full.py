@@ -40,7 +40,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         ],
         "items": [
             {
-                "item_id": "item-potion",
+                "item_id": 1,
                 "name": "Red Potion",
                 "description": "Heals 30 HP",
                 "item_type": "consumable",
@@ -139,14 +139,14 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         row = await conn.fetchrow(
             "SELECT item_id FROM item WHERE session_id = $1 LIMIT 1", session_id
         )
-        item_uuid = row["item_id"]
+        item_id = row["item_id"]
 
     earn_resp = await real_db_client.post(
         "/state/player/item/earn",
         json={
             "session_id": session_id,
             "player_id": player_id,
-            "item_id": str(item_uuid),
+            "item_id": item_id,
             "quantity": 5,
         },
     )
@@ -154,7 +154,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
 
     update_inv_resp = await real_db_client.put(
         "/state/inventory/update",
-        json={"player_id": player_id, "item_id": str(item_uuid), "quantity": 10},
+        json={"player_id": player_id, "item_id": item_id, "quantity": 10},
     )
     assert update_inv_resp.status_code == 200
     assert update_inv_resp.json()["data"]["quantity"] == 10

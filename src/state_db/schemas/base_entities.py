@@ -35,7 +35,7 @@ class EnemyBase(SessionContextMixin, EntityBaseMixin, StateMixin):
 class ItemBase(BaseModel):
     """아이템 기본 스키마"""
 
-    item_id: str = Field(..., description="아이템 고유 식별자")
+    item_id: int = Field(..., description="아이템 고유 식별자 (Rule Engine에서 전달받는 INT)")
     name: str = Field(..., description="아이템 이름")
     description: Optional[str] = Field("", description="아이템 설명")
     item_type: str = Field(..., description="아이템 분류")

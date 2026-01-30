@@ -196,18 +196,19 @@ class ScenarioRepository(BaseRepository):
                                 """
                             )
 
-                # 5. Items
+                # 5. Items (item_id: INT, scenario_item_id: VARCHAR) #수정필요?
                 for item in request.items:
                     await conn.execute(
                         """
                         INSERT INTO item (
-                            session_id, scenario_id, scenario_item_id,
+                            item_id, session_id, scenario_id, scenario_item_id,
                             name, description, item_type, meta
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                         """,
+                        item.item_id,
                         MASTER_SESSION_ID,
                         scenario_id,
-                        item.item_id,
+                        str(item.item_id),
                         item.name,
                         item.description,
                         item.item_type,

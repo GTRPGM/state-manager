@@ -41,7 +41,7 @@ class ScenarioInjectEnemy(BaseModel):
 class ScenarioInjectItem(BaseModel):
     """주입용 아이템 정보"""
 
-    item_id: str
+    item_id: int
     name: str
     description: str = ""
     item_type: str = "misc"

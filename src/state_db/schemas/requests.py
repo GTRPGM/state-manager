@@ -22,7 +22,7 @@ class InventoryUpdateRequest(BaseModel):
     """인벤토리 업데이트 요청"""
 
     player_id: str
-    item_id: Union[str, int]
+    item_id: int
     quantity: int
 
 
@@ -52,7 +52,7 @@ class ItemEarnRequest(BaseModel):
 
     session_id: str
     player_id: str
-    item_id: Union[str, int]
+    item_id: int
     quantity: int
 
 
@@ -61,5 +61,5 @@ class ItemUseRequest(BaseModel):
 
     session_id: str
     player_id: str
-    item_id: Union[str, int]
+    item_id: int
     quantity: int

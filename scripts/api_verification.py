@@ -150,7 +150,7 @@ class APIVerifier:
             ],
             "items": [
                 {
-                    "item_id": "item-basic-sword",
+                    "item_id": 1,
                     "name": "녹슨 칼",
                     "item_type": "equipment",
                 }

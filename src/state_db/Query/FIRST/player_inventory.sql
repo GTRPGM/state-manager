@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS player_inventory (
     -- 복합 키
     player_id UUID NOT NULL,
-    item_id UUID NOT NULL,
+    item_id INT NOT NULL,
 
     -- 수량
     quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
@@ -22,12 +22,8 @@ CREATE TABLE IF NOT EXISTS player_inventory (
     CONSTRAINT fk_player_inventory_player
         FOREIGN KEY (player_id)
         REFERENCES player(player_id)
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_player_inventory_item
-        FOREIGN KEY (item_id)
-        REFERENCES item(item_id)
         ON DELETE CASCADE
+    -- item FK 제거: item PK가 (item_id, session_id) 복합키이므로
 );
 
 -- 인덱스 생성
@@ -49,57 +45,8 @@ BEFORE UPDATE ON player_inventory
 FOR EACH ROW
 EXECUTE FUNCTION update_player_inventory_updated_at();
 
--- session의 생성/종료에 맞춰 생성/삭제
-CREATE OR REPLACE FUNCTION initialize_starting_items()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_player_id UUID;
-    v_health_potion_id UUID;
-BEGIN
-    SELECT player_id INTO v_player_id
-    FROM player
-    WHERE session_id = NEW.session_id
-    LIMIT 1;
-
-    IF v_player_id IS NOT NULL THEN
-        -- Health Potion 아이템 ID 조회
-        SELECT item_id INTO v_health_potion_id
-        FROM item
-        WHERE session_id = NEW.session_id
-          AND name = 'Health Potion'
-        LIMIT 1;
-
-        -- 초기 아이템 지급 (Health Potion x3)
-        IF v_health_potion_id IS NOT NULL THEN
-            INSERT INTO player_inventory (
-                player_id,
-                item_id,
-                quantity,
-                created_at
-            )
-            VALUES
-            (
-                v_player_id,
-                v_health_potion_id,
-                3,
-                NEW.started_at
-            );
-
-            RAISE NOTICE '[Player Inventory] Starting items given to player % in session %',
-                v_player_id, NEW.session_id;
-        END IF;
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_06_initialize_starting_items ON session;
-CREATE TRIGGER trigger_06_initialize_starting_items
-    AFTER INSERT ON session
-    FOR EACH ROW
-    EXECUTE FUNCTION initialize_starting_items();
-
+-- 아이템은 Rule Engine에서 전달받아 earn_item을 통해 player_inventory에 추가됨
+-- 초기 아이템 자동 지급 트리거 제거됨
 
 -- 주석
 COMMENT ON TABLE player_inventory IS '플레이어 인벤토리 - 플레이어와 아이템의 관계 및 수량';

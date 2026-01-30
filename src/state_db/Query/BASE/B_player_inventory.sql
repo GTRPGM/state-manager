@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS player_inventory (
     -- 복합 키 (플레이어와 아이템의 N:M 관계)
     player_id UUID NOT NULL,
-    item_id UUID NOT NULL,
+    item_id INT NOT NULL,
 
     -- 수량
     quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
@@ -18,16 +18,12 @@ CREATE TABLE IF NOT EXISTS player_inventory (
     -- 제약조건
     PRIMARY KEY (player_id, item_id),
 
-    -- 외래키 (B_player.sql 및 B_item.sql 선행 필요)
+    -- 외래키 (B_player.sql 선행 필요)
     CONSTRAINT fk_player_inventory_player
         FOREIGN KEY (player_id)
         REFERENCES player(player_id)
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_player_inventory_item
-        FOREIGN KEY (item_id)
-        REFERENCES item(item_id)
         ON DELETE CASCADE
+    -- item FK 제거: item PK가 (item_id, session_id) 복합키이므로
 );
 
 -- 인덱스 생성

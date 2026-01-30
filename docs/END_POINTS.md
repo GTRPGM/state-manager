@@ -399,16 +399,9 @@ Sequence를 1 감소시킵니다.
   "status": "success",
   "data": {
     "player": {
-      "player_id": "550e8400-e29b-41d4-a716-446655440002",
-      "name": "Hero",
-      "current_hp": 80,
-      "max_hp": 100,
+      "hp": 80,
       "gold": 500,
-      "stats": {
-        "STR": 15,
-        "DEX": 12,
-        "INT": 10
-      }
+      "items": [1, 2, 3]
     },
     "player_npc_relations": [
       {
@@ -420,6 +413,12 @@ Sequence를 1 감소시킵니다.
   }
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `player.hp` | int | 현재 HP |
+| `player.gold` | int | 보유 골드 |
+| `player.items` | List[int] | 보유 아이템 ID 목록 (Rule Engine에서 INT로 전달) |
 
 ### PUT /state/player/{player_id}/hp
 
@@ -468,6 +467,8 @@ Sequence를 1 감소시킵니다.
 
 플레이어 인벤토리(아이템)를 관리합니다.
 
+> **Note**: `item_id`는 Rule Engine에서 INT 형태로 전달받습니다. 아이템은 `earn_item`을 통해 최초 획득되며, `use_item`으로 수량이 감소합니다. 수량이 0이 되면 인벤토리에서 자동 삭제되고 turn 테이블에 기록됩니다.
+
 ### GET /state/session/{session_id}/inventory
 
 세션의 인벤토리를 조회합니다.
@@ -479,7 +480,7 @@ Sequence를 1 감소시킵니다.
   "data": [
     {
       "player_id": "550e8400-e29b-41d4-a716-446655440002",
-      "item_id": "550e8400-e29b-41d4-a716-446655440010",
+      "item_id": 1,
       "item_name": "Health Potion",
       "description": "Restores 50 HP",
       "quantity": 3,
@@ -499,24 +500,31 @@ Sequence를 1 감소시킵니다.
 ```json
 {
   "player_id": "550e8400-e29b-41d4-a716-446655440002",
-  "item_id": "550e8400-e29b-41d4-a716-446655440010",
+  "item_id": 1,
   "quantity": 5
 }
 ```
 
 ### POST /state/player/item/earn
 
-아이템을 획득합니다. 기존에 보유 중이면 수량이 증가합니다.
+아이템을 획득합니다. Rule Engine에서 `item_id`(INT)를 전달받아 `player_inventory`에 추가합니다. 기존에 보유 중이면 수량이 증가합니다.
 
 **Request Body:**
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440001",
   "player_id": "550e8400-e29b-41d4-a716-446655440002",
-  "item_id": "550e8400-e29b-41d4-a716-446655440010",
+  "item_id": 1,
   "quantity": 2
 }
 ```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `session_id` | UUID | O | 세션 ID |
+| `player_id` | UUID | O | 플레이어 ID |
+| `item_id` | int | O | Rule Engine에서 전달받은 아이템 ID |
+| `quantity` | int | X | 획득 수량 (기본값: 1) |
 
 **Response:**
 ```json
@@ -524,7 +532,7 @@ Sequence를 1 감소시킵니다.
   "status": "success",
   "data": {
     "player_id": "550e8400-e29b-41d4-a716-446655440002",
-    "item_id": "550e8400-e29b-41d4-a716-446655440010",
+    "item_id": 1,
     "quantity": 5,
     "updated_at": "2026-01-30T12:10:00Z"
   }
@@ -533,17 +541,24 @@ Sequence를 1 감소시킵니다.
 
 ### POST /state/player/item/use
 
-아이템을 사용합니다. 수량이 감소하며, 0이 되면 인벤토리에서 제거됩니다.
+아이템을 사용합니다. 수량이 감소하며, **수량이 0이 되면 인벤토리에서 자동 삭제되고 turn 테이블에 사용 이력이 기록됩니다.**
 
 **Request Body:**
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440001",
   "player_id": "550e8400-e29b-41d4-a716-446655440002",
-  "item_id": "550e8400-e29b-41d4-a716-446655440010",
+  "item_id": 1,
   "quantity": 1
 }
 ```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `session_id` | UUID | O | 세션 ID |
+| `player_id` | UUID | O | 플레이어 ID |
+| `item_id` | int | O | 사용할 아이템 ID |
+| `quantity` | int | X | 사용 수량 (기본값: 1) |
 
 ---
 
@@ -975,7 +990,7 @@ Phase 전환 요약 리포트를 조회합니다.
   ],
   "items": [
     {
-      "scenario_item_id": "potion_01",
+      "item_id": 1,
       "name": "Health Potion",
       "description": "Restores 50 HP",
       "item_type": "consumable",
@@ -1052,9 +1067,16 @@ Phase 전환 요약 리포트를 조회합니다.
 
 ### UUID
 
-모든 ID 필드는 UUID v4 형식을 사용합니다.
+대부분의 ID 필드는 UUID v4 형식을 사용합니다.
 ```
 550e8400-e29b-41d4-a716-446655440000
+```
+
+### item_id (INT)
+
+`item_id`는 Rule Engine에서 INT 형태로 전달받습니다. UUID가 아닌 정수형입니다.
+```
+1, 2, 3, ...
 ```
 
 ### Phase Type
@@ -1101,3 +1123,4 @@ ISO 8601 형식 (UTC)
 |------|------|
 | 2026-01-29 | 초기 문서 작성 |
 | 2026-01-30 | asyncpg 파라미터 형식 수정 완료, 문서 구조 개선, 상세 설명 추가 |
+| 2026-01-30 | `item_id` UUID→INT 변경, use_item 시 quantity=0 자동 삭제 및 turn 기록 로직 반영 |
