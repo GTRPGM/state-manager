@@ -9,6 +9,7 @@ from state_db.models import (
     EnemyInfo,
     FullPlayerState,
     InventoryItem,
+    ItemInfo,
     NPCInfo,
     PhaseChangeResult,
     ScenarioActInfo,
@@ -124,6 +125,17 @@ async def get_inventory(
     session_id: str, repo: Annotated[PlayerRepository, Depends(get_player_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_inventory(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/items",
+    response_model=WrappedResponse[List[ItemInfo]],
+)
+async def get_items(
+    session_id: str, repo: Annotated[EntityRepository, Depends(get_entity_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_session_items(session_id)
     return {"status": "success", "data": result}
 
 

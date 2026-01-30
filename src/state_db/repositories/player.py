@@ -80,7 +80,10 @@ class PlayerRepository(BaseRepository):
     async def update_inventory(
         self, player_id: str, item_id: str, quantity: int
     ) -> Dict[str, Any]:
-        # TODO: 실제 SQL 파일 구현 필요
+        sql_path = self.query_dir / "UPDATE" / "inventory" / "update_inventory.sql"
+        result = await run_sql_query(sql_path, [player_id, item_id, quantity])
+        if result:
+            return result[0]
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
     async def get_npc_relations(self, player_id: str) -> List[NPCRelation]:

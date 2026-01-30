@@ -6,6 +6,7 @@ from state_db.infrastructure import run_sql_command, run_sql_query
 from state_db.models import (
     EnemyHPUpdateResult,
     EnemyInfo,
+    ItemInfo,
     NPCInfo,
     RemoveEntityResult,
     SpawnResult,
@@ -14,6 +15,12 @@ from state_db.repositories.base import BaseRepository
 
 
 class EntityRepository(BaseRepository):
+    # Item
+    async def get_session_items(self, session_id: str) -> List[ItemInfo]:
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_item.sql"
+        results = await run_sql_query(sql_path, [session_id])
+        return [ItemInfo.model_validate(row) for row in results]
+
     # NPC
     async def get_session_npcs(self, session_id: str) -> List[NPCInfo]:
         sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc.sql"
