@@ -1,23 +1,35 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
 
+class ScenarioActInfo(BaseModel):
+    scenario_id: Union[str, UUID]
+    act_number: int
+    title: str
+    description: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class LocationUpdateResult(BaseModel):
-    session_id: str
+    session_id: Union[str, UUID]
     location: str
     model_config = ConfigDict(from_attributes=True)
 
 
 class PhaseChangeResult(BaseModel):
-    session_id: str
+    session_id: Union[str, UUID]
     current_phase: str
     model_config = ConfigDict(from_attributes=True)
 
 
 class TurnAddResult(BaseModel):
-    session_id: str
+    session_id: Union[str, UUID]
     current_turn: int
     phase_at_turn: Optional[str] = None
     turn_type: Optional[str] = None
@@ -26,14 +38,14 @@ class TurnAddResult(BaseModel):
 
 
 class ActChangeResult(BaseModel):
-    session_id: str
+    session_id: Union[str, UUID]
     current_phase: str = ""
     current_act: int
     model_config = ConfigDict(from_attributes=True)
 
 
 class SequenceChangeResult(BaseModel):
-    session_id: str
+    session_id: Union[str, UUID]
     current_sequence: int
     model_config = ConfigDict(from_attributes=True)
 

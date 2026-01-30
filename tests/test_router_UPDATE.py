@@ -117,8 +117,9 @@ async def test_update_location(async_client: AsyncClient):
         "session_id": MOCK_SESSION_ID,
         "location": "Dark Forest",
     }
+    # [수정됨] SessionRepository -> ProgressRepository
     with patch(
-        "state_db.repositories.SessionRepository.update_location",
+        "state_db.repositories.ProgressRepository.update_location",
         new=AsyncMock(return_value=mock_response),
     ) as mock_update:
         response = await async_client.put(

@@ -9,7 +9,7 @@ from .base import JsonField
 
 class InventoryItem(BaseModel):
     player_id: Optional[str] = None
-    item_id: Union[str, UUID]
+    item_id: int
     item_name: Optional[str] = None
     description: Optional[str] = None
     quantity: int

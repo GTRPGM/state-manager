@@ -10,7 +10,11 @@ from state_db.models import (
     NPCAffinityUpdateResult,
     PlayerHPUpdateResult,
 )
-from state_db.repositories import EntityRepository, PlayerRepository, SessionRepository
+from state_db.repositories import (
+    EntityRepository,
+    PlayerRepository,
+    ProgressRepository,
+)
 from state_db.schemas import (
     EnemyHPUpdateRequest,
     InventoryUpdateRequest,
@@ -22,7 +26,7 @@ from state_db.schemas import (
     PlayerStatsUpdateRequest,
 )
 
-from .dependencies import get_entity_repo, get_player_repo, get_session_repo
+from .dependencies import get_entity_repo, get_player_repo, get_progress_repo
 
 router = APIRouter(tags=["State Updates"])
 
@@ -99,7 +103,7 @@ async def update_npc_affinity_endpoint(
 async def update_location_endpoint(
     session_id: str,
     request: LocationUpdateRequest,
-    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
 ) -> Dict[str, Any]:
     await repo.update_location(session_id, request.new_location)
     return {

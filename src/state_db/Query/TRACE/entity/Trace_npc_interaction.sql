@@ -6,5 +6,5 @@ SELECT
     r.affinity_score
 FROM player_npc_relations r
 JOIN npc n ON r.npc_id = n.npc_id
-WHERE r.player_id = :player_id
+WHERE r.player_id = $1
 ORDER BY r.interaction_count DESC, r.last_interaction_at DESC;

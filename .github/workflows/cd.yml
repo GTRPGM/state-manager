@@ -31,6 +31,16 @@ jobs:
 
       - run: uvx pre-commit run --all-files
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Test Database Image
+        run: docker pull ghcr.io/gtrpgm/postgres-ex:latest
+
       - run: |
           uv sync --dev --frozen
           uv run pytest

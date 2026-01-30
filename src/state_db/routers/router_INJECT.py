@@ -24,4 +24,4 @@ async def inject_scenario(
     repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)],
 ) -> Dict[str, Any]:
     result = await repo.inject_scenario(request)
-    return {"status": "success", "data": result}
+    return {"status": "success", "data": result.model_dump()}

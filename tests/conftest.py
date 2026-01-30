@@ -36,7 +36,36 @@ def postgres_container():
 async def db_lifecycle(postgres_container):
     """
     테스트 함수마다 DB 초기화 및 정리.
+    CASCADE를 사용하여 이전 테스트의 잔재를 완벽히 제거.
     """
+    from state_db.infrastructure import DatabaseManager
+
+    async with DatabaseManager.get_connection() as conn:
+        await conn.execute("""
+            DROP TABLE IF EXISTS turn CASCADE;
+            DROP TABLE IF EXISTS phase CASCADE;
+            DROP TABLE IF EXISTS phase_rules CASCADE;
+            DROP TABLE IF EXISTS player_npc_relations CASCADE;
+            DROP TABLE IF EXISTS player_inventory CASCADE;
+            DROP TABLE IF EXISTS inventory CASCADE;
+            DROP TABLE IF EXISTS enemy CASCADE;
+            DROP TABLE IF EXISTS npc CASCADE;
+            DROP TABLE IF EXISTS player CASCADE;
+            DROP TABLE IF EXISTS session_snapshot CASCADE;
+            DROP TABLE IF EXISTS session CASCADE;
+            DROP TABLE IF EXISTS scenario_sequence CASCADE;
+            DROP TABLE IF EXISTS scenario_act CASCADE;
+            DROP TABLE IF EXISTS scenario CASCADE;
+            DROP TABLE IF EXISTS item CASCADE;
+
+            -- 타입 및 함수 정리 (잔재 제거)
+            DROP TYPE IF EXISTS phase_type CASCADE;
+            DROP TYPE IF EXISTS session_status CASCADE;
+            DROP FUNCTION IF EXISTS initialize_enemies CASCADE;
+            DROP FUNCTION IF EXISTS initialize_npcs CASCADE;
+            DROP FUNCTION IF EXISTS create_session CASCADE;
+        """)
+
     await startup()
     yield
     await shutdown()

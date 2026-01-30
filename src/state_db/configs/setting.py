@@ -30,13 +30,20 @@ APP_ENV = os.getenv("APP_ENV", "local")
 # ====================================================================
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
+
 # ====================================================================
 # PostgreSQL 연결 설정 딕셔너리
 # ====================================================================
-DB_CONFIG = {
-    "user": DB_USER,
-    "password": DB_PASSWORD,
-    "database": DB_NAME,
-    "host": DB_HOST,
-    "port": DB_PORT,
-}
+def get_db_config() -> dict:
+    """DB 설정을 호출 시점에 환경변수에서 읽어옴 (테스트 환경 지원)"""
+    return {
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
+        "database": os.getenv("DB_NAME"),
+        "host": os.getenv("DB_HOST"),
+        "port": int(os.getenv("DB_PORT", 8621)),
+    }
+
+
+# 하위 호환성을 위한 프로퍼티 (기존 코드에서 DB_CONFIG 직접 참조 시)
+DB_CONFIG = get_db_config()

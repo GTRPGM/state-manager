@@ -1,4 +1,6 @@
+-- B_scenario.sql
 -- [사용자 원본 유지]
+
 CREATE TABLE IF NOT EXISTS scenario (
     scenario_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(200) NOT NULL,
@@ -17,10 +19,12 @@ CREATE TABLE IF NOT EXISTS scenario (
     published_at TIMESTAMP,
     play_count INTEGER DEFAULT 0,
     completion_count INTEGER DEFAULT 0,
-    average_rating NUMERIC(3, 2)
+    average_rating NUMERIC(3, 2),
+
+    -- 별도 제약 조건 선언
+    CONSTRAINT unique_scenario_title UNIQUE (title)
 );
 
--- [인덱스 및 트리거 원본 유지]
 CREATE INDEX IF NOT EXISTS idx_scenario_is_published ON scenario(is_published);
 CREATE INDEX IF NOT EXISTS idx_scenario_is_active ON scenario(is_active);
 CREATE INDEX IF NOT EXISTS idx_scenario_difficulty ON scenario(difficulty);
@@ -57,7 +61,7 @@ BEFORE UPDATE ON scenario
 FOR EACH ROW
 EXECUTE FUNCTION set_scenario_published_at();
 
--- [최소 수정] 시스템 마스터용 시나리오 0번 삽입
+-- 시스템 마스터 시나리오
 INSERT INTO scenario (scenario_id, title, description, is_published)
 VALUES ('00000000-0000-0000-0000-000000000000', 'SYSTEM_MASTER', 'Master template', true)
 ON CONFLICT (scenario_id) DO NOTHING;

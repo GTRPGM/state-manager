@@ -22,8 +22,8 @@ BEGIN
         meta,
         created_at
     )
-    SELECT 
-        gen_random_uuid(),  -- 복사본에 새로운 고유 ID 부여
+    SELECT
+        item_id,            -- Rule Engine에서 전달받은 INT ID 그대로 사용
         entity_type,
         NEW.session_id,     -- 트리거를 발생시킨 실제 세션 ID
         scenario_id,
@@ -34,7 +34,7 @@ BEGIN
         meta,
         NOW()
     FROM item
-    WHERE session_id = MASTER_SESSION_ID 
+    WHERE session_id = MASTER_SESSION_ID
       AND scenario_id = NEW.scenario_id;
 
     RAISE NOTICE '[Item] Initialized session % by cloning Master Items from Session 0', NEW.session_id;

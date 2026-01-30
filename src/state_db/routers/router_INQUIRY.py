@@ -9,16 +9,54 @@ from state_db.models import (
     EnemyInfo,
     FullPlayerState,
     InventoryItem,
+    ItemInfo,
     NPCInfo,
     PhaseChangeResult,
+    ScenarioActInfo,
     SessionInfo,
     TurnAddResult,
 )
-from state_db.repositories import EntityRepository, PlayerRepository, SessionRepository
+from state_db.repositories import (
+    EntityRepository,
+    LifecycleStateRepository,
+    PlayerRepository,
+    ProgressRepository,
+    ScenarioRepository,
+    SessionRepository,
+)
+from state_db.schemas import ScenarioInfo
 
-from .dependencies import get_entity_repo, get_player_repo, get_session_repo
+from .dependencies import (
+    get_entity_repo,
+    get_lifecycle_repo,
+    get_player_repo,
+    get_progress_repo,
+    get_scenario_repo,
+    get_session_repo,
+)
 
 router = APIRouter(tags=["State Inquiry"])
+
+
+# ====================================================================
+# 시나리오 조회
+# ====================================================================
+
+
+@router.get("/scenarios", response_model=WrappedResponse[List[ScenarioInfo]])
+async def get_all_scenarios_endpoint(
+    repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)],
+) -> Dict[str, Any]:
+    result = await repo.get_all_scenarios()
+    return {"status": "success", "data": result}
+
+
+@router.get("/scenario/{scenario_id}", response_model=WrappedResponse[ScenarioInfo])
+async def get_scenario_endpoint(
+    scenario_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_scenario(scenario_id)
+    return {"status": "success", "data": result}
 
 
 # ====================================================================
@@ -90,6 +128,17 @@ async def get_inventory(
     return {"status": "success", "data": result}
 
 
+@router.get(
+    "/session/{session_id}/items",
+    response_model=WrappedResponse[List[ItemInfo]],
+)
+async def get_items(
+    session_id: str, repo: Annotated[EntityRepository, Depends(get_entity_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_session_items(session_id)
+    return {"status": "success", "data": result}
+
+
 # ====================================================================
 # 엔티티 조회 (NPCs, Enemies)
 # ====================================================================
@@ -124,7 +173,8 @@ async def get_enemies(
     "/session/{session_id}/phase", response_model=WrappedResponse[PhaseChangeResult]
 )
 async def get_phase(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str,
+    repo: Annotated[LifecycleStateRepository, Depends(get_lifecycle_repo)],
 ) -> Dict[str, Any]:
     result = await repo.get_phase(session_id)
     return {"status": "success", "data": result}
@@ -132,7 +182,8 @@ async def get_phase(
 
 @router.get("/session/{session_id}/turn", response_model=WrappedResponse[TurnAddResult])
 async def get_turn(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str,
+    repo: Annotated[LifecycleStateRepository, Depends(get_lifecycle_repo)],
 ) -> Dict[str, Any]:
     result = await repo.get_turn(session_id)
     return {"status": "success", "data": result}
@@ -145,9 +196,20 @@ async def get_turn(
 
 @router.get("/session/{session_id}/act", response_model=WrappedResponse[Dict[str, Any]])
 async def get_act(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_act(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/act/details", response_model=WrappedResponse[ScenarioActInfo]
+)
+async def get_current_act_details(
+    session_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    """현재 세션이 진행 중인 액트의 상세 정보(제목, 설명, 메타데이터)를 조회합니다."""
+    result = await repo.get_current_act_details(session_id)
     return {"status": "success", "data": result}
 
 
@@ -155,7 +217,7 @@ async def get_act(
     "/session/{session_id}/sequence", response_model=WrappedResponse[Dict[str, Any]]
 )
 async def get_sequence(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_sequence(session_id)
     return {"status": "success", "data": result}
@@ -165,7 +227,7 @@ async def get_sequence(
     "/session/{session_id}/location", response_model=WrappedResponse[Dict[str, Any]]
 )
 async def get_location(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_location(session_id)
     return {"status": "success", "data": result}
@@ -175,7 +237,7 @@ async def get_location(
     "/session/{session_id}/progress", response_model=WrappedResponse[Dict[str, Any]]
 )
 async def get_progress(
-    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_progress(session_id)
     return {"status": "success", "data": result}

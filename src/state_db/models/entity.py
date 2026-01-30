@@ -8,22 +8,38 @@ from .base import JsonField
 
 class NPCInfo(BaseModel):
     npc_id: Union[str, UUID]
+    scenario_npc_id: str
     name: str
     description: str
     current_hp: Optional[int] = None
     tags: List[str] = []
     state: Optional[JsonField] = None
+    assigned_sequence_id: Optional[str] = None
+    assigned_location: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class EnemyInfo(BaseModel):
     enemy_instance_id: Union[str, UUID]
-    scenario_enemy_id: Union[str, UUID]
+    scenario_enemy_id: str
     name: str
     description: str = ""
     current_hp: Optional[int] = None
     tags: List[str] = []
     state: Optional[JsonField] = None
+    assigned_sequence_id: Optional[str] = None
+    assigned_location: Optional[str] = None
+    is_defeated: bool = False
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ItemInfo(BaseModel):
+    item_id: int
+    scenario_item_id: str
+    name: str
+    description: str = ""
+    item_type: str = "misc"
+    meta: Optional[JsonField] = None
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -8,5 +8,5 @@ SELECT
     transition_reason,
     transitioned_at
 FROM phase
-WHERE session_id = :session_id
+WHERE session_id = $1
 ORDER BY turn_at_transition ASC; -- 턴 번호 기준으로 정렬하는 것이 논리적으로 가장 정확함

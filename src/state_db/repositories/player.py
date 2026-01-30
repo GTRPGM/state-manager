@@ -23,6 +23,12 @@ class PlayerRepository(BaseRepository):
             return PlayerStats.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Player not found")
 
+    async def get_item_ids(self, player_id: str) -> List[int]:
+        """플레이어가 보유한 아이템 ID 리스트 조회"""
+        sql_path = self.query_dir / "INQUIRY" / "inventory" / "Player_item_ids.sql"
+        results = await run_sql_query(sql_path, [player_id])
+        return [row["item_id"] for row in results]
+
     async def get_full_state(self, player_id: str) -> FullPlayerState:
         try:
             stats = await self.get_stats(player_id)
@@ -33,6 +39,7 @@ class PlayerRepository(BaseRepository):
             )
 
         relations = await self.get_npc_relations(player_id)
+        item_ids = await self.get_item_ids(player_id)
 
         # state가 dict인 경우와 객체인 경우를 모두 처리
         state_data = stats.state
@@ -48,7 +55,7 @@ class PlayerRepository(BaseRepository):
             player=PlayerStateResponse(
                 hp=hp,
                 gold=gold,
-                items=[],
+                items=item_ids,
             ),
             player_npc_relations=relations,
         )
@@ -78,9 +85,12 @@ class PlayerRepository(BaseRepository):
         return [InventoryItem.model_validate(row) for row in results]
 
     async def update_inventory(
-        self, player_id: str, item_id: str, quantity: int
+        self, player_id: str, item_id: int, quantity: int
     ) -> Dict[str, Any]:
-        # TODO: 실제 SQL 파일 구현 필요
+        sql_path = self.query_dir / "UPDATE" / "inventory" / "update_inventory.sql"
+        result = await run_sql_query(sql_path, [player_id, item_id, quantity])
+        if result:
+            return result[0]
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
     async def get_npc_relations(self, player_id: str) -> List[NPCRelation]:
@@ -99,7 +109,7 @@ class PlayerRepository(BaseRepository):
         )
 
     async def earn_item(
-        self, session_id: str, player_id: str, item_id: str, quantity: int
+        self, session_id: str, player_id: str, item_id: int, quantity: int
     ) -> Dict[str, Any]:
         sql_path = self.query_dir / "UPDATE" / "inventory" / "earn_item.sql"
         result = await run_sql_query(
@@ -110,12 +120,32 @@ class PlayerRepository(BaseRepository):
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
     async def use_item(
-        self, session_id: str, player_id: str, item_id: str, quantity: int
+        self, session_id: str, player_id: str, item_id: int, quantity: int
     ) -> Dict[str, Any]:
         sql_path = self.query_dir / "UPDATE" / "inventory" / "use_item.sql"
         result = await run_sql_query(
             sql_path, [session_id, player_id, item_id, quantity]
         )
         if result:
+            # turn 테이블에 아이템 사용 기록 추가
+            remaining_quantity = result[0].get("quantity", 0)
+            await self._record_item_use(
+                session_id, player_id, item_id, quantity, remaining_quantity
+            )
             return result[0]
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
+
+    async def _record_item_use(
+        self,
+        session_id: str,
+        player_id: str,
+        item_id: int,
+        quantity_used: int,
+        remaining_quantity: int,
+    ) -> None:
+        """아이템 사용 기록을 turn 테이블에 추가"""
+        sql_path = self.query_dir / "UPDATE" / "turn" / "record_item_use.sql"
+        await run_sql_query(
+            sql_path,
+            [session_id, player_id, item_id, quantity_used, remaining_quantity],
+        )

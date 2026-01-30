@@ -4,7 +4,7 @@ SELECT
     new_phase,
     COUNT(*) AS transition_count
 FROM phase
-WHERE session_id = :session_id
+WHERE session_id = $1
   AND previous_phase IS NOT NULL
 GROUP BY previous_phase, new_phase
 ORDER BY transition_count DESC;

@@ -2,6 +2,7 @@ from .base import JsonField, Phase, SessionStatus
 from .entity import (
     EnemyHPUpdateResult,
     EnemyInfo,
+    ItemInfo,
     NPCInfo,
     RemoveEntityResult,
     SpawnResult,
@@ -23,6 +24,7 @@ from .world import (
     ApplyJudgmentSkipped,
     LocationUpdateResult,
     PhaseChangeResult,
+    ScenarioActInfo,
     SequenceChangeResult,
     StateUpdateResult,
     TurnAddResult,
@@ -34,6 +36,7 @@ __all__ = [
     "SessionStatus",
     "SessionInfo",
     "InventoryItem",
+    "ItemInfo",
     "NPCInfo",
     "NPCRelation",
     "EnemyInfo",
