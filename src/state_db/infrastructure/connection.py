@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import asyncpg
 
-from state_db.configs.setting import DB_CONFIG
+from state_db.configs.setting import get_db_config
 
 logger = logging.getLogger("state_db.infrastructure.connection")
 
@@ -19,7 +19,7 @@ class DatabaseManager:
         if cls._pool is None:
             logger.info("Initializing database connection pool...")
             cls._pool = await asyncpg.create_pool(
-                **DB_CONFIG,
+                **get_db_config(),
                 min_size=2,
                 max_size=10,
                 command_timeout=60,
