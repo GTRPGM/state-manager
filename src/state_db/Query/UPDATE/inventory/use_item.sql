@@ -1,19 +1,23 @@
 -- --------------------------------------------------------------------
 -- use_item.sql
--- 아이템 사용 (수량 차감)
+-- 아이템 사용 처리 (수량 감소)
 -- $1: session_id, $2: player_id, $3: item_id, $4: quantity
--- 제약: 보유 수량이 사용량보다 적으면 업데이트 실패
 -- --------------------------------------------------------------------
 
 UPDATE player_inventory
 SET
-    quantity = quantity - $4,
+    quantity = player_inventory.quantity - $4::int,
     updated_at = NOW()
-WHERE player_id = $2
-  AND item_id = $3
-  AND quantity >= $4
+FROM player p
+JOIN session s ON p.session_id = s.session_id
+WHERE player_inventory.player_id = p.player_id
+  AND s.session_id = $1::uuid
+  AND p.player_id = $2::uuid
+  AND player_inventory.item_id = $3
+  AND s.status = 'active'
+  AND player_inventory.quantity >= $4::int
 RETURNING
-    player_id,
-    item_id,
-    quantity,
-    updated_at;
+    player_inventory.player_id::text,
+    player_inventory.item_id::text,
+    player_inventory.quantity,
+    player_inventory.updated_at;

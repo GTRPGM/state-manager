@@ -7,7 +7,10 @@
 UPDATE session
 SET
     current_act = GREATEST(current_act - 1, 1),  -- 최소 1
-    current_sequence = 1  -- Sequence는 1로 초기화
-WHERE session_id = $1
+    current_sequence = 1,  -- Sequence는 1로 초기화
+    current_act_id = CONCAT('act-', GREATEST(current_act - 1, 1)::text),
+    current_sequence_id = 'seq-1',
+    updated_at = NOW()
+WHERE session_id = $1::uuid
   AND status = 'active'
-RETURNING current_act, current_sequence;
+RETURNING session_id, current_act, current_sequence;
