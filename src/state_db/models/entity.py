@@ -33,6 +33,16 @@ class EnemyInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ItemInfo(BaseModel):
+    item_id: Union[str, UUID]
+    scenario_item_id: str
+    name: str
+    description: str = ""
+    item_type: str = "misc"
+    meta: Optional[JsonField] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EnemyHPUpdateResult(BaseModel):
     enemy_instance_id: Union[str, UUID]
     current_hp: int
