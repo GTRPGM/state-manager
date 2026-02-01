@@ -40,6 +40,8 @@ Repository에서 실제로 호출되는 SQL 파일 목록입니다.
 | `INQUIRY/session/Session_show.sql` | 세션 상세 조회 | SessionRepository |
 | `INQUIRY/session/Session_turn.sql` | 세션 턴 조회 | LifecycleStateRepository |
 | `INQUIRY/session/get_current_context.sql` | 현재 컨텍스트 조회 | ScenarioRepository |
+| `INQUIRY/session/get_current_act_details.sql` | 현재 Act 상세 조회 | ScenarioRepository |
+| `INQUIRY/session/get_current_sequence_details.sql` | 현재 Sequence 상세 조회 | ScenarioRepository |
 
 ### MANAGE 폴더 (관리/수정)
 
@@ -114,12 +116,12 @@ Repository에서 아직 사용하지 않는 SQL 파일입니다. 향후 기능 �
 | `INQUIRY/inventory/Check_item.sql` | 아이템 존재 확인 | 유효성 검사용 |
 | `INQUIRY/inventory/Current_inventory.sql` | 인벤토리 설정 조회 | 인벤토리 제한 확인용 |
 | `INQUIRY/inventory/Detail_item.sql` | 아이템 상세 정보 | 아이템 툴팁용 |
+| `INQUIRY/inventory/Player_item_ids.sql` | 플레이어 아이템 ID 조회 | 아이템 ID 목록용 |
 | `INQUIRY/npc/Detail_npc.sql` | NPC 상세 정보 | NPC 정보창용 |
 | `INQUIRY/phase/phase_rule.sql` | 페이즈 규칙 조회 | 규칙 엔진용 |
 | `INQUIRY/relations/Check_npc_relation.sql` | NPC 관계 확인 | 대화 조건 확인용 |
 | `INQUIRY/scenario/Detail_scenario.sql` | 시나리오 상세 | 시나리오 정보용 |
 | `INQUIRY/scenario/List_senario.sql` | 시나리오 목록 | 시나리오 선택용 (오타: senario) |
-| `INQUIRY/session/get_current_act_details.sql` | 현재 Act 상세 | Act 진행 상황용 |
 
 ### UPDATE 폴더
 

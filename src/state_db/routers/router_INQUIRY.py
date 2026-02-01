@@ -13,6 +13,7 @@ from state_db.models import (
     NPCInfo,
     PhaseChangeResult,
     ScenarioActInfo,
+    SequenceDetailInfo,
     SessionInfo,
     TurnAddResult,
 )
@@ -220,6 +221,18 @@ async def get_sequence(
     session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_sequence(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/sequence/details",
+    response_model=WrappedResponse[SequenceDetailInfo],
+)
+async def get_current_sequence_details(
+    session_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    """현재 세션이 진행 중인 시퀀스의 상세 정보(엔티티, 관계 포함)를 조회합니다."""
+    result = await repo.get_current_sequence_details(session_id)
     return {"status": "success", "data": result}
 
 

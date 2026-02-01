@@ -267,3 +267,163 @@ class ScenarioRepository(BaseRepository):
         if result:
             return result[0]
         raise HTTPException(status_code=404, detail="Current game context not found")
+
+    async def get_current_act_details(self, session_id: str) -> Dict[str, Any]:
+        """현재 세션의 Act 상세 정보 조회"""
+        sql_path = (
+            self.query_dir / "INQUIRY" / "session" / "get_current_act_details.sql"
+        )
+        from state_db.infrastructure import run_sql_query
+
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Current act details not found")
+
+    async def get_current_sequence_details(self, session_id: str) -> Dict[str, Any]:
+        """현재 세션의 Sequence 상세 정보 조회 (엔티티 및 관계 포함)"""
+        from state_db.infrastructure import run_sql_query
+
+        # 1. 시퀀스 기본 정보 조회
+        sql_path = (
+            self.query_dir / "INQUIRY" / "session" / "get_current_sequence_details.sql"
+        )
+        seq_result = await run_sql_query(sql_path, [session_id])
+        if not seq_result:
+            raise HTTPException(
+                status_code=404, detail="Current sequence details not found"
+            )
+
+        sequence_info = seq_result[0]
+        current_sequence_id = sequence_info["sequence_id"]
+
+        async with DatabaseManager.get_connection() as conn:
+            await set_age_path(conn)
+
+            # 2. 현재 시퀀스의 NPC 조회
+            npcs_rows = await conn.fetch(
+                """
+                SELECT npc_id, scenario_npc_id, name, description, tags, state
+                FROM npc
+                WHERE session_id = $1 AND assigned_sequence_id = $2
+                """,
+                session_id,
+                current_sequence_id,
+            )
+            npcs = [
+                {
+                    "id": str(row["npc_id"]),
+                    "scenario_entity_id": row["scenario_npc_id"],
+                    "name": row["name"],
+                    "description": row["description"],
+                    "entity_type": "npc",
+                    "tags": row["tags"] or [],
+                    "state": row["state"],
+                    "is_defeated": None,
+                }
+                for row in npcs_rows
+            ]
+
+            # 3. 현재 시퀀스의 Enemy 조회
+            enemies_rows = await conn.fetch(
+                """
+                SELECT enemy_id, scenario_enemy_id, name, description, tags, state, is_defeated
+                FROM enemy
+                WHERE session_id = $1 AND assigned_sequence_id = $2
+                """,
+                session_id,
+                current_sequence_id,
+            )
+            enemies = [
+                {
+                    "id": str(row["enemy_id"]),
+                    "scenario_entity_id": row["scenario_enemy_id"],
+                    "name": row["name"],
+                    "description": row["description"],
+                    "entity_type": "enemy",
+                    "tags": row["tags"] or [],
+                    "state": row["state"],
+                    "is_defeated": row["is_defeated"],
+                }
+                for row in enemies_rows
+            ]
+
+            # 4. 엔티티 간 관계 조회 (Apache AGE 그래프)
+            entity_relations = []
+            scenario_entity_ids = [n["scenario_entity_id"] for n in npcs] + [
+                e["scenario_entity_id"] for e in enemies
+            ]
+            if scenario_entity_ids:
+                try:
+                    # 현재 세션의 엔티티들 간 관계 조회
+                    relations_query = f"""
+                        SELECT * FROM ag_catalog.cypher('state_db', $$
+                            MATCH (v1)-[r:RELATION]->(v2)
+                            WHERE r.session_id = '{session_id}'
+                            RETURN
+                                coalesce(v1.scenario_npc_id, v1.scenario_enemy_id) as from_id,
+                                v1.name as from_name,
+                                coalesce(v2.scenario_npc_id, v2.scenario_enemy_id) as to_id,
+                                v2.name as to_name,
+                                r.relation_type as relation_type,
+                                r.affinity as affinity
+                        $$) AS (from_id agtype, from_name agtype, to_id agtype, to_name agtype, relation_type agtype, affinity agtype)
+                    """
+                    rel_rows = await conn.fetch(relations_query)
+                    for row in rel_rows:
+                        from_id = str(row["from_id"]).strip('"')
+                        to_id = str(row["to_id"]).strip('"')
+                        # 현재 시퀀스의 엔티티들만 필터
+                        if from_id in scenario_entity_ids or to_id in scenario_entity_ids:
+                            entity_relations.append(
+                                {
+                                    "from_id": from_id,
+                                    "from_name": str(row["from_name"]).strip('"'),
+                                    "to_id": to_id,
+                                    "to_name": str(row["to_name"]).strip('"'),
+                                    "relation_type": str(row["relation_type"]).strip('"'),
+                                    "affinity": int(str(row["affinity"])) if row["affinity"] else None,
+                                }
+                            )
+                except Exception as e:
+                    logger.warning(f"Failed to fetch entity relations: {e}")
+
+            # 5. 플레이어-NPC 관계 조회
+            player_npc_relations = []
+            npc_ids = [n["id"] for n in npcs]
+            if npc_ids:
+                try:
+                    pnr_rows = await conn.fetch(
+                        """
+                        SELECT pnr.npc_id, n.name as npc_name, n.scenario_npc_id,
+                               pnr.affinity_score, pnr.relation_type, pnr.interaction_count
+                        FROM player_npc_relations pnr
+                        JOIN npc n ON pnr.npc_id = n.npc_id
+                        JOIN player p ON pnr.player_id = p.player_id
+                        WHERE p.session_id = $1 AND n.npc_id = ANY($2::uuid[])
+                        """,
+                        session_id,
+                        npc_ids,
+                    )
+                    player_npc_relations = [
+                        {
+                            "npc_id": str(row["npc_id"]),
+                            "npc_name": row["npc_name"],
+                            "scenario_npc_id": row["scenario_npc_id"],
+                            "affinity_score": row["affinity_score"],
+                            "relation_type": row["relation_type"],
+                            "interaction_count": row["interaction_count"],
+                        }
+                        for row in pnr_rows
+                    ]
+                except Exception as e:
+                    logger.warning(f"Failed to fetch player-NPC relations: {e}")
+
+        # 최종 결과 조합
+        return {
+            **sequence_info,
+            "npcs": npcs,
+            "enemies": enemies,
+            "entity_relations": entity_relations,
+            "player_npc_relations": player_npc_relations,
+        }

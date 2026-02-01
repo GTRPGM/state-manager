@@ -22,10 +22,15 @@ from .session import SessionInfo
 from .world import (
     ActChangeResult,
     ApplyJudgmentSkipped,
+    EntityRelationInfo,
     LocationUpdateResult,
     PhaseChangeResult,
+    PlayerNPCRelationInfo,
     ScenarioActInfo,
+    ScenarioSequenceInfo,
     SequenceChangeResult,
+    SequenceDetailInfo,
+    SequenceEntityInfo,
     StateUpdateResult,
     TurnAddResult,
 )
@@ -57,4 +62,10 @@ __all__ = [
     "RemoveEntityResult",
     "StateUpdateResult",
     "ApplyJudgmentSkipped",
+    "ScenarioActInfo",
+    "ScenarioSequenceInfo",
+    "SequenceDetailInfo",
+    "SequenceEntityInfo",
+    "EntityRelationInfo",
+    "PlayerNPCRelationInfo",
 ]
