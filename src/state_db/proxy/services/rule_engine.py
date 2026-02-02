@@ -4,7 +4,7 @@ import logging
 from typing import Any, Optional
 
 from state_db.configs.setting import RULE_ENGINE_URL
-from state_db.proxy.client import proxy_request
+from ..client import proxy_request
 
 logger = logging.getLogger("state_db.proxy.services.rule_engine")
 
