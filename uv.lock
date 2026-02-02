@@ -907,6 +907,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "python-dotenv" },
+    { name = "tenacity" },
     { name = "uvicorn" },
 ]
 
@@ -926,6 +927,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=1.2.7" },
     { name = "langgraph", specifier = ">=1.0.6" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "tenacity", specifier = ">=8.2.0" },
     { name = "uvicorn", specifier = ">=0.40.0" },
 ]
 

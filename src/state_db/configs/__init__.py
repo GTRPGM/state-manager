@@ -13,7 +13,13 @@ from state_db.configs.setting import (
     DB_PASSWORD,
     DB_PORT,
     DB_USER,
+    GM_URL,
+    PROXY_MAX_RETRIES,
+    PROXY_RETRY_MAX_WAIT,
+    PROXY_RETRY_MIN_WAIT,
+    PROXY_TIMEOUT,
     REDIS_PORT,
+    RULE_ENGINE_URL,
 )
 
 __all__ = [
@@ -34,4 +40,11 @@ __all__ = [
     "DB_CONFIG",
     # Apache AGE
     "AGE_GRAPH_NAME",
+    # Proxy
+    "RULE_ENGINE_URL",
+    "GM_URL",
+    "PROXY_TIMEOUT",
+    "PROXY_MAX_RETRIES",
+    "PROXY_RETRY_MIN_WAIT",
+    "PROXY_RETRY_MAX_WAIT",
 ]

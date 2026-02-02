@@ -4,6 +4,7 @@ from pathlib import Path
 from state_db.configs.setting import AGE_GRAPH_NAME
 from state_db.infrastructure.connection import DatabaseManager, set_age_path
 from state_db.infrastructure.query_executor import load_queries
+from state_db.proxy.client import HTTPClientManager
 
 logger = logging.getLogger("state_db.infrastructure.lifecycle")
 
@@ -31,7 +32,12 @@ async def startup() -> None:
     """애플리케이션 시작 시 초기화"""
     from .schema import initialize_schema
 
+    # DB 연결 풀 초기화
     await DatabaseManager.get_pool()
+
+    # HTTP 클라이언트 풀 초기화 (프록시용)
+    await HTTPClientManager.get_client()
+    logger.info("HTTP client pool initialized")
 
     # 쿼리 로드 (상위 폴더의 Query 디렉토리)
     # 현재 파일 위치: src/state_db/infrastructure/lifecycle.py
@@ -48,4 +54,9 @@ async def startup() -> None:
 
 async def shutdown() -> None:
     """애플리케이션 종료 시 정리"""
+    # HTTP 클라이언트 종료
+    await HTTPClientManager.close_client()
+    logger.info("HTTP client pool closed")
+
+    # DB 연결 풀 종료
     await DatabaseManager.close_pool()

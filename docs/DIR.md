@@ -10,8 +10,8 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 
 | 파일 | 역할 |
 |------|------|
-| `pyproject.toml` | 프로젝트 메타데이터, 의존성 정의 (Python 3.11+) |
-| `.env.example` | 환경변수 템플릿 (DB, 서버, Apache AGE 설정) |
+| `pyproject.toml` | 프로젝트 메타데이터, 의존성 정의 (Python 3.11+, tenacity 포함) |
+| `.env.example` | 환경변수 템플릿 (DB, 서버, Apache AGE, 프록시 설정) |
 | `.python-version` | Python 버전 명시 |
 | `.pre-commit-config.yaml` | Pre-commit 훅 설정 (Ruff, Markdown lint) |
 | `.gitignore` | Git 무시 파일 목록 |
@@ -50,11 +50,11 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 
 | 파일 | 역할 |
 |------|------|
-| `setting.py` | 환경변수 로딩, DB 설정 함수 |
+| `setting.py` | 환경변수 로딩, DB/프록시 설정 (RULE_ENGINE_URL, GM_URL, PROXY_TIMEOUT 등) |
 | `api_routers.py` | API 라우터 중앙 등록 목록 |
 | `exceptions.py` | 커스텀 예외 정의 및 핸들러 |
 | `logging_config.py` | 구조화된 로깅 설정 |
-| `color_hint_formatter.py` | 컬러 힌트가 있는 커스텀 로그 포맷터 |
+| `color_hint_formatter.py` | 로그 레벨별 색상 포매터 (DEBUG=cyan, WARNING=yellow, ERROR=red) |
 
 ---
 
@@ -96,6 +96,7 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `router_MANAGE.py` | 엔티티/세션 관리 (생성, 삭제, 페이즈 변경) |
 | `router_TRACE.py` | 히스토리 및 게임 트레이스 분석 |
 | `router_TRACE_phase.py` | 페이즈별 트레이싱 |
+| `router_PROXY.py` | 마이크로서비스 프록시 헬스체크 (/health/proxy) |
 | `dependencies.py` | FastAPI 의존성 주입 |
 
 ---
@@ -119,7 +120,7 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `management.py` | 관리 작업 스키마 |
 | `management_requests.py` | 관리 요청 모델 |
 | `requests.py` | 공통 요청 모델 |
-| `mixins.py` | 스키마 조합용 믹스인 클래스 |
+| `mixins.py` | 스키마 믹스인 (SessionContextMixin, EntityBaseMixin, StateMixin, LoggableMixin) |
 
 ---
 
@@ -130,8 +131,24 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `connection.py` | asyncpg 커넥션 풀링, PostgreSQL 연결 관리 |
 | `query_executor.py` | SQL 실행 엔진, 쿼리 캐싱, Cypher 지원 |
 | `database.py` | 하위호환성을 위한 래퍼 (deprecated) |
-| `lifecycle.py` | 앱 시작/종료 시 DB 테이블/트리거 초기화 |
+| `lifecycle.py` | 앱 시작/종료 시 DB 및 HTTP 클라이언트 초기화/정리 |
 | `schema.py` | 데이터베이스 스키마 유틸리티 |
+
+---
+
+### `/proxy` - 마이크로서비스 프록시
+
+| 파일 | 역할 |
+|------|------|
+| `__init__.py` | 프록시 모듈 export (HTTPClientManager, proxy_request) |
+| `client.py` | HTTPClientManager 싱글톤, proxy_request 함수 (tenacity 재시도) |
+
+#### `/proxy/services` - 서비스별 프록시
+
+| 파일 | 역할 |
+|------|------|
+| `rule_engine.py` | Rule Engine 프록시 (validate_action, calculate_outcome, health_check) |
+| `gm.py` | GM 프록시 (generate_narrative, generate_npc_response, health_check) |
 
 ---
 
@@ -271,6 +288,8 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `test_system_integrity.py` | 세션 격리 및 데이터 무결성 테스트 |
 | `test_db_logic_full.py` | 종합 DB 로직 검증 |
 | `test_router_*.py` | 각 라우터별 API 엔드포인트 테스트 |
+| `test_router_PROXY.py` | 프록시 헬스체크 엔드포인트 테스트 |
+| `test_proxy.py` | HTTPClientManager, proxy_request 유닛 테스트 |
 | `test_main.py` | 메인 앱 진입점 테스트 |
 | `test_pipeline.py` | 상태 처리 파이프라인 테스트 |
 | `test_scenario_advanced.py` | 고급 시나리오 작업 테스트 |
@@ -283,8 +302,9 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 |------|------|
 | `END_POINTS.md` | 전체 API 엔드포인트 레퍼런스 |
 | `BE_operation.md` | 백엔드 운영 가이드 |
-| `BE_plan.md` | 백엔드 계획 문서 |
-| `QUERY_STRUCTURE.md` | SQL 쿼리 조직 구조 |
+| `BE_plan.md` | 백엔드 프록시 작업 계획서 |
+| `plan4.md` | Proxy/Logger/ColorFormatter 구현 계획 |
+| `DIR.md` | 디렉토리 구조 문서 (현재 파일) |
 | `SCENARIO_INTEGRATION_GUIDE.md` | 시나리오 통합 가이드 |
 | `UNUSED_SQL.md` | 미사용 SQL 파일 문서화 |
 | `GTRPGM.drawio.png` | 시스템 아키텍처 다이어그램 |
@@ -364,13 +384,17 @@ main.py (FastAPI 앱)
   ├── infrastructure/ (DB 계층)
   │   ├── connection.py (asyncpg)
   │   ├── query_executor.py
-  │   └── lifecycle.py
+  │   └── lifecycle.py (DB + HTTP 클라이언트 관리)
+  │
+  ├── proxy/ (마이크로서비스 통신)
+  │   ├── client.py (HTTPClientManager 싱글톤)
+  │   └── services/ (Rule Engine, GM 프록시)
   │
   ├── models/ (Pydantic 모델)
-  ├── schemas/ (요청/응답 검증)
-  └── configs/ (환경 설정)
+  ├── schemas/ (요청/응답 검증, LoggableMixin)
+  └── configs/ (환경 설정, 프록시 URL/타임아웃)
 ```
 
 ---
 
-*마지막 업데이트: 2026-02-02*
+*마지막 업데이트: 2026-02-02 (Proxy/Logger/ColorFormatter 추가)*

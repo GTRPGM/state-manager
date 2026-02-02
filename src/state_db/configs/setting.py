@@ -30,6 +30,18 @@ APP_ENV = os.getenv("APP_ENV", "local")
 # ====================================================================
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
+# ====================================================================
+# 마이크로서비스 프록시 설정
+# ====================================================================
+RULE_ENGINE_URL = os.getenv("RULE_ENGINE_URL", "http://localhost:8050")
+GM_URL = os.getenv("GM_URL", "http://localhost:8020")
+
+# 프록시 타임아웃 및 재시도 설정
+PROXY_TIMEOUT = float(os.getenv("PROXY_TIMEOUT", 10.0))
+PROXY_MAX_RETRIES = int(os.getenv("PROXY_MAX_RETRIES", 3))
+PROXY_RETRY_MIN_WAIT = float(os.getenv("PROXY_RETRY_MIN_WAIT", 1.0))
+PROXY_RETRY_MAX_WAIT = float(os.getenv("PROXY_RETRY_MAX_WAIT", 10.0))
+
 
 # ====================================================================
 # PostgreSQL 연결 설정 딕셔너리

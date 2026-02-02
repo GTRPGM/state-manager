@@ -5,6 +5,7 @@ from state_db.routers import (
     router_INJECT,
     router_INQUIRY,
     router_MANAGE,
+    router_PROXY,
     router_START,
     router_TRACE,
     router_TRACE_phase,
@@ -20,4 +21,5 @@ API_ROUTERS = [
     router_MANAGE,  # 관리
     router_TRACE,  # 이력 추적 (Turn)
     router_TRACE_phase,  # 이력 추적 (Phase)
+    router_PROXY,  # 프록시 헬스체크
 ]

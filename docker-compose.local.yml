@@ -30,6 +30,11 @@ services:
       - APP_PORT=8030
       - APP_ENV=local
       - AGE_GRAPH_NAME=state_db
+      # 마이크로서비스 프록시 설정
+      - RULE_ENGINE_URL=http://rule-engine:8050
+      - GM_URL=http://gm:8020
+      - PROXY_TIMEOUT=10.0
+      - PROXY_MAX_RETRIES=3
     networks:
       - gtrpgm-net
 

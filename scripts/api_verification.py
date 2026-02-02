@@ -108,6 +108,12 @@ class APIVerifier:
             print("\n[OK] No NULL values found in responses.")
 
     def run(self):
+        # 0. Proxy Health Check (서비스가 없어도 응답 확인)
+        print("[0] Checking Proxy Health...")
+        self.check("Proxy Health Check", "GET", "/state/health/proxy")
+        self.check("Rule Engine Health", "GET", "/state/health/proxy/rule-engine")
+        self.check("GM Health", "GET", "/state/health/proxy/gm")
+
         # 1. Inject Scenario
         print("[1] Injecting Scenario...")
         scenario_data = {
