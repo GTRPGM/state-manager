@@ -34,17 +34,17 @@ BEGIN
     EXECUTE format($fmt$
         SELECT * FROM ag_catalog.cypher('state_db'::name, $$
             MATCH (v1)-[r:RELATION]->(v2)
-            WHERE r.session_id = %L
+            WHERE r.session_id = %L AND r.scenario_id = %L
             MATCH (nv1), (nv2)
-            WHERE nv1.session_id = %L 
+            WHERE nv1.session_id = %L
               AND (nv1.scenario_npc_id = v1.scenario_npc_id OR nv1.scenario_enemy_id = v1.scenario_enemy_id)
-              AND nv2.session_id = %L 
+              AND nv2.session_id = %L
               AND (nv2.scenario_npc_id = v2.scenario_npc_id OR nv2.scenario_enemy_id = v2.scenario_enemy_id)
             CREATE (nv1)-[nr:RELATION]->(nv2)
             SET nr = properties(r)
             SET nr.session_id = %L
         $$) AS (result agtype);
-    $fmt$, MASTER_SESSION_ID::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text);
+    $fmt$, MASTER_SESSION_ID::text, NEW.scenario_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text);
 
     RAISE NOTICE '[Graph] Initialized graph nodes and edges for session %', NEW.session_id;
 

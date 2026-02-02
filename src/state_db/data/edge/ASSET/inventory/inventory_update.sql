@@ -28,7 +28,7 @@
 
 -- 1️⃣ EARN_ITEM 엣지 생성 또는 활성화
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (i:inventory { session_id: $session_id }),
     (it:item { id: $item_id, session_id: $session_id })
@@ -68,7 +68,7 @@ COMMIT;
 
 -- 2️⃣ 획득 메시지 생성 (선택적)
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (p:player { id: $player_id, session_id: $session_id }),
     (it:item { id: $item_id, session_id: $session_id })
@@ -89,7 +89,7 @@ $$) AS (v agtype);
 
 -- 1️⃣ EARN_ITEM 엣지 비활성화
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (i:inventory { session_id: $session_id })-[r:EARN_ITEM]->(it:item { id: $item_id })
   WHERE r.active = true
@@ -100,7 +100,7 @@ $$) AS (v agtype);
 
 -- 2️⃣ USED_ITEM 엣지 생성 (사용 기록 + 정보 전달)
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (i:inventory { session_id: $session_id }),
     (it:item { id: $item_id, session_id: $session_id })
@@ -139,7 +139,7 @@ COMMIT;
 
 -- 3️⃣ 사용 메시지 생성 (선택적)
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (p:player { id: $player_id, session_id: $session_id }),
     (it:item { id: $item_id, session_id: $session_id })

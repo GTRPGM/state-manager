@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS enemy (
     -- RELATION 엣지 ID 저장
     relations JSONB DEFAULT '[]'::jsonb,
 
-    -- 드롭 아이템
-    dropped_items UUID[] DEFAULT ARRAY[]::UUID[]
+    -- 드롭 아이템 (item_id 리스트, INT 타입)
+    dropped_items INT[] DEFAULT ARRAY[]::INT[]
 );
 
 -- 인덱스 생성

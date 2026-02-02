@@ -2,13 +2,15 @@
 -- Enemy의 아이템 드롭 정의 및 실행
 -- Apache AGE Cypher 쿼리 + PostgreSQL 배열 업데이트
 --
+-- [미사용] 현재 ScenarioRepository에서 enemy.dropped_items (INT[])로 직접 관리
+--
 -- 두 가지 작업:
 -- 1. DROP_ITEM 엣지 생성/업데이트 (Cypher)
 -- 2. enemy.dropped_items 배열 업데이트 (PostgreSQL)
 --
 -- Parameters (정의 시):
---   :enemy_id        - Enemy UUID (enemy.enemy_id, 주의: 테이블은 enenmy_id)
---   :item_id         - Item UUID (item.item_id)
+--   :enemy_id        - Enemy UUID (enemy.enemy_id)
+--   :item_id         - Item INT (item.item_id) - INT 타입
 --   :session_id      - 세션 UUID
 --   :drop_rate       - 드롭 확률 (선택, 기본값: 1.0)
 --   :quantity        - 드롭 개수 (선택, 기본값: 1)
@@ -26,7 +28,7 @@
 -- 1. 드롭 테이블 정의 (MERGE 패턴)
 -- ========================================
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (e:enemy {enemy_id: $enemy_id, session_id: $session_id}),
     (i:item {item_id: $item_id, session_id: $session_id})
@@ -70,11 +72,11 @@ $$) AS (
 -- 2-1. Cypher: DROP_ITEM 엣지 업데이트
 WITH dropped_items AS (
   SELECT
-    (result->'item_id')::text::uuid AS item_id,
+    (result->'item_id')::text::integer AS item_id,
     (result->'item_name')::text AS item_name,
     (result->'quantity')::text::integer AS quantity,
     (result->'dropped_turn')::text::integer AS dropped_turn
-  FROM cypher('state_db_item_logic', format($$
+  FROM cypher('state_db', format($$
     MATCH (e:enemy {enemy_id: %L, session_id: %L})-[r:DROP_ITEM]->(i:item)
     WHERE r.dropped = false
       AND r.condition = %L
@@ -96,7 +98,7 @@ SET
   dropped_items = array_append(dropped_items, item_id),
   updated_at = NOW()
 FROM dropped_items
-WHERE enemy.enenmy_id = :enemy_id  -- 주의: 테이블 오타 반영
+WHERE enemy.enemy_id = :enemy_id
   AND enemy.session_id = :session_id
 RETURNING
   dropped_items.item_id,
@@ -112,7 +114,7 @@ RETURNING
 -- 예시 1: 드롭 테이블 정의 (시나리오 초기화)
 /*
 SELECT *
-FROM cypher('state_db_item_logic', $$
+FROM cypher('state_db', $$
   MATCH (e:enemy {enemy_id: 'enemy-uuid'}), (i:item {item_id: 'item-uuid'})
   MERGE (e)-[r:DROP_ITEM {drop_rate: 0.7, quantity: 1}]->(i)
 $$) AS (v agtype);

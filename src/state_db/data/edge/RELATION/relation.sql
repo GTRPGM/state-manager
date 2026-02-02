@@ -29,7 +29,7 @@
 -- 1. 관계 생성/업데이트 (MERGE)
 -- ========================================
 SELECT *
-FROM cypher('state_db_actor_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (from_node {session_id: $session_id}),
     (to_node {session_id: $session_id})
@@ -86,7 +86,7 @@ $$) AS (
 -- ========================================
 -- 특정 엔티티가 출발점인 모든 관계
 SELECT *
-FROM cypher('state_db_actor_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (from_node {session_id: $session_id})-[r:RELATION]->(to_node)
   WHERE
@@ -112,7 +112,7 @@ $$) AS (
 -- 3. 호감도만 업데이트
 -- ========================================
 SELECT *
-FROM cypher('state_db_actor_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (from_node {session_id: $session_id})-[r:RELATION]->(to_node {session_id: $session_id})
   WHERE
@@ -133,7 +133,7 @@ $$) AS (
 -- 4. 퇴장 처리 (active = false)
 -- ========================================
 SELECT *
-FROM cypher('state_db_actor_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (from_node {session_id: $session_id})-[r:RELATION]->(to_node {session_id: $session_id})
   WHERE
@@ -155,7 +155,7 @@ $$) AS (
 -- 5. 재등장 처리 (active = true)
 -- ========================================
 SELECT *
-FROM cypher('state_db_actor_logic', $$
+FROM cypher('state_db', $$
   MATCH
     (from_node {session_id: $session_id})-[r:RELATION]->(to_node {session_id: $session_id})
   WHERE
@@ -177,7 +177,7 @@ $$) AS (
 -- 6. 세션 종료 시 완전 삭제
 -- ========================================
 SELECT *
-FROM cypher('state_db_actor_logic', $$
+FROM cypher('state_db', $$
   MATCH
     ()-[r:RELATION {session_id: $session_id}]->()
   DELETE r
@@ -228,7 +228,7 @@ $$) AS (
 
 -- 예시 4: 특정 player의 모든 관계 조회
 /*
-SELECT * FROM cypher('state_db_actor_logic', $$
+SELECT * FROM cypher('state_db', $$
   MATCH (p:player {id: 'player-uuid'})-[r:RELATION]->(target)
   WHERE r.active = true
   RETURN r.relation_type, r.affinity, target.name

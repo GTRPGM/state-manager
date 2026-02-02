@@ -35,7 +35,7 @@ class ScenarioInjectEnemy(BaseModel):
     description: str = ""
     tags: List[str] = []
     state: Dict[str, Any] = {}
-    dropped_items: List[str] = []
+    dropped_items: List[int] = []  # item_id 리스트 (INT 타입)
 
 
 class ScenarioInjectItem(BaseModel):

@@ -181,12 +181,12 @@ Repository에서 아직 사용하지 않는 SQL 파일입니다. 향후 기능 �
 
 ### BASE 폴더
 
-DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다.
+DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다. (`initialize_schema()`에서 사용)
 
 | 접두사 | 용도 |
 |--------|------|
-| `B_*.sql` | 테이블 생성 (CREATE TABLE) |
-| `L_*.sql` | 관계 정의 (CONSTRAINT, INDEX) |
+| `B_*.sql` | 테이블 생성 (CREATE TABLE), 인덱스, 트리거 |
+| `L_*.sql` | Lifecycle/Logic - 세션 생성 시 트리거 함수 (NPC/Enemy/Item 복제 등) |
 
 ### FIRST 폴더
 
@@ -240,8 +240,8 @@ DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다.
 
 | 접두사 | 용도 |
 |--------|------|
-| `B_*` | Base table (테이블 생성) |
-| `L_*` | Link/Relation (제약조건, 인덱스) |
+| `B_*` | Base table (테이블 생성, 인덱스, 기본 트리거) |
+| `L_*` | Lifecycle/Logic (세션 생성 시 데이터 복제 트리거 함수) |
 
 ### DEBUG 폴더 접두사
 
@@ -279,3 +279,4 @@ DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다.
 | 2026-01-29 | 중복 역할 파일 분석, 파라미터 스타일 불일치 상세 목록 추가 |
 | 2026-01-29 | -r 폴더 삭제, 중복 파일 통합, 파라미터 스타일 통일, Session JOIN 통일, 페이즈 전환 로직 통합, TRACE 파일 추가 완료 |
 | 2026-01-30 | 전체 SQL 파일 사용 현황 재정리, asyncpg 파라미터 형식 수정 완료 반영, 폴더별 역할 및 네이밍 규칙 문서화 |
+| 2026-02-02 | data 폴더 원본 파일 정리 (drop_item 타입 수정: UUID→INT, 오타 수정: enenmy_id→enemy_id, state_db_item_logic→state_db) |

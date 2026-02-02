@@ -1,6 +1,8 @@
 -- drop_item.cypher
 -- Enemy가 드롭하는 Item 정의
 --
+-- [미사용] 현재 ScenarioRepository에서 enemy.dropped_items (INT[])로 직접 관리
+--
 -- 관계 타입: DROP_ITEM
 -- 방향: enemy → item (단방향)
 --
@@ -17,9 +19,10 @@
 --   - updated_at: TIMESTAMP
 --
 -- 참고:
---   - enemy.enemy_id 사용 (오타 주의: 테이블에는 enenmy_id)
---   - item.item_id 사용
---   - enemy.dropped_items 배열에도 추가 필요
+--   - enemy.enemy_id 사용
+--   - item.item_id 사용 (INT 타입)
+--   - enemy.dropped_items 배열에도 추가 필요 (INT[] 타입)
+--   - 그래프: state_db
 
 MATCH
   (e:enemy {enemy_id: $enemy_id, session_id: $session_id}),

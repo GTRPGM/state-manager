@@ -15,6 +15,13 @@ from state_db.schemas import ScenarioInjectRequest, ScenarioInjectResponse
 logger = logging.getLogger(__name__)
 
 
+def _escape_cypher(value: str) -> str:
+    """Cypher 쿼리용 문자열 이스케이프 (SQL Injection 방지)"""
+    if value is None:
+        return ""
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
 class ScenarioRepository(BaseRepository):
     def _get_query(self, path: Any) -> str:
         query_path = str(path.resolve())
@@ -139,18 +146,25 @@ class ScenarioRepository(BaseRepository):
                                 n.tags,
                                 json.dumps(n.state),
                             )
-                            # Graph Vertex (NPC)
+                            # Graph Vertex (NPC) - 이스케이프 적용
+                            safe_name = _escape_cypher(n.name)
+                            safe_npc_id = _escape_cypher(n.scenario_npc_id)
                             await conn.execute(
                                 f"""
                                 SELECT * FROM ag_catalog.cypher('state_db', $$
                                     CREATE (:npc {{
-                                        name: '{n.name}',
+                                        name: '{safe_name}',
                                         scenario_id: '{scenario_id}',
-                                        scenario_npc_id: '{n.scenario_npc_id}',
+                                        scenario_npc_id: '{safe_npc_id}',
                                         session_id: '{MASTER_SESSION_ID}'
                                     }})
                                 $$) AS (a agtype)
                                 """
+                            )
+                        else:
+                            logger.warning(
+                                f"NPC ID '{npc_id}' in sequence '{seq.id}' "
+                                f"not found in request.npcs"
                             )
 
                     for enemy_id in seq.enemies:
@@ -182,18 +196,25 @@ class ScenarioRepository(BaseRepository):
                                 json.dumps(e.state),
                                 e.dropped_items,
                             )
-                            # Graph Vertex (Enemy)
+                            # Graph Vertex (Enemy) - 이스케이프 적용
+                            safe_name = _escape_cypher(e.name)
+                            safe_enemy_id = _escape_cypher(e.scenario_enemy_id)
                             await conn.execute(
                                 f"""
                                 SELECT * FROM ag_catalog.cypher('state_db', $$
                                     CREATE (:enemy {{
-                                        name: '{e.name}',
+                                        name: '{safe_name}',
                                         scenario_id: '{scenario_id}',
-                                        scenario_enemy_id: '{e.scenario_enemy_id}',
+                                        scenario_enemy_id: '{safe_enemy_id}',
                                         session_id: '{MASTER_SESSION_ID}'
                                     }})
                                 $$) AS (a agtype)
                                 """
+                            )
+                        else:
+                            logger.warning(
+                                f"Enemy ID '{enemy_id}' in sequence '{seq.id}' "
+                                f"not found in request.enemies"
                             )
 
                 # 5. Items (item_id: INT, scenario_item_id: VARCHAR) #수정필요?
@@ -215,26 +236,32 @@ class ScenarioRepository(BaseRepository):
                         json.dumps(item.meta),
                     )
 
-                # 6. Relations (Graph Edges)
+                # 6. Relations (Graph Edges) - 이스케이프 적용
                 for rel in request.relations:
+                    safe_from_id = _escape_cypher(rel.from_id)
+                    safe_to_id = _escape_cypher(rel.to_id)
+                    safe_rel_type = _escape_cypher(rel.relation_type)
                     await conn.execute(
                         f"""
                         SELECT * FROM ag_catalog.cypher('state_db', $$
                             MATCH (v1), (v2)
                             WHERE v1.session_id = '{MASTER_SESSION_ID}'
+                              AND v1.scenario_id = '{scenario_id}'
                               AND (
-                                v1.scenario_npc_id = '{rel.from_id}'
-                                OR v1.scenario_enemy_id = '{rel.from_id}'
+                                v1.scenario_npc_id = '{safe_from_id}'
+                                OR v1.scenario_enemy_id = '{safe_from_id}'
                               )
                               AND v2.session_id = '{MASTER_SESSION_ID}'
+                              AND v2.scenario_id = '{scenario_id}'
                               AND (
-                                v2.scenario_npc_id = '{rel.to_id}'
-                                OR v2.scenario_enemy_id = '{rel.to_id}'
+                                v2.scenario_npc_id = '{safe_to_id}'
+                                OR v2.scenario_enemy_id = '{safe_to_id}'
                               )
                             CREATE (v1)-[:RELATION {{
-                                relation_type: '{rel.relation_type}',
+                                relation_type: '{safe_rel_type}',
                                 affinity: {rel.affinity},
-                                session_id: '{MASTER_SESSION_ID}'
+                                session_id: '{MASTER_SESSION_ID}',
+                                scenario_id: '{scenario_id}'
                             }}]->(v2)
                         $$) AS (a agtype)
                         """
