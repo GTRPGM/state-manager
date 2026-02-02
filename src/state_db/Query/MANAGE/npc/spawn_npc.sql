@@ -15,7 +15,7 @@ INSERT INTO npc (
 SELECT
     $1::UUID,
     scenario_id,
-    COALESCE($2::text, gen_random_uuid()::text)::UUID,
+    COALESCE($2::text, gen_random_uuid()::text),
     $3::text,
     COALESCE($4::text, ''),
     jsonb_build_object(

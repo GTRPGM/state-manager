@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from .base import JsonField
+
 
 class ScenarioActInfo(BaseModel):
     scenario_id: Union[str, UUID]
@@ -11,8 +13,8 @@ class ScenarioActInfo(BaseModel):
     act_name: str
     act_description: Optional[str] = None
     exit_criteria: Optional[str] = None
-    sequence_ids: List[str] = []
-    metadata: Dict[str, Any] = {}
+    sequence_ids: JsonField = []
+    metadata: JsonField = {}
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -24,8 +26,8 @@ class ScenarioSequenceInfo(BaseModel):
     location_name: Optional[str] = None
     description: Optional[str] = None
     goal: Optional[str] = None
-    exit_triggers: List[Dict[str, Any]] = []
-    metadata: Dict[str, Any] = {}
+    exit_triggers: JsonField = []
+    metadata: JsonField = {}
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -40,8 +42,8 @@ class SequenceEntityInfo(BaseModel):
     name: str
     description: Optional[str] = None
     entity_type: str  # 'npc' or 'enemy'
-    tags: List[str] = []
-    state: Optional[Dict[str, Any]] = None
+    tags: JsonField = []
+    state: JsonField = None
     is_defeated: Optional[bool] = None  # enemy only
 
     model_config = ConfigDict(from_attributes=True)
@@ -83,8 +85,8 @@ class SequenceDetailInfo(BaseModel):
     location_name: Optional[str] = None
     description: Optional[str] = None
     goal: Optional[str] = None
-    exit_triggers: List[Dict[str, Any]] = []
-    metadata: Dict[str, Any] = {}
+    exit_triggers: JsonField = []
+    metadata: JsonField = {}
     # 시퀀스 내 엔티티
     npcs: List[SequenceEntityInfo] = []
     enemies: List[SequenceEntityInfo] = []

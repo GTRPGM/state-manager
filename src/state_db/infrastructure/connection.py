@@ -1,3 +1,4 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, Optional
@@ -7,6 +8,22 @@ import asyncpg
 from state_db.configs.setting import get_db_config
 
 logger = logging.getLogger("state_db.infrastructure.connection")
+
+
+async def _init_connection(conn: asyncpg.Connection) -> None:
+    """연결 초기화: JSON/JSONB 타입 자동 파싱 설정"""
+    await conn.set_type_codec(
+        "json",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
+    await conn.set_type_codec(
+        "jsonb",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
 
 
 class DatabaseManager:
@@ -23,6 +40,8 @@ class DatabaseManager:
                 min_size=2,
                 max_size=10,
                 command_timeout=60,
+                init=_init_connection,
+                statement_cache_size=0,  # prepared statement 캐시 비활성화
             )
         return cls._pool
 
