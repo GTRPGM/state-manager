@@ -133,8 +133,8 @@ class ScenarioRepository(BaseRepository):
                                 INSERT INTO npc (
                                     name, description, scenario_id, scenario_npc_id,
                                     session_id, assigned_sequence_id, assigned_location,
-                                    tags, state
-                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                                    tags, state, is_departed
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                                 """,
                                 n.name,
                                 n.description,
@@ -145,6 +145,7 @@ class ScenarioRepository(BaseRepository):
                                 seq.location_name,
                                 n.tags,
                                 json.dumps(n.state),
+                                n.is_departed,
                             )
                             # Graph Vertex (NPC) - 이스케이프 적용
                             safe_name = _escape_cypher(n.name)
@@ -217,7 +218,9 @@ class ScenarioRepository(BaseRepository):
                                 f"not found in request.enemies"
                             )
 
-                # 5. Items (item_id: INT, scenario_item_id: VARCHAR) #수정필요?
+                # 5. Items (item_id: INT, scenario_item_id: VARCHAR)
+                # PRIMARY KEY가 (item_id, session_id)이므로 다른 시나리오에서
+                # 동일한 item_id를 사용할 경우 충돌 발생 -> ON CONFLICT로 해결
                 for item in request.items:
                     await conn.execute(
                         """
@@ -225,6 +228,13 @@ class ScenarioRepository(BaseRepository):
                             item_id, session_id, scenario_id, scenario_item_id,
                             name, description, item_type, meta
                         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        ON CONFLICT (item_id, session_id) DO UPDATE SET
+                            scenario_id = EXCLUDED.scenario_id,
+                            scenario_item_id = EXCLUDED.scenario_item_id,
+                            name = EXCLUDED.name,
+                            description = EXCLUDED.description,
+                            item_type = EXCLUDED.item_type,
+                            meta = EXCLUDED.meta
                         """,
                         item.item_id,
                         MASTER_SESSION_ID,

@@ -25,6 +25,7 @@ class ScenarioInjectNPC(BaseModel):
     description: str = Field(default="", description="NPC 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
     state: Dict[str, Any] = Field(default_factory=dict, description="상태 데이터")
+    is_departed: bool = Field(default=False, description="퇴장 여부")
 
 
 class ScenarioInjectEnemy(BaseModel):
