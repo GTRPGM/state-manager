@@ -1,7 +1,12 @@
 from typing import Any, Dict, List, Union
 
 from state_db.models import ApplyJudgmentSkipped, Phase, StateUpdateResult
-from state_db.repositories import EntityRepository, PlayerRepository, SessionRepository
+from state_db.repositories import (
+    EntityRepository,
+    LifecycleStateRepository,
+    PlayerRepository,
+    SessionRepository,
+)
 
 ApplyJudgmentResult = Union[StateUpdateResult, ApplyJudgmentSkipped]
 
@@ -11,6 +16,7 @@ class StateService:
         self.session_repo = SessionRepository()
         self.player_repo = PlayerRepository()
         self.entity_repo = EntityRepository()
+        self.lifecycle_repo = LifecycleStateRepository()
 
     async def get_state_snapshot(self, session_id: str) -> Dict[str, Any]:
         session_info = await self.session_repo.get_info(session_id)
@@ -25,8 +31,8 @@ class StateService:
             session_id, active_only=True
         )
         inventory = await self.player_repo.get_inventory(session_id)
-        phase_info = await self.session_repo.get_phase(session_id)
-        turn_info = await self.session_repo.get_turn(session_id)
+        phase_info = await self.lifecycle_repo.get_phase(session_id)
+        turn_info = await self.lifecycle_repo.get_turn(session_id)
 
         return {
             "session": session_info,
@@ -78,11 +84,11 @@ class StateService:
             results.append("location_updated")
 
         if "phase" in changes:
-            await self.session_repo.change_phase(session_id, changes["phase"])
+            await self.lifecycle_repo.change_phase(session_id, changes["phase"])
             results.append("phase_updated")
 
         if changes.get("turn_increment", False):
-            await self.session_repo.add_turn(session_id)
+            await self.lifecycle_repo.add_turn(session_id)
             results.append("turn_incremented")
 
         if "act" in changes:

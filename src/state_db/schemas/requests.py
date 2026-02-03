@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -139,3 +139,17 @@ class ItemUseRequest(BaseModel):
             }
         }
     )
+
+
+class EntityDiff(BaseModel):
+    """엔티티별 변경사항"""
+
+    entity_id: str = Field(..., description="엔티티 식별자 (player 또는 NPC/Enemy ID)")
+    diff: Dict[str, Any] = Field(..., description="변경할 필드와 값")
+
+
+class CommitRequest(BaseModel):
+    """일괄 상태 확정(Commit) 요청"""
+
+    turn_id: str = Field(..., description="턴 식별자 (session_id:seq)")
+    diffs: list[EntityDiff] = Field(..., description="변경사항 목록")

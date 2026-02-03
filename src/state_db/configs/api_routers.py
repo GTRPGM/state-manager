@@ -2,6 +2,7 @@
 # State Manager API 라우터 목록 관리
 
 from state_db.routers import (
+    router_COMMIT,
     router_INJECT,
     router_INQUIRY,
     router_MANAGE,
@@ -14,6 +15,7 @@ from state_db.routers import (
 
 # State Manager의 모든 라우터 목록
 API_ROUTERS = [
+    router_COMMIT,  # 상태 확정 (GM용)
     router_INJECT,  # 시나리오 주입
     router_START,  # 세션 시작
     router_INQUIRY,  # 조회
