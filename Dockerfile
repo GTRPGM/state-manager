@@ -41,4 +41,4 @@ HEALTHCHECK --start-period=20s --interval=30s --timeout=3s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; port=os.environ.get('PORT'); urllib.request.urlopen(f'http://localhost:{port}/health')"]
 
 # CMD - 엔트리포인트 경로 수정: gm.main:app → state_db.main:app
-CMD ["sh", "-c", "uvicorn state_db.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["sh", "-c", "uvicorn state_db.main:app --host 0.0.0.0 --port $PORT --log-config /app/src/state_db/configs/logging_config.yaml"]
