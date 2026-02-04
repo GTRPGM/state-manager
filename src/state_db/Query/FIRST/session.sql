@@ -112,7 +112,7 @@ CREATE OR REPLACE FUNCTION create_session(
     p_scenario_id UUID,
     p_current_act INTEGER DEFAULT 1,
     p_current_sequence INTEGER DEFAULT 1,
-    p_location TEXT DEFAULT NULL,
+    p_location TEXT DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
@@ -124,7 +124,7 @@ BEGIN
         current_sequence,
         location,
         status,
-        current_phase,  -- 내부 관리: 기본값 'dialogue'
+        current_phase  -- 내부 관리: 기본값 'dialogue'
     )
     VALUES (
         p_scenario_id,
@@ -132,7 +132,7 @@ BEGIN
         p_current_sequence,
         p_location,
         'active',
-        'dialogue',
+        'dialogue'
     )
     RETURNING session_id INTO new_session_id;
 
