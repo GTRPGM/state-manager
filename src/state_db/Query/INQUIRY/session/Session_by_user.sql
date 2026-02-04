@@ -1,4 +1,9 @@
--- 세션 전체 목록 조회
+-- --------------------------------------------------------------------
+-- Session_by_user.sql
+-- user_id로 활성 세션 조회
+-- 용도: 특정 사용자에게 매핑된 활성 세션 목록 확인
+-- --------------------------------------------------------------------
+
 SELECT
     s.session_id,
     s.scenario_id,
@@ -18,4 +23,6 @@ SELECT
     s.updated_at
 FROM session s
 LEFT JOIN player p ON s.session_id = p.session_id
-ORDER BY s.created_at DESC;
+WHERE s.user_id = $1
+  AND s.status = 'active'
+ORDER BY s.started_at DESC;

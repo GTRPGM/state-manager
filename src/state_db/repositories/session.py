@@ -27,7 +27,7 @@ class SessionRepository(BaseRepository):
             ) from e
 
         result = await execute_sql_function(
-            "create_session", [scenario_uuid, act, sequence, location]
+            "create_session", [scenario_uuid, act, sequence, location, user_id]
         )
         session_id = result[0].get("create_session") if result else None
         if not session_id:
