@@ -10,6 +10,7 @@ This package contains separated routers organized by Query folder structure:
 """
 
 from . import (
+    router_COMMIT,
     router_INJECT,
     router_INQUIRY,
     router_MANAGE,
@@ -21,6 +22,7 @@ from . import (
 )
 
 __all__ = [
+    "router_COMMIT",
     "router_INJECT",
     "router_START",
     "router_INQUIRY",
