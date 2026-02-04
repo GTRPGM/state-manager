@@ -2,7 +2,6 @@
 SELECT
     s.session_id,
     s.scenario_id,
-    s.user_id,
     p.player_id,
     s.current_act,
     s.current_sequence,

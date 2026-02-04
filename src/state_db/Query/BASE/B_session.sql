@@ -28,9 +28,6 @@ CREATE TABLE IF NOT EXISTS session (
     location TEXT,
     status session_status NOT NULL DEFAULT 'active',
 
-    -- [신규 추가] 외부 시스템 사용자 식별자 (FK 없음, Optional)
-    user_id INTEGER DEFAULT NULL,
-
     started_at TIMESTAMP NOT NULL DEFAULT NOW(),
     ended_at TIMESTAMP,
     paused_at TIMESTAMP,
@@ -40,7 +37,6 @@ CREATE TABLE IF NOT EXISTS session (
 
 CREATE INDEX IF NOT EXISTS idx_session_scenario_id ON session(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_session_status ON session(status);
-CREATE INDEX IF NOT EXISTS idx_session_user_id ON session(user_id);
 
 CREATE OR REPLACE FUNCTION update_session_timestamp()
 RETURNS TRIGGER AS $$
