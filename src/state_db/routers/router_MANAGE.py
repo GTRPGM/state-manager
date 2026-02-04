@@ -83,17 +83,6 @@ async def delete_session(
     return {"status": "success", "data": result}
 
 
-@router.patch(
-    "/session/{session_id}/user", response_model=WrappedResponse[Dict[str, Any]]
-)
-async def update_session_user(
-    session_id: str,
-    user_id: int,
-    repo: Annotated[SessionRepository, Depends(get_session_repo)],
-) -> Dict[str, Any]:
-    """기존 세션에 user_id 매핑"""
-    result = await repo.update_user_id(session_id, user_id)
-    return {"status": "success", "data": result}
 
 
 # ====================================================================

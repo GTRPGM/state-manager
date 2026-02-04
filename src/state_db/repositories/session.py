@@ -92,16 +92,3 @@ class SessionRepository(BaseRepository):
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
-    async def update_user_id(self, session_id: str, user_id: int) -> dict:
-        """세션에 user_id 매핑"""
-        sql_path = self.query_dir / "MANAGE" / "session" / "update_user_id.sql"
-        result = await run_sql_query(sql_path, [session_id, user_id])
-        if result:
-            return {"session_id": session_id, "user_id": user_id}
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def get_sessions_by_user(self, user_id: int) -> List[SessionInfo]:
-        """user_id로 활성 세션 조회"""
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_by_user.sql"
-        results = await run_sql_query(sql_path, [user_id])
-        return [SessionInfo.model_validate(row) for row in results]

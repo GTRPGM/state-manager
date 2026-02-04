@@ -113,7 +113,6 @@ CREATE OR REPLACE FUNCTION create_session(
     p_current_act INTEGER DEFAULT 1,
     p_current_sequence INTEGER DEFAULT 1,
     p_location TEXT DEFAULT NULL,
-    p_user_id INTEGER DEFAULT NULL  -- 외부 시스템 사용자 식별자 (Optional)
 )
 RETURNS UUID AS $$
 DECLARE
@@ -126,7 +125,6 @@ BEGIN
         location,
         status,
         current_phase,  -- 내부 관리: 기본값 'dialogue'
-        user_id         -- 외부 시스템 사용자 식별자
     )
     VALUES (
         p_scenario_id,
@@ -135,7 +133,6 @@ BEGIN
         p_location,
         'active',
         'dialogue',
-        p_user_id
     )
     RETURNING session_id INTO new_session_id;
 
