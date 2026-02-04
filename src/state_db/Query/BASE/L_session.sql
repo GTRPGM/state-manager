@@ -3,7 +3,8 @@ CREATE OR REPLACE FUNCTION create_session(
     p_scenario_id UUID,
     p_current_act INTEGER DEFAULT 1,
     p_current_sequence INTEGER DEFAULT 1,
-    p_location TEXT DEFAULT NULL
+    p_location TEXT DEFAULT NULL,
+    p_user_id INTEGER DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
@@ -42,7 +43,8 @@ BEGIN
         current_sequence_id,
         location,
         status,
-        current_phase
+        current_phase,
+        user_id
     )
     VALUES (
         p_scenario_id,
@@ -52,7 +54,8 @@ BEGIN
         v_first_sequence_id,
         p_location,
         'active',
-        'dialogue'
+        'dialogue',
+        p_user_id
     )
     RETURNING session_id INTO new_session_id;
 
