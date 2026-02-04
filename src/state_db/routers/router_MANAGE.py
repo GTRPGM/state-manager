@@ -74,14 +74,25 @@ async def resume_session(
     return {"status": "success", "data": {"message": f"Session {session_id} resumed"}}
 
 
-@router.delete(
-    "/session/{session_id}", response_model=WrappedResponse[Dict[str, str]]
-)
+@router.delete("/session/{session_id}", response_model=WrappedResponse[Dict[str, str]])
 async def delete_session(
     session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
 ) -> Dict[str, Any]:
     """세션 완전 삭제 (CASCADE로 모든 관련 데이터 삭제)"""
     result = await repo.delete(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.patch(
+    "/session/{session_id}/user", response_model=WrappedResponse[Dict[str, Any]]
+)
+async def update_session_user(
+    session_id: str,
+    user_id: int,
+    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+) -> Dict[str, Any]:
+    """기존 세션에 user_id 매핑"""
+    result = await repo.update_user_id(session_id, user_id)
     return {"status": "success", "data": result}
 
 

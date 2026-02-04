@@ -411,15 +411,22 @@ class ScenarioRepository(BaseRepository):
                         from_id = str(row["from_id"]).strip('"')
                         to_id = str(row["to_id"]).strip('"')
                         # 현재 시퀀스의 엔티티들만 필터
-                        if from_id in scenario_entity_ids or to_id in scenario_entity_ids:
+                        if (
+                            from_id in scenario_entity_ids
+                            or to_id in scenario_entity_ids
+                        ):
                             entity_relations.append(
                                 {
                                     "from_id": from_id,
                                     "from_name": str(row["from_name"]).strip('"'),
                                     "to_id": to_id,
                                     "to_name": str(row["to_name"]).strip('"'),
-                                    "relation_type": str(row["relation_type"]).strip('"'),
-                                    "affinity": int(str(row["affinity"])) if row["affinity"] else None,
+                                    "relation_type": str(row["relation_type"]).strip(
+                                        '"'
+                                    ),
+                                    "affinity": int(str(row["affinity"]))
+                                    if row["affinity"]
+                                    else None,
                                 }
                             )
                 except Exception as e:

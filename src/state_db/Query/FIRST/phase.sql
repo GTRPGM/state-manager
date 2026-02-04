@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS phase (
     phase_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL,
-    previous_phase phase_type, 
+    previous_phase phase_type,
     new_phase phase_type NOT NULL,
     turn_at_transition INTEGER NOT NULL,
     transition_reason TEXT,
@@ -36,9 +36,9 @@ CREATE OR REPLACE FUNCTION log_phase_transition_logic()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO phase (phase_id, session_id, previous_phase, new_phase, turn_at_transition, transition_reason)
-    VALUES (gen_random_uuid(), NEW.session_id, 
-           CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.current_phase END, 
-           NEW.current_phase, NEW.current_turn, 
+    VALUES (gen_random_uuid(), NEW.session_id,
+           CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.current_phase END,
+           NEW.current_phase, NEW.current_turn,
            CASE WHEN TG_OP = 'INSERT' THEN 'session_start' ELSE NULL END);
     RETURN NEW;
 END;
@@ -49,7 +49,7 @@ DROP TRIGGER IF EXISTS trg_initialize_phase ON session;
 CREATE TRIGGER trg_initialize_phase AFTER INSERT ON session FOR EACH ROW EXECUTE FUNCTION log_phase_transition_logic();
 
 DROP TRIGGER IF EXISTS trg_log_phase_transition ON session;
-CREATE TRIGGER trg_log_phase_transition AFTER UPDATE ON session FOR EACH ROW 
+CREATE TRIGGER trg_log_phase_transition AFTER UPDATE ON session FOR EACH ROW
 WHEN (OLD.current_phase IS DISTINCT FROM NEW.current_phase) EXECUTE FUNCTION log_phase_transition_logic();
 
 -- [Logic] 검증 함수

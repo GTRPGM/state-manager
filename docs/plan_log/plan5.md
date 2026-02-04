@@ -19,7 +19,7 @@ Session 테이블에 `user_id` 컬럼을 추가하여 외부에서 전달받은 
 
 ## Phase 1: DB 스키마 수정
 
-### 1.1 session 테이블에 user_id 컬럼 추가
+### 1.1 session 테이블에 user_id 컬럼 추가 --complete
 
 **경로**: `src/state_db/Query/BASE/B_session.sql`
 
@@ -32,7 +32,7 @@ ALTER TABLE session ADD COLUMN IF NOT EXISTS user_id INTEGER DEFAULT NULL;
 CREATE INDEX IF NOT EXISTS idx_session_user_id ON session(user_id);
 ```
 
-### 1.2 마이그레이션 SQL 파일 생성
+### 1.2 마이그레이션 SQL 파일 생성 --complete
 
 **경로**: `src/state_db/Query/MIGRATE/add_user_id_to_session.sql` (신규)
 
@@ -50,7 +50,7 @@ COMMENT ON COLUMN session.user_id IS '외부 시스템의 사용자 식별자 (O
 
 ## Phase 2: SQL 함수 수정
 
-### 2.1 create_session 함수 수정
+### 2.1 create_session 함수 수정 --complete
 
 **경로**: `src/state_db/Query/FIRST/session.sql`
 
@@ -92,7 +92,7 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-### 2.2 user_id 업데이트 함수 추가
+### 2.2 user_id 업데이트 함수 추가 --complete
 
 **경로**: `src/state_db/Query/MANAGE/session/update_user_id.sql` (신규)
 
@@ -108,7 +108,7 @@ RETURNING session_id, user_id;
 
 ## Phase 3: 조회 SQL 수정/추가
 
-### 3.1 Session_active.sql 수정
+### 3.1 Session_active.sql 수정 --complete
 
 **경로**: `src/state_db/Query/INQUIRY/session/Session_active.sql`
 
@@ -136,7 +136,7 @@ WHERE s.status = 'active'
 ORDER BY s.started_at DESC;
 ```
 
-### 3.2 Session_by_user.sql 추가 (신규)
+### 3.2 Session_by_user.sql 추가 (신규) --complete
 
 **경로**: `src/state_db/Query/INQUIRY/session/Session_by_user.sql`
 
@@ -166,7 +166,7 @@ WHERE s.user_id = $1
 ORDER BY s.started_at DESC;
 ```
 
-### 3.3 기타 Session 조회 SQL 수정
+### 3.3 기타 Session 조회 SQL 수정 --complete
 
 다음 파일들에 `s.user_id` 컬럼 추가:
 - `Session_show.sql`
@@ -178,7 +178,7 @@ ORDER BY s.started_at DESC;
 
 ## Phase 4: Python 모델 수정
 
-### 4.1 SessionInfo 모델 수정
+### 4.1 SessionInfo 모델 수정 --complete
 
 **경로**: `src/state_db/models/session.py`
 
@@ -195,7 +195,7 @@ class SessionInfo(BaseModel):
 
 ## Phase 5: Repository 수정
 
-### 5.1 SessionRepository 수정
+### 5.1 SessionRepository 수정 --complete
 
 **경로**: `src/state_db/repositories/session.py`
 
@@ -236,9 +236,9 @@ class SessionRepository(BaseRepository):
 
 ## Phase 6: API 엔드포인트 수정/추가
 
-### 6.1 세션 생성 API 수정
+### 6.1 세션 생성 API 수정 --complete
 
-**경로**: `src/state_db/routers/session.py` (또는 해당 라우터)
+**경로**: `src/state_db/routers/router_START.py`, `src/state_db/schemas/management.py`
 
 ```python
 class SessionStartRequest(BaseModel):
@@ -259,7 +259,7 @@ async def start_session(request: SessionStartRequest):
     )
 ```
 
-### 6.2 user_id 매핑 API 추가
+### 6.2 user_id 매핑 API 추가 --complete
 
 ```python
 @router.patch("/session/{session_id}/user")
@@ -268,10 +268,10 @@ async def update_session_user(session_id: str, user_id: int):
     return await session_repo.update_user_id(session_id, user_id)
 ```
 
-### 6.3 user_id로 세션 조회 API 추가
+### 6.3 user_id로 세션 조회 API 추가 --complete
 
 ```python
-@router.get("/session/user/{user_id}")
+@router.get("/sessions/user/{user_id}")
 async def get_sessions_by_user(user_id: int) -> List[SessionInfo]:
     """user_id에 연결된 활성 세션 목록 조회"""
     return await session_repo.get_sessions_by_user(user_id)

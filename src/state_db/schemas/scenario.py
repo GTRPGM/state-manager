@@ -36,7 +36,8 @@ class ScenarioInjectEnemy(BaseModel):
     description: str = Field(default="", description="적 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
     state: Dict[str, Any] = Field(
-        default_factory=lambda: {"hp": 30, "attack": 5}, description="상태 (hp, attack 등)"
+        default_factory=lambda: {"hp": 30, "attack": 5},
+        description="상태 (hp, attack 등)",
     )
     dropped_items: List[int] = Field(
         default_factory=list, description="드롭 아이템 ID 리스트"
@@ -49,7 +50,9 @@ class ScenarioInjectItem(BaseModel):
     item_id: int = Field(..., description="아이템 ID (정수)")
     name: str = Field(..., description="아이템 이름")
     description: str = Field(default="", description="아이템 설명")
-    item_type: str = Field(default="misc", description="아이템 타입 (consumable, material, equipment 등)")
+    item_type: str = Field(
+        default="misc", description="아이템 타입 (consumable, material, equipment 등)"
+    )
     meta: Dict[str, Any] = Field(default_factory=dict, description="추가 메타데이터")
 
 
@@ -58,7 +61,9 @@ class ScenarioInjectRelation(BaseModel):
 
     from_id: str = Field(..., description="관계 시작 엔티티 ID")
     to_id: str = Field(..., description="관계 대상 엔티티 ID")
-    relation_type: str = Field(default="neutral", description="관계 타입 (friend, enemy, ally, neutral)")
+    relation_type: str = Field(
+        default="neutral", description="관계 타입 (friend, enemy, ally, neutral)"
+    )
     affinity: int = Field(default=50, description="호감도 (0-100)")
     meta: Dict[str, Any] = Field(default_factory=dict, description="추가 메타데이터")
 
@@ -80,15 +85,25 @@ class ScenarioSequenceInject(BaseModel):
 class ScenarioInjectRequest(BaseModel):
     """최종 시나리오 주입 규격"""
 
-    scenario_id: Optional[str] = Field(default=None, description="기존 시나리오 업데이트 시 UUID")
+    scenario_id: Optional[str] = Field(
+        default=None, description="기존 시나리오 업데이트 시 UUID"
+    )
     title: str = Field(..., description="시나리오 제목")
     description: Optional[str] = Field(default=None, description="시나리오 설명")
     acts: List[ScenarioActInject] = Field(default_factory=list, description="Act 목록")
-    sequences: List[ScenarioSequenceInject] = Field(default_factory=list, description="Sequence 목록")
+    sequences: List[ScenarioSequenceInject] = Field(
+        default_factory=list, description="Sequence 목록"
+    )
     npcs: List[ScenarioInjectNPC] = Field(default_factory=list, description="NPC 목록")
-    enemies: List[ScenarioInjectEnemy] = Field(default_factory=list, description="Enemy 목록")
-    items: List[ScenarioInjectItem] = Field(default_factory=list, description="Item 목록")
-    relations: List[ScenarioInjectRelation] = Field(default_factory=list, description="관계 목록")
+    enemies: List[ScenarioInjectEnemy] = Field(
+        default_factory=list, description="Enemy 목록"
+    )
+    items: List[ScenarioInjectItem] = Field(
+        default_factory=list, description="Item 목록"
+    )
+    relations: List[ScenarioInjectRelation] = Field(
+        default_factory=list, description="관계 목록"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

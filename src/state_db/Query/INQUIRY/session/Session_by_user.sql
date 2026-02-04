@@ -1,7 +1,7 @@
 -- --------------------------------------------------------------------
--- Session_ended.sql
--- 종료된 세션 조회 (플레이어 ID 포함)
--- 용도: 종료 상태의 세션 목록 확인
+-- Session_by_user.sql
+-- user_id로 활성 세션 조회
+-- 용도: 특정 사용자에게 매핑된 활성 세션 목록 확인
 -- --------------------------------------------------------------------
 
 SELECT
@@ -11,6 +11,8 @@ SELECT
     p.player_id,
     s.current_act,
     s.current_sequence,
+    s.current_act_id,
+    s.current_sequence_id,
     s.current_phase,
     s.current_turn,
     s.location,
@@ -21,5 +23,6 @@ SELECT
     s.updated_at
 FROM session s
 LEFT JOIN player p ON s.session_id = p.session_id
-WHERE s.status = 'ended'
-ORDER BY s.ended_at DESC;
+WHERE s.user_id = $1
+  AND s.status = 'active'
+ORDER BY s.started_at DESC;

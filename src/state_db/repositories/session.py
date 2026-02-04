@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -12,7 +12,12 @@ class SessionRepository(BaseRepository):
     """세션의 생명주기 및 기본 조회를 담당하는 리포지토리"""
 
     async def start(
-        self, scenario_id: str, act: int, sequence: int, location: str
+        self,
+        scenario_id: str,
+        act: int,
+        sequence: int,
+        location: str,
+        user_id: Optional[int] = None,
     ) -> SessionInfo:
         try:
             scenario_uuid = UUID(scenario_id)
@@ -22,7 +27,7 @@ class SessionRepository(BaseRepository):
             ) from e
 
         result = await execute_sql_function(
-            "create_session", [scenario_uuid, act, sequence, location]
+            "create_session", [scenario_uuid, act, sequence, location, user_id]
         )
         session_id = result[0].get("create_session") if result else None
         if not session_id:
@@ -82,4 +87,18 @@ class SessionRepository(BaseRepository):
         # [dev 반영] -r 접미사 제거
         sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended.sql"
         results = await run_sql_query(sql_path)
+        return [SessionInfo.model_validate(row) for row in results]
+
+    async def update_user_id(self, session_id: str, user_id: int) -> dict:
+        """세션에 user_id 매핑"""
+        sql_path = self.query_dir / "MANAGE" / "session" / "update_user_id.sql"
+        result = await run_sql_query(sql_path, [session_id, user_id])
+        if result:
+            return {"session_id": session_id, "user_id": user_id}
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    async def get_sessions_by_user(self, user_id: int) -> List[SessionInfo]:
+        """user_id로 활성 세션 조회"""
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_by_user.sql"
+        results = await run_sql_query(sql_path, [user_id])
         return [SessionInfo.model_validate(row) for row in results]

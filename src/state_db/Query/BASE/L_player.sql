@@ -41,7 +41,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 트리거 설정: session 테이블 INSERT 후 즉시 실행
--- 타 초기화 트리거(Inventory, Relations 등)가 이 플레이어 ID를 참조하므로 
+-- 타 초기화 트리거(Inventory, Relations 등)가 이 플레이어 ID를 참조하므로
 -- trigger_03 순서를 유지하여 먼저 생성되도록 합니다.
 DROP TRIGGER IF EXISTS trigger_03_initialize_player ON session;
 CREATE TRIGGER trigger_03_initialize_player

@@ -127,7 +127,9 @@ class TestProxyRequest:
             )
 
             call_args = mock_client.request.call_args
-            assert call_args.kwargs["headers"]["Authorization"] == "Bearer my-secret-token"
+            assert (
+                call_args.kwargs["headers"]["Authorization"] == "Bearer my-secret-token"
+            )
 
     @pytest.mark.asyncio
     async def test_connection_error_raises_503(self):
@@ -135,7 +137,9 @@ class TestProxyRequest:
         from fastapi import HTTPException
 
         mock_client = AsyncMock()
-        mock_client.request = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.request = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
         with patch.object(
             HTTPClientManager,
@@ -158,7 +162,9 @@ class TestProxyRequest:
         from fastapi import HTTPException
 
         mock_client = AsyncMock()
-        mock_client.request = AsyncMock(side_effect=httpx.TimeoutException("Request timeout"))
+        mock_client.request = AsyncMock(
+            side_effect=httpx.TimeoutException("Request timeout")
+        )
 
         with patch.object(
             HTTPClientManager,

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS phase (
     phase_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL,
 
-    previous_phase phase_type, 
+    previous_phase phase_type,
     new_phase phase_type NOT NULL,
     turn_at_transition INTEGER NOT NULL,
     transition_reason TEXT,

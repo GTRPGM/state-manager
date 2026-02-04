@@ -28,5 +28,6 @@ async def start_session(
         act=request.current_act,
         sequence=request.current_sequence,
         location=request.location,
+        user_id=request.user_id,
     )
     return {"status": "success", "data": result}

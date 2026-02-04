@@ -105,6 +105,18 @@ async def get_session(
     return {"status": "success", "data": result}
 
 
+@router.get(
+    "/sessions/user/{user_id}", response_model=WrappedResponse[List[SessionInfo]]
+)
+async def get_sessions_by_user_endpoint(
+    user_id: int,
+    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+) -> Dict[str, Any]:
+    """user_id에 연결된 활성 세션 목록 조회"""
+    result = await repo.get_sessions_by_user(user_id)
+    return {"status": "success", "data": result}
+
+
 # ====================================================================
 # 플레이어 및 인벤토리 조회
 # ====================================================================

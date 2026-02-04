@@ -7,11 +7,11 @@ CREATE TABLE IF NOT EXISTS location (
     location_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id  UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
     scenario_id UUID NOT NULL REFERENCES scenario(scenario_id),
-    
+
     -- 장소 식별 정보
     name        VARCHAR(100) NOT NULL,
     description TEXT DEFAULT '',
-    
+
     -- [특이사항] 텍스트 형태의 현재 상태 명시
     state       JSONB NOT NULL DEFAULT '{
         "current_text": "평범한 마을 광장",
@@ -66,7 +66,7 @@ BEGIN
         state,
         constraints
     )
-    SELECT 
+    SELECT
         NEW.session_id,
         scenario_id,
         name,
@@ -74,7 +74,7 @@ BEGIN
         state,
         constraints
     FROM location
-    WHERE session_id = system_session_id 
+    WHERE session_id = system_session_id
       AND scenario_id = NEW.scenario_id;
 
     RAISE NOTICE '[Location] Locations initialized for session %', NEW.session_id;
