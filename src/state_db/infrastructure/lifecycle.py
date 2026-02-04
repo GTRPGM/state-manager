@@ -46,10 +46,14 @@ async def startup() -> None:
     load_queries(query_dir)
 
     # 1. AGE 초기화
+    logger.info("Initializing AGE graphs...")
     await init_age_graph()
 
     # 2. 스키마 초기화 (테이블 및 트리거 생성)
-    await initialize_schema(query_dir)
+    logger.info("Initializing database schema and logic...")
+    async with DatabaseManager.get_connection() as conn:
+        await set_age_path(conn)
+        await initialize_schema(query_dir)
 
 
 async def shutdown() -> None:

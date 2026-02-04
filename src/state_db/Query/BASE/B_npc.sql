@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS npc (
     departed_at TIMESTAMP
 );
 
+-- 테이블이 이미 존재하는 경우를 대비해 컬럼 추가 보장
+ALTER TABLE npc ADD COLUMN IF NOT EXISTS is_departed BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE npc ADD COLUMN IF NOT EXISTS departed_at TIMESTAMP;
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_npc_session_id ON npc(session_id);
 CREATE INDEX IF NOT EXISTS idx_npc_scenario_id ON npc(scenario_id);
