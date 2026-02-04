@@ -4,8 +4,8 @@ import logging
 from typing import Any, Optional
 
 from state_db.configs.setting import GM_URL
-from ..client import proxy_request
 
+from ..client import proxy_request
 
 logger = logging.getLogger("state_db.proxy.services.gm")
 

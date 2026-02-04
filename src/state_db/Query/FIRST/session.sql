@@ -107,12 +107,13 @@ CREATE TRIGGER trigger_update_session_timestamp
 -- 4. session 생성용 함수
 -- ====================================================================
 
--- [외부 전달] scenario_id, act, sequence, location을 받아 session 생성
+-- [외부 전달] scenario_id, act, sequence, location, user_id를 받아 session 생성
 CREATE OR REPLACE FUNCTION create_session(
     p_scenario_id UUID,
     p_current_act INTEGER DEFAULT 1,
     p_current_sequence INTEGER DEFAULT 1,
-    p_location TEXT DEFAULT NULL
+    p_location TEXT DEFAULT NULL,
+    p_user_id INTEGER DEFAULT NULL  -- 외부 시스템 사용자 식별자 (Optional)
 )
 RETURNS UUID AS $$
 DECLARE
@@ -124,7 +125,8 @@ BEGIN
         current_sequence,
         location,
         status,
-        current_phase  -- 내부 관리: 기본값 'dialogue'
+        current_phase,  -- 내부 관리: 기본값 'dialogue'
+        user_id         -- 외부 시스템 사용자 식별자
     )
     VALUES (
         p_scenario_id,
@@ -132,7 +134,8 @@ BEGIN
         p_current_sequence,
         p_location,
         'active',
-        'dialogue'
+        'dialogue',
+        p_user_id
     )
     RETURNING session_id INTO new_session_id;
 

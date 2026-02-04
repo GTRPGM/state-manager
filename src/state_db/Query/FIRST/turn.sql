@@ -140,8 +140,8 @@ $$ LANGUAGE plpgsql;
 -- 5. 이력 조회 함수 (명칭 반영)
 CREATE OR REPLACE FUNCTION get_turn(p_session_id UUID)
 RETURNS TABLE (
-    turn_id UUID, session_id UUID, turn_number INTEGER, 
-    phase_at_turn phase_type, turn_type VARCHAR, 
+    turn_id UUID, session_id UUID, turn_number INTEGER,
+    phase_at_turn phase_type, turn_type VARCHAR,
     state_changes JSONB, created_at TIMESTAMP
 ) AS $$
 BEGIN

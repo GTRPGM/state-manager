@@ -22,7 +22,7 @@ def postgres_container():
     postgres-ex 이미지를 사용하여 임시 컨테이너를 띄웁니다.
     세션 전체에서 하나만 유지하여 성능 최적화.
     """
-    with PostgresContainer("postgres-ex", port=5432) as postgres:
+    with PostgresContainer("ghcr.io/gtrpgm/postgres-ex:latest", port=5432) as postgres:
         os.environ["DB_HOST"] = postgres.get_container_host_ip()
         os.environ["DB_PORT"] = str(postgres.get_exposed_port(5432))
         os.environ["DB_USER"] = postgres.username

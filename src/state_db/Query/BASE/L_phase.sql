@@ -56,7 +56,7 @@ DECLARE
 BEGIN
     SELECT current_phase INTO v_phase FROM session WHERE session_id = p_session_id;
     RETURN EXISTS (
-        SELECT 1 FROM phase_rules 
+        SELECT 1 FROM phase_rules
         WHERE phase = v_phase AND p_action = ANY(allowed_actions)
     );
 END;

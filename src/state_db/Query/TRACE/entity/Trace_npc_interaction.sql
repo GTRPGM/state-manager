@@ -1,7 +1,7 @@
 -- [용도] 상호작용 횟수가 가장 많은 NPC와 최근 교류 시점 분석
-SELECT 
-    n.name, 
-    r.interaction_count, 
+SELECT
+    n.name,
+    r.interaction_count,
     r.last_interaction_at,
     r.affinity_score
 FROM player_npc_relations r

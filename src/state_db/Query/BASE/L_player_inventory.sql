@@ -14,11 +14,11 @@ BEGIN
     WHERE session_id = NEW.session_id
     LIMIT 1;
 
-    -- [Logic 변경] 초기 아이템 X 
+    -- [Logic 변경] 초기 아이템 X
     -- 인벤토리는 아이템이 획득(INSERT)될 때 동적으로 구성됩니다.
 
     IF v_player_id IS NOT NULL THEN
-        RAISE NOTICE '[Player Inventory] Inventory space ready for player % in session % (No starting items)', 
+        RAISE NOTICE '[Player Inventory] Inventory space ready for player % in session % (No starting items)',
             v_player_id, NEW.session_id;
     END IF;
 

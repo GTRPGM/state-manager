@@ -1,4 +1,4 @@
-SELECT 
+SELECT
     s.current_phase AS session_current,
     p.new_phase AS history_latest
 FROM session s

@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres-ex
+    image: ghcr.io/gtrpgm/postgres-ex:latest
     container_name: gtrpgm-db
     restart: always
     environment:
