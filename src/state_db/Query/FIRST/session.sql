@@ -107,7 +107,7 @@ CREATE TRIGGER trigger_update_session_timestamp
 -- 4. session 생성용 함수
 -- ====================================================================
 
--- [외부 전달] scenario_id, act, sequence, location, user_id를 받아 session 생성
+-- [외부 전달] scenario_id, act, sequence, location를 받아 session 생성
 CREATE OR REPLACE FUNCTION create_session(
     p_scenario_id UUID,
     p_current_act INTEGER DEFAULT 1,

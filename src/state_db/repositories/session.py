@@ -33,10 +33,13 @@ class SessionRepository(BaseRepository):
         if not session_id:
             raise Exception("Failed to create session")
 
-        return await self.get_info(session_id)
+        _result = await self.get_info(session_id)
+        _result.user_id = user_id
+        return _result
 
     async def end(self, session_id: str) -> None:
         sql_path = self.query_dir / "MANAGE" / "session" / "end_session.sql"
+        
         await run_sql_command(sql_path, [session_id])
 
     async def delete(self, session_id: str) -> dict:
