@@ -91,20 +91,6 @@ async def test_remove_npc(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_change_phase(async_client: AsyncClient):
-    mock_response = {"session_id": MOCK_SESSION_ID, "current_phase": "combat"}
-    with patch(
-        "state_db.repositories.LifecycleStateRepository.change_phase",
-        new=AsyncMock(return_value=mock_response),
-    ):
-        response = await async_client.put(
-            f"/state/session/{MOCK_SESSION_ID}/phase",
-            json={"new_phase": "combat"},
-        )
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
 async def test_add_turn(async_client: AsyncClient):
     mock_response = {"session_id": MOCK_SESSION_ID, "current_turn": 2}
     with patch(

@@ -66,7 +66,6 @@ async def test_get_session_info(async_client: AsyncClient):
                 "scenario_id": "id",
                 "current_act": 1,
                 "current_sequence": 1,
-                "current_phase": "exploration",
                 "current_turn": 1,
                 "location": "Arena",
                 "status": "active",
@@ -116,18 +115,6 @@ async def test_get_enemies(async_client: AsyncClient):
         new=AsyncMock(return_value=[]),
     ):
         response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/enemies")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_get_phase(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.LifecycleStateRepository.get_phase",
-        new=AsyncMock(
-            return_value={"session_id": "id", "current_phase": "exploration"}
-        ),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/phase")
         assert response.status_code == 200
 
 

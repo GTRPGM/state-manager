@@ -97,16 +97,6 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     assert add_turn_resp.status_code == 200
     assert add_turn_resp.json()["data"]["current_turn"] == 1
 
-    # 7. 페이즈 변경 및 이력 확인
-    phase_resp = await real_db_client.put(
-        f"/state/session/{session_id}/phase", json={"new_phase": "combat"}
-    )
-    assert phase_resp.status_code == 200
-
-    phase_history_resp = await real_db_client.get(f"/state/session/{session_id}/phases")
-    phases = phase_history_resp.json()["data"]
-    assert len(phases) >= 2
-
     # 8. 적 처치 검증
     enemies_resp = await real_db_client.get(f"/state/session/{session_id}/enemies")
     enemies = enemies_resp.json()["data"]
