@@ -17,25 +17,24 @@ BEGIN
 
     -- 플레이어가 존재할 경우에만 인벤토리 생성
     IF v_player_id IS NOT NULL THEN
+        -- 1. SQL 메타데이터 생성
         INSERT INTO inventory (
             session_id,
-            owner_entity_type,
-            owner_entity_id,
             capacity,
             weight_limit,
             created_at
         )
         VALUES (
             NEW.session_id,
-            'player',
-            v_player_id,
             NULL,
             NULL,
             NEW.started_at
         );
 
-        RAISE NOTICE '[Inventory] Initial inventory created for player % in session %',
-            v_player_id, NEW.session_id;
+        -- TODO: Phase C에서 Cypher를 통해 (:Player)-[:HAS_INVENTORY]->(:Inventory) 관계 생성 로직 추가 필요
+        -- 현재는 관계 테이블 제거 단계이므로 SQL 소유권 컬럼만 제거함
+
+        RAISE NOTICE '[Inventory] Initial SQL metadata created for session %', NEW.session_id;
     END IF;
 
     RETURN NEW;
