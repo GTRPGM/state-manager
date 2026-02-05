@@ -9,10 +9,14 @@ from .base import JsonField
 
 class InventoryItem(BaseModel):
     player_id: Optional[str] = None
-    item_id: int
+    item_id: Union[str, UUID]
+    rule_id: int
     item_name: Optional[str] = None
     description: Optional[str] = None
     quantity: int
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
     category: Optional[str] = None
     item_state: Optional[Dict] = None
     acquired_at: Optional[datetime] = None
@@ -23,6 +27,10 @@ class NPCRelation(BaseModel):
     npc_id: Union[str, UUID]
     npc_name: Optional[str] = None
     affinity_score: int
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
+    relation_type: str = "neutral"
     model_config = ConfigDict(from_attributes=True)
 
 

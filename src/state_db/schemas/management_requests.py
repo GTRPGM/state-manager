@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -31,7 +31,8 @@ class EntitySpawnRequestBase(BaseModel):
 class EnemySpawnRequest(EntitySpawnRequestBase):
     """적 스폰 요청"""
 
-    enemy_id: Union[str, int] = Field(..., description="적 식별자")
+    scenario_enemy_id: str = Field(..., description="시나리오 내 적 식별자")
+    rule_id: int = Field(default=0, description="Rule Engine ID")
     hp: int = Field(default=30, description="HP")
     attack: int = Field(default=10, description="공격력")
     defense: int = Field(default=5, description="방어력")
@@ -39,7 +40,8 @@ class EnemySpawnRequest(EntitySpawnRequestBase):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "enemy_id": "goblin-01",
+                "scenario_enemy_id": "enemy-goblin",
+                "rule_id": 201,
                 "name": "Forest Goblin",
                 "description": "A small but vicious goblin",
                 "hp": 30,
@@ -55,13 +57,15 @@ class EnemySpawnRequest(EntitySpawnRequestBase):
 class NPCSpawnRequest(EntitySpawnRequestBase):
     """NPC 스폰 요청"""
 
-    npc_id: Union[str, int] = Field(..., description="NPC 식별자")
+    scenario_npc_id: str = Field(..., description="시나리오 내 NPC 식별자")
+    rule_id: int = Field(default=0, description="Rule Engine ID")
     hp: int = Field(default=100, description="HP")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "npc_id": "guard-01",
+                "scenario_npc_id": "npc-elder",
+                "rule_id": 101,
                 "name": "Town Guard",
                 "description": "A vigilant town guard",
                 "hp": 100,

@@ -21,6 +21,7 @@ class ScenarioInjectNPC(BaseModel):
     """주입용 NPC 정보"""
 
     scenario_npc_id: str = Field(..., description="NPC 식별자 (예: npc-elder)")
+    rule_id: int = Field(default=0, description="Rule Engine ID")
     name: str = Field(..., description="NPC 이름")
     description: str = Field(default="", description="NPC 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
@@ -32,6 +33,7 @@ class ScenarioInjectEnemy(BaseModel):
     """주입용 적 정보"""
 
     scenario_enemy_id: str = Field(..., description="적 식별자 (예: enemy-goblin)")
+    rule_id: int = Field(default=0, description="Rule Engine ID")
     name: str = Field(..., description="적 이름")
     description: str = Field(default="", description="적 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
@@ -40,14 +42,15 @@ class ScenarioInjectEnemy(BaseModel):
         description="상태 (hp, attack 등)",
     )
     dropped_items: List[int] = Field(
-        default_factory=list, description="드롭 아이템 ID 리스트"
+        default_factory=list, description="드롭 아이템 Rule ID 리스트"
     )
 
 
 class ScenarioInjectItem(BaseModel):
     """주입용 아이템 정보"""
 
-    item_id: int = Field(..., description="아이템 ID (정수)")
+    scenario_item_id: str = Field(..., description="아이템 식별자 (예: item-potion)")
+    rule_id: int = Field(..., description="아이템 Rule ID (정수)")
     name: str = Field(..., description="아이템 이름")
     description: str = Field(default="", description="아이템 설명")
     item_type: str = Field(
@@ -135,6 +138,7 @@ class ScenarioInjectRequest(BaseModel):
                 "npcs": [
                     {
                         "scenario_npc_id": "npc-elder",
+                        "rule_id": 101,
                         "name": "Village Elder",
                         "description": "A wise old man",
                         "tags": ["quest_giver", "friendly"],
@@ -144,6 +148,7 @@ class ScenarioInjectRequest(BaseModel):
                 "enemies": [
                     {
                         "scenario_enemy_id": "enemy-goblin",
+                        "rule_id": 201,
                         "name": "Forest Goblin",
                         "description": "A small goblin",
                         "tags": ["weak", "melee"],
@@ -153,7 +158,8 @@ class ScenarioInjectRequest(BaseModel):
                 ],
                 "items": [
                     {
-                        "item_id": 1,
+                        "scenario_item_id": "item-potion",
+                        "rule_id": 1,
                         "name": "Healing Potion",
                         "description": "Restores 50 HP",
                         "item_type": "consumable",

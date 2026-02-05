@@ -10,6 +10,7 @@ from .base import JsonField
 class NPCInfo(BaseModel):
     npc_id: Union[str, UUID]
     scenario_npc_id: str
+    rule_id: int = 0
     name: str
     description: str
     current_hp: Optional[int] = None
@@ -22,8 +23,9 @@ class NPCInfo(BaseModel):
 
 
 class EnemyInfo(BaseModel):
-    enemy_instance_id: Union[str, UUID]
+    enemy_id: Union[str, UUID]
     scenario_enemy_id: str
+    rule_id: int = 0
     name: str
     description: str = ""
     current_hp: Optional[int] = None
@@ -36,8 +38,9 @@ class EnemyInfo(BaseModel):
 
 
 class ItemInfo(BaseModel):
-    item_id: int
+    item_id: Union[str, UUID]
     scenario_item_id: str
+    rule_id: int
     name: str
     description: str = ""
     item_type: str = "misc"
@@ -46,7 +49,7 @@ class ItemInfo(BaseModel):
 
 
 class EnemyHPUpdateResult(BaseModel):
-    enemy_instance_id: Union[str, UUID]
+    enemy_id: Union[str, UUID]
     current_hp: int
     is_defeated: bool
     model_config = ConfigDict(from_attributes=True)

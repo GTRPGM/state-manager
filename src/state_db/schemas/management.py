@@ -10,6 +10,12 @@ class SessionStartRequest(BaseModel):
     scenario_id: str = Field(..., description="시나리오 UUID")
     current_act: int = Field(default=1, description="시작 Act", ge=1)
     current_sequence: int = Field(default=1, description="시작 Sequence", ge=1)
+    current_act_id: Optional[str] = Field(
+        default="act-1", description="시작 Act ID (문자열)"
+    )
+    current_sequence_id: Optional[str] = Field(
+        default="seq-1", description="시작 Sequence ID (문자열)"
+    )
     location: str = Field(default="Starting Town", description="시작 위치")
     user_id: Optional[int] = Field(default=None, description="외부 시스템 사용자 ID")
 
@@ -19,6 +25,8 @@ class SessionStartRequest(BaseModel):
                 "scenario_id": "550e8400-e29b-41d4-a716-446655440000",
                 "current_act": 1,
                 "current_sequence": 1,
+                "current_act_id": "act-1",
+                "current_sequence_id": "seq-1",
                 "location": "Starting Town",
                 "user_id": 12345,
             }
@@ -33,6 +41,8 @@ class SessionStartResponse(BaseModel):
     scenario_id: str
     current_act: int
     current_sequence: int
+    current_act_id: Optional[str] = None
+    current_sequence_id: Optional[str] = None
     current_turn: int
     location: str
     status: str
@@ -53,6 +63,8 @@ class SessionInfoResponse(BaseModel):
     scenario_id: str
     current_act: int
     current_sequence: int
+    current_act_id: Optional[str] = None
+    current_sequence_id: Optional[str] = None
     current_turn: int
     location: str
     status: str

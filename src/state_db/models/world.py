@@ -39,6 +39,7 @@ class SequenceEntityInfo(BaseModel):
 
     id: Union[str, UUID]
     scenario_entity_id: str  # scenario_npc_id or scenario_enemy_id
+    rule_id: int = 0
     name: str
     description: Optional[str] = None
     entity_type: str  # 'npc' or 'enemy'
@@ -58,6 +59,9 @@ class EntityRelationInfo(BaseModel):
     to_name: str
     relation_type: str
     affinity: Optional[int] = None
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,6 +75,9 @@ class PlayerNPCRelationInfo(BaseModel):
     affinity_score: int
     relation_type: str
     interaction_count: int = 0
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 

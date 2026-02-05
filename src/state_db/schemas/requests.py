@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,14 +43,14 @@ class InventoryUpdateRequest(BaseModel):
     """인벤토리 업데이트 요청"""
 
     player_id: str = Field(..., description="플레이어 UUID")
-    item_id: int = Field(..., description="아이템 ID (정수)")
+    rule_id: int = Field(..., description="아이템 Rule ID (정수)")
     quantity: int = Field(..., description="수량 변화량 (양수: 추가, 음수: 감소)")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
-                "item_id": 1,
+                "rule_id": 1,
                 "quantity": 2,
             }
         }
@@ -61,7 +61,7 @@ class NPCAffinityUpdateRequest(BaseModel):
     """NPC 호감도 업데이트 요청"""
 
     player_id: str = Field(..., description="플레이어 UUID")
-    npc_id: Union[str, int] = Field(..., description="NPC UUID 또는 ID")
+    npc_id: str = Field(..., description="NPC 고유 UUID")
     affinity_change: int = Field(..., description="호감도 변화량")
 
     model_config = ConfigDict(
@@ -106,7 +106,7 @@ class ItemEarnRequest(BaseModel):
 
     session_id: str = Field(..., description="세션 UUID")
     player_id: str = Field(..., description="플레이어 UUID")
-    item_id: int = Field(..., description="아이템 ID")
+    rule_id: int = Field(..., description="아이템 Rule ID")
     quantity: int = Field(..., description="획득 수량")
 
     model_config = ConfigDict(
@@ -114,7 +114,7 @@ class ItemEarnRequest(BaseModel):
             "example": {
                 "session_id": "76502a46-4f97-4878-953b-f9afd8919f19",
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
-                "item_id": 1,
+                "rule_id": 1,
                 "quantity": 2,
             }
         }
@@ -126,7 +126,7 @@ class ItemUseRequest(BaseModel):
 
     session_id: str = Field(..., description="세션 UUID")
     player_id: str = Field(..., description="플레이어 UUID")
-    item_id: int = Field(..., description="아이템 ID")
+    rule_id: int = Field(..., description="아이템 Rule ID")
     quantity: int = Field(..., description="사용 수량")
 
     model_config = ConfigDict(
@@ -134,7 +134,7 @@ class ItemUseRequest(BaseModel):
             "example": {
                 "session_id": "76502a46-4f97-4878-953b-f9afd8919f19",
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
-                "item_id": 1,
+                "rule_id": 1,
                 "quantity": 1,
             }
         }
