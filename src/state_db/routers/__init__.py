@@ -11,7 +11,6 @@ This package contains separated routers organized by domain:
 
 from . import (
     router_COMMIT,
-    router_INJECT,
     router_INQUIRY,
     router_MANAGE,
     router_PROXY,
@@ -25,7 +24,6 @@ router_SESSION = router_session
 
 __all__ = [
     "router_COMMIT",
-    "router_INJECT",
     "router_INQUIRY",
     "router_MANAGE",
     "router_PROXY",

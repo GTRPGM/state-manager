@@ -111,69 +111,71 @@ class ScenarioInjectRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "title": "The Lost Kingdom",
-                "description": "A brave adventurer seeks to reclaim the lost kingdom",
+                "title": "안개 낀 검은 숲의 비밀",
+                "description": "고대 저주가 잠든 검은 숲에서 실종된 탐사대를 찾고 숲의 심장에 도달해야 합니다.",
                 "acts": [
                     {
                         "id": "act-1",
-                        "name": "The Beginning",
-                        "description": "The hero starts their journey",
-                        "exit_criteria": "Complete all sequences",
-                        "sequences": ["seq-1"],
+                        "name": "서막: 숲의 입구",
+                        "description": "탐사대의 마지막 행적을 쫓아 숲으로 들어섭니다.",
+                        "exit_criteria": "경비병의 허가를 받거나 몰래 통과하기",
+                        "sequences": ["seq-entrance", "seq-camp"]
                     }
                 ],
                 "sequences": [
                     {
-                        "id": "seq-1",
-                        "name": "Town Square",
-                        "location_name": "Starting Town",
-                        "description": "The central plaza",
-                        "goal": "Talk to the elder",
-                        "exit_triggers": ["talk_to_elder"],
-                        "npcs": ["npc-elder"],
-                        "enemies": [],
-                        "items": [],
+                        "id": "seq-entrance",
+                        "name": "숲의 검문소",
+                        "location_name": "서부 초소",
+                        "description": "숲으로 통하는 유일한 길목을 지키는 낡은 검문소입니다.",
+                        "goal": "초소장 '아이작'과 대화하여 정보를 얻으십시오.",
+                        "exit_triggers": ["talked_to_isaac"],
+                        "npcs": ["npc-isaac"],
+                        "enemies": ["enemy-patrol"],
+                        "items": []
                     }
                 ],
                 "npcs": [
                     {
-                        "scenario_npc_id": "npc-elder",
-                        "rule_id": 101,
-                        "name": "Village Elder",
-                        "description": "A wise old man",
-                        "tags": ["quest_giver", "friendly"],
-                        "state": {"mood": "worried"},
+                        "scenario_npc_id": "npc-isaac",
+                        "rule_id": 1001,
+                        "name": "초소장 아이작",
+                        "description": "과거 숲의 탐사대원이었으나 다리를 다쳐 은퇴한 노련한 군인입니다.",
+                        "tags": ["경비", "정보원", "은퇴자"],
+                        "state": {"trust_level": 50, "is_drunk": False},
+                        "is_departed": False
                     }
                 ],
                 "enemies": [
                     {
-                        "scenario_enemy_id": "enemy-goblin",
-                        "rule_id": 201,
-                        "name": "Forest Goblin",
-                        "description": "A small goblin",
-                        "tags": ["weak", "melee"],
-                        "state": {"hp": 30, "attack": 5},
-                        "dropped_items": [1],
+                        "scenario_enemy_id": "enemy-patrol",
+                        "rule_id": 2001,
+                        "name": "검은 숲 정찰병",
+                        "description": "숲의 그림자에 잠식된 정체불명의 존재입니다.",
+                        "tags": ["그림자", "정찰"],
+                        "state": {"numeric": {"hp": 50, "attack": 8, "defense": 3}},
+                        "dropped_items": [3001]
                     }
                 ],
                 "items": [
                     {
-                        "scenario_item_id": "item-potion",
-                        "rule_id": 1,
-                        "name": "Healing Potion",
-                        "description": "Restores 50 HP",
-                        "item_type": "consumable",
-                        "meta": {"heal_amount": 50},
+                        "scenario_item_id": "item-insignia",
+                        "rule_id": 3001,
+                        "name": "부러진 탐사대 휘장",
+                        "description": "실종된 탐사대의 표식이 새겨진 낡은 휘장입니다.",
+                        "item_type": "material",
+                        "meta": {"rarity": "common", "quest_item": True}
                     }
                 ],
                 "relations": [
                     {
-                        "from_id": "npc-elder",
-                        "to_id": "enemy-goblin",
-                        "relation_type": "enemy",
-                        "affinity": 0,
+                        "from_id": "npc-isaac",
+                        "to_id": "enemy-patrol",
+                        "relation_type": "hostile",
+                        "affinity": -100,
+                        "meta": {"reason": "과거 동료들을 잃은 원한"}
                     }
-                ],
+                ]
             }
         }
     )
