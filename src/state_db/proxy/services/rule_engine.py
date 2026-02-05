@@ -16,67 +16,80 @@ class RuleEngineProxy:
     base_url: str = RULE_ENGINE_URL
 
     @classmethod
-    async def validate_action(
+    async def add_session(
         cls,
         session_id: str,
-        action_type: str,
-        action_data: dict[str, Any],
+        user_id: str,
         token: Optional[str] = None,
     ) -> dict[str, Any]:
         """
-        액션 유효성 검증 요청
+        Rule Engine에 세션 매핑 정보 추가 요청
 
         Args:
             session_id: 세션 ID
-            action_type: 액션 타입
-            action_data: 액션 데이터
+            user_id: 사용자 ID
             token: 인증 토큰 (선택)
 
         Returns:
-            검증 결과
+            Rule Engine 응답 데이터
         """
-        logger.debug(f"Validating action: {action_type} for session {session_id}")
+        logger.debug(f"Adding session to Rule Engine: {session_id} for user {user_id}")
         return await proxy_request(
             method="POST",
             base_url=cls.base_url,
-            path="/validate",
+            path="/session/add",
             token=token,
             json={
                 "session_id": session_id,
-                "action_type": action_type,
-                "action_data": action_data,
+                "user_id": user_id,
             },
         )
 
-    @classmethod
-    async def calculate_outcome(
-        cls,
-        session_id: str,
-        action_result: dict[str, Any],
-        token: Optional[str] = None,
-    ) -> dict[str, Any]:
-        """
-        액션 결과 계산 요청
+    # @classmethod
+    # async def validate_action(
+    #     cls,
+    #     session_id: str,
+    #     action_type: str,
+    #     action_data: dict[str, Any],
+    #     token: Optional[str] = None,
+    # ) -> dict[str, Any]:
+    #     """
+    #     액션 유효성 검증 요청
+    #     """
+    #     logger.debug(f"Validating action: {action_type} for session {session_id}")
+    #     return await proxy_request(
+    #         method="POST",
+    #         base_url=cls.base_url,
+    #         path="/validate",
+    #         token=token,
+    #         json={
+    #             "session_id": session_id,
+    #             "action_type": action_type,
+    #             "action_data": action_data,
+    #         },
+    #     )
 
-        Args:
-            session_id: 세션 ID
-            action_result: 액션 결과 데이터
-            token: 인증 토큰 (선택)
-
-        Returns:
-            계산된 결과
-        """
-        logger.debug(f"Calculating outcome for session {session_id}")
-        return await proxy_request(
-            method="POST",
-            base_url=cls.base_url,
-            path="/calculate",
-            token=token,
-            json={
-                "session_id": session_id,
-                "action_result": action_result,
-            },
-        )
+    # @classmethod
+    # async def calculate_outcome(
+    #     cls,
+    #     session_id: str,
+    #     action_result: dict[str, Any],
+    #     token: Optional[str] = None,
+    # ) -> dict[str, Any]:
+    #     """
+    #     액션 결과 계산 요청
+    #     """
+    #     logger.debug(f"Calculating outcome for session {session_id}")
+    #     return await proxy_request(
+    #         method="POST",
+    #         base_url=cls.base_url,
+    #         path="/calculate",
+    #         token=token,
+    #         json={
+    #             "session_id": session_id,
+    #             "action_result": action_result,
+    #         },
+    #     )
 
     @classmethod
     async def health_check(cls) -> dict[str, Any]:
