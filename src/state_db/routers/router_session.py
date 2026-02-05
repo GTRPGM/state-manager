@@ -184,10 +184,15 @@ async def get_progress_endpoint(
 async def update_location_endpoint(
     session_id: str,
     request: LocationUpdateRequest,
-    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
 ) -> Dict[str, Any]:
-    result = await repo.update_location(session_id, request.location)
-    return {"status": "success", "data": result}
+    await repo.update_location(session_id, request.new_location)
+    return {
+        "status": "success",
+        "data": LocationUpdateResult(
+            session_id=session_id, location=request.new_location
+        ),
+    }
 
 
 @router.post(

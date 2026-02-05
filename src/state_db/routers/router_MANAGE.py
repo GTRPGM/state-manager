@@ -99,15 +99,15 @@ async def spawn_enemy_endpoint(
 
 
 @router.delete(
-    "/session/{session_id}/enemy/{enemy_instance_id}",
+    "/session/{session_id}/enemy/{enemy_id}",
     response_model=WrappedResponse[RemoveEntityResult],
 )
 async def remove_enemy_endpoint(
     session_id: str,
-    enemy_instance_id: str,
+    enemy_id: str,
     repo: Annotated[EntityRepository, Depends(get_entity_repo)],
 ) -> Dict[str, Any]:
-    result = await repo.remove_enemy(session_id, enemy_instance_id)
+    result = await repo.remove_enemy(session_id, enemy_id)
     return {"status": "success", "data": result}
 
 
@@ -129,15 +129,15 @@ async def spawn_npc_endpoint(
 
 
 @router.delete(
-    "/session/{session_id}/npc/{npc_instance_id}",
+    "/session/{session_id}/npc/{npc_id}",
     response_model=WrappedResponse[RemoveEntityResult],
 )
 async def remove_npc_endpoint(
     session_id: str,
-    npc_instance_id: str,
+    npc_id: str,
     repo: Annotated[EntityRepository, Depends(get_entity_repo)],
 ) -> Dict[str, Any]:
-    result = await repo.remove_npc(session_id, npc_instance_id)
+    result = await repo.remove_npc(session_id, npc_id)
     return {"status": "success", "data": result}
 
 
