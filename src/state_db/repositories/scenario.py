@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
@@ -105,25 +106,11 @@ class ScenarioRepository(BaseRepository):
                         seq.description, seq.goal, json.dumps(seq.exit_triggers),
                     )
 
-                    # 4-1. NPCs
+                    # 4-1. NPCs (3-ID 체계: npc_id(UUID), scenario_npc_id(str), rule_id(int))
                     for npc_id in seq.npcs:
                         n = next((x for x in request.npcs if x.scenario_npc_id == npc_id), None)
                         if n:
-                            # SQL Insert
-                            await conn.execute(
-                                """
-                                INSERT INTO npc (
-                                    name, description, scenario_id, scenario_npc_id,
-                                    rule_id, session_id, assigned_sequence_id, assigned_location,
-                                    tags, state, is_departed
-                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                                """,
-                                n.name, n.description, scenario_id, n.scenario_npc_id,
-                                n.rule_id, MASTER_SESSION_ID, seq.id, seq.location_name,
-                                n.tags, json.dumps(n.state), n.is_departed,
-                            )
-                            
-                            # Graph Node Create (With Validation)
+                            # 1. Validate first (before any DB operation)
                             node_props = {
                                 "name": n.name,
                                 "scenario_id": scenario_id,
@@ -134,10 +121,30 @@ class ScenarioRepository(BaseRepository):
                                 "activated_turn": 0
                             }
                             GraphValidator.validate_node("npc", node_props)
-                            
+
+                            # 2. Generate UUID after validation passes
+                            generated_npc_id = str(uuid.uuid4())
+
+                            # 3. SQL Insert with generated UUID
+                            await conn.execute(
+                                """
+                                INSERT INTO npc (
+                                    npc_id, name, description, scenario_id, scenario_npc_id,
+                                    rule_id, session_id, assigned_sequence_id, assigned_location,
+                                    tags, state, is_departed
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                                """,
+                                generated_npc_id, n.name, n.description, scenario_id, n.scenario_npc_id,
+                                n.rule_id, MASTER_SESSION_ID, seq.id, seq.location_name,
+                                n.tags, json.dumps(n.state), n.is_departed,
+                            )
+
+                            # 4. Graph Node Create (with npc_id for SQL-Graph mapping)
+                            node_props["npc_id"] = generated_npc_id
                             await self.cypher.run_cypher(
                                 """
-                                CREATE (:npc {
+                                CREATE (:NPC {
+                                    npc_id: $npc_id,
                                     name: $name,
                                     scenario_id: $scenario_id,
                                     scenario_npc_id: $scenario_npc_id,
@@ -153,25 +160,11 @@ class ScenarioRepository(BaseRepository):
                         else:
                             logger.warning(f"NPC ID '{npc_id}' in sequence '{seq.id}' not found in request.npcs")
 
-                    # 4-2. Enemies
+                    # 4-2. Enemies (3-ID 체계: enemy_id(UUID), scenario_enemy_id(str), rule_id(int))
                     for enemy_id in seq.enemies:
                         e = next((x for x in request.enemies if x.scenario_enemy_id == enemy_id), None)
                         if e:
-                            # SQL Insert
-                            await conn.execute(
-                                """
-                                INSERT INTO enemy (
-                                    name, description, scenario_id, scenario_enemy_id,
-                                    rule_id, session_id, assigned_sequence_id, assigned_location,
-                                    tags, state, dropped_items
-                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                                """,
-                                e.name, e.description, scenario_id, e.scenario_enemy_id,
-                                e.rule_id, MASTER_SESSION_ID, seq.id, seq.location_name,
-                                e.tags, json.dumps(e.state), e.dropped_items,
-                            )
-                            
-                            # Graph Node Create (With Validation)
+                            # 1. Validate first (before any DB operation)
                             node_props = {
                                 "name": e.name,
                                 "scenario_id": scenario_id,
@@ -182,10 +175,30 @@ class ScenarioRepository(BaseRepository):
                                 "activated_turn": 0
                             }
                             GraphValidator.validate_node("enemy", node_props)
-                            
+
+                            # 2. Generate UUID after validation passes
+                            generated_enemy_id = str(uuid.uuid4())
+
+                            # 3. SQL Insert with generated UUID
+                            await conn.execute(
+                                """
+                                INSERT INTO enemy (
+                                    enemy_id, name, description, scenario_id, scenario_enemy_id,
+                                    rule_id, session_id, assigned_sequence_id, assigned_location,
+                                    tags, state, dropped_items
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                                """,
+                                generated_enemy_id, e.name, e.description, scenario_id, e.scenario_enemy_id,
+                                e.rule_id, MASTER_SESSION_ID, seq.id, seq.location_name,
+                                e.tags, json.dumps(e.state), e.dropped_items,
+                            )
+
+                            # 4. Graph Node Create (with enemy_id for SQL-Graph mapping)
+                            node_props["enemy_id"] = generated_enemy_id
                             await self.cypher.run_cypher(
                                 """
-                                CREATE (:enemy {
+                                CREATE (:Enemy {
+                                    enemy_id: $enemy_id,
                                     name: $name,
                                     scenario_id: $scenario_id,
                                     scenario_enemy_id: $scenario_enemy_id,
@@ -201,29 +214,35 @@ class ScenarioRepository(BaseRepository):
                         else:
                             logger.warning(f"Enemy ID '{enemy_id}' in sequence '{seq.id}' not found in request.enemies")
 
-                # 5. Items (SQL - Item nodes are usually created when acquired, but master items exist in SQL)
+                # 5. Items (SQL + Validation - 3-ID 체계: item_id(UUID), scenario_item_id(str), rule_id(int))
                 for item in request.items:
+                    # Validate before generating UUID (same pattern as NPC/Enemy)
+                    node_props = {
+                        "name": item.name,
+                        "scenario_id": scenario_id,
+                        "scenario_item_id": item.scenario_item_id,
+                        "session_id": MASTER_SESSION_ID,
+                        "active": True,
+                        "rule": item.rule_id,
+                        "activated_turn": 0
+                    }
+                    GraphValidator.validate_node("item", node_props)
+
+                    # Generate UUID after validation passes
+                    item_id = str(uuid.uuid4())
+
+                    # SQL Insert
                     await conn.execute(
                         """
                         INSERT INTO item (
                             item_id, session_id, scenario_id, scenario_item_id,
                             rule_id, name, description, item_type, meta
                         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                        ON CONFLICT (item_id, session_id) DO UPDATE SET
-                            scenario_id = EXCLUDED.scenario_id,
-                            scenario_item_id = EXCLUDED.scenario_item_id,
-                            rule_id = EXCLUDED.rule_id,
-                            name = EXCLUDED.name,
-                            description = EXCLUDED.description,
-                            item_type = EXCLUDED.item_type,
-                            meta = EXCLUDED.meta
                         """,
-                        item.item_id, MASTER_SESSION_ID, scenario_id, item.scenario_item_id,
+                        item_id, MASTER_SESSION_ID, scenario_id, item.scenario_item_id,
                         item.rule_id, item.name, item.description, item.item_type, json.dumps(item.meta),
                     )
                     # Note: Item Graph Nodes are typically created on demand (Inventory) or placed in world.
-                    # If world-placed items are needed, they should be treated like NPC/Enemy placement.
-                    # For now, we only sync SQL master data.
 
                 # 6. Relations (Graph Edges)
                 for rel in request.relations:
@@ -404,14 +423,31 @@ class ScenarioRepository(BaseRepository):
                             "affinity": row.get("affinity")
                         })
 
-            # 5. 플레이어-NPC 관계 (Deprecated SQL Join -> Graph Placeholder)
-            # 관계 테이블(player_npc_relations) 삭제 예정이므로, 여기서는 빈 리스트 반환하거나
-            # 필요 시 Graph에서 (:Player)-[:RELATION]->(:NPC)를 조회해야 함.
-            # 현재는 하위 호환성을 위해 빈 리스트 또는 간단한 Graph 조회를 수행.
+            # 5. 플레이어-NPC 관계 (Graph 기반 조회)
             player_npc_relations = []
-            
-            # TODO: Future - Fetch player relations from graph if needed here.
-            # Currently leaving empty to signal UI/Client to use the dedicated context API.
+            player_row = await conn.fetchrow(
+                "SELECT player_id FROM player WHERE session_id = $1 LIMIT 1",
+                session_id,
+            )
+            if player_row:
+                player_id = str(player_row["player_id"])
+                rel_rows = await self.cypher.run_cypher(
+                    """
+                    MATCH (p:Player {id: $player_id, session_id: $session_id})-[r:RELATION]->(n:NPC)
+                    WHERE r.active = true
+                    RETURN n.npc_id as npc_id, n.name as npc_name,
+                           r.affinity as affinity_score, r.relation_type as relation_type
+                    """,
+                    {"player_id": player_id, "session_id": session_id},
+                )
+                for row in rel_rows:
+                    if row and isinstance(row, dict):
+                        player_npc_relations.append({
+                            "npc_id": row.get("npc_id", row.get("value", "")),
+                            "npc_name": row.get("npc_name"),
+                            "affinity_score": row.get("affinity_score", 0),
+                            "relation_type": row.get("relation_type", "neutral"),
+                        })
 
         # 최종 결과 조합
         return {

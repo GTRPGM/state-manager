@@ -60,16 +60,20 @@ class InventoryUpdateRequest(BaseModel):
 class NPCAffinityUpdateRequest(BaseModel):
     """NPC 호감도 업데이트 요청"""
 
+    session_id: str = Field(..., description="세션 UUID")
     player_id: str = Field(..., description="플레이어 UUID")
     npc_id: str = Field(..., description="NPC 고유 UUID")
     affinity_change: int = Field(..., description="호감도 변화량")
+    relation_type: str = Field(default="neutral", description="관계 유형")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
+                "session_id": "76502a46-4f97-4878-953b-f9afd8919f19",
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
                 "npc_id": "a914618a-56d3-4eed-b21c-b6d8775f7013",
                 "affinity_change": 10,
+                "relation_type": "neutral",
             }
         }
     )

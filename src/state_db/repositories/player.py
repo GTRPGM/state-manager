@@ -1,7 +1,8 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException
 
+from state_db.graph.cypher_engine import engine as cypher_engine
 from state_db.infrastructure import run_sql_command, run_sql_query
 from state_db.models import (
     FullPlayerState,
@@ -93,52 +94,311 @@ class PlayerRepository(BaseRepository):
             return result[0]
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
-    async def get_npc_relations(self, player_id: str) -> List[NPCRelation]:
-        sql_path = self.query_dir / "INQUIRY" / "Npc_relations.sql"
-        results = await run_sql_query(sql_path, [player_id])
-        return [NPCRelation.model_validate(row) for row in results]
+    async def get_npc_relations(
+        self, player_id: str, session_id: Optional[str] = None
+    ) -> List[NPCRelation]:
+        """NPC 관계 조회 (Cypher 기반)"""
+        # session_id가 없으면 player_id로 조회
+        if not session_id:
+            sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+            rows = await run_sql_query(sql_path, [player_id])
+            if rows:
+                session_id = str(rows[0].get("session_id", ""))
+            else:
+                return []
+
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "relation" / "get_relations.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"player_id": player_id, "session_id": session_id}
+        )
+
+        relations = []
+        for row in results:
+            if row and isinstance(row, dict):
+                # ResultMapper가 {"__age_type__": ..., "value": ...} 형태로 반환
+                props = row.get("properties", row)
+                relations.append(
+                    NPCRelation(
+                        npc_id=props.get("npc_id", props.get("value", "")),
+                        npc_name=props.get("npc_name"),
+                        affinity_score=props.get("affinity_score", 0),
+                        active=props.get("active", True),
+                        activated_turn=props.get("activated_turn", 0),
+                        deactivated_turn=props.get("deactivated_turn"),
+                        relation_type=props.get("relation_type", "neutral"),
+                    )
+                )
+        return relations
 
     async def update_npc_affinity(
-        self, player_id: str, npc_id: str, affinity_change: int
+        self,
+        player_id: str,
+        npc_id: str,
+        affinity_change: int,
+        session_id: Optional[str] = None,
+        relation_type: str = "neutral",
     ) -> NPCAffinityUpdateResult:
-        sql_path = self.query_dir / "UPDATE" / "relations" / "update_affinity.sql"
-        result = await run_sql_query(sql_path, [player_id, npc_id, affinity_change])
-        new_affinity = result[0].get("new_affinity", 0) if result else 0
+        """NPC 호감도 업데이트 (Cypher 기반, delta 방식)
+
+        Args:
+            affinity_change: 호감도 변동값 (예: +3, -2). 결과는 0~100 범위로 제한됨
+        """
+        # session_id가 없으면 player_id로 조회
+        if not session_id:
+            sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+            rows = await run_sql_query(sql_path, [player_id])
+            if rows:
+                session_id = str(rows[0].get("session_id", ""))
+                current_turn = rows[0].get("current_turn", 0)
+            else:
+                raise HTTPException(status_code=404, detail="Player session not found")
+        else:
+            # session_id가 있으면 current_turn만 조회
+            turn_sql = self.query_dir / "INQUIRY" / "session" / "Session_turn.sql"
+            turn_rows = await run_sql_query(turn_sql, [session_id])
+            current_turn = turn_rows[0].get("current_turn", 0) if turn_rows else 0
+
+        # NPC context 조회 (scenario, rule)
+        npc_ctx = await self._get_npc_context(npc_id, session_id)
+
+        cypher_path = str(self.query_dir / "CYPHER" / "relation" / "relation.cypher")
+        params = {
+            "player_id": player_id,
+            "session_id": session_id,
+            "npc_uuid": npc_id,
+            "scenario": npc_ctx.get("scenario", ""),
+            "rule": npc_ctx.get("rule", 0),
+            "relation_type": relation_type,
+            "delta_affinity": affinity_change,
+            "turn": current_turn,
+            "meta_json": "{}",
+        }
+
+        results = await cypher_engine.run_cypher(cypher_path, params)
+
+        new_affinity = 0
+        if results and results[0]:
+            val = results[0]
+            if isinstance(val, dict):
+                new_affinity = val.get("affinity", val.get("value", 0))
+                if isinstance(new_affinity, str):
+                    new_affinity = int(new_affinity)
+
         return NPCAffinityUpdateResult(
             player_id=player_id, npc_id=npc_id, new_affinity=new_affinity
         )
+
+    async def _get_npc_context(
+        self, npc_id: str, session_id: str
+    ) -> Dict[str, Any]:
+        """NPC의 scenario와 rule 조회 (Graph fallback SQL)"""
+        cypher = """
+        MATCH (n:NPC {npc_id: $npc_id, session_id: $session_id})
+        RETURN n.scenario_npc_id as scenario, n.rule_id as rule
+        LIMIT 1
+        """
+        results = await cypher_engine.run_cypher(
+            cypher, {"npc_id": npc_id, "session_id": session_id}
+        )
+        if results and results[0]:
+            val = results[0]
+            if isinstance(val, dict):
+                return {
+                    "scenario": val.get("scenario", val.get("value", "")),
+                    "rule": val.get("rule", 0),
+                }
+        # Fallback: SQL 조회
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc.sql"
+        rows = await run_sql_query(sql_path, [session_id, False])
+        for row in rows:
+            if str(row.get("npc_id")) == npc_id:
+                return {
+                    "scenario": row.get("scenario_npc_id", ""),
+                    "rule": row.get("rule_id", 0),
+                }
+        return {"scenario": "", "rule": 0}
 
     async def update_san(self, session_id: str, san_change: int) -> None:
         """이성(SAN) 수치 증분 업데이트"""
         sql_path = self.query_dir / "UPDATE" / "player" / "update_player_san.sql"
         await run_sql_query(sql_path, [session_id, san_change])
 
-    async def earn_item(
-        self, session_id: str, player_id: str, item_id: int, quantity: int
-    ) -> Dict[str, Any]:
-        sql_path = self.query_dir / "UPDATE" / "inventory" / "earn_item.sql"
-        result = await run_sql_query(
-            sql_path, [session_id, player_id, item_id, quantity]
+    # ============================================================
+    # 인벤토리 헬퍼 메서드
+    # ============================================================
+
+    async def _get_player_inventory_id(
+        self, session_id: str, player_id: str
+    ) -> str:
+        """Player의 Inventory ID 조회 (Graph 우선, SQL fallback)"""
+        cypher = """
+        MATCH (p:Player {id: $player_id, session_id: $session_id})
+              -[:HAS_INVENTORY]->(inv:Inventory)
+        RETURN inv.inventory_id as inventory_id
+        LIMIT 1
+        """
+        results = await cypher_engine.run_cypher(
+            cypher, {"player_id": player_id, "session_id": session_id}
         )
-        if result:
-            return result[0]
-        return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
+        if results and results[0]:
+            val = results[0]
+            if isinstance(val, dict):
+                inv_id = val.get("inventory_id", val.get("value", ""))
+                if inv_id:
+                    return str(inv_id).strip('"')
+
+        # Fallback: SQL 조회
+        sql_path = self.query_dir / "INQUIRY" / "inventory" / "Current_inventory.sql"
+        rows = await run_sql_query(sql_path, [session_id])
+        if rows:
+            return str(rows[0].get("inventory_id", ""))
+        raise HTTPException(status_code=404, detail="Inventory not found for player")
+
+    async def _get_item_by_rule(
+        self, session_id: str, rule_id: int
+    ) -> Tuple[str, str]:
+        """rule_id로부터 item_uuid와 scenario 조회 (Graph 우선)"""
+        cypher = """
+        MATCH (i:Item {rule: $rule_id, session_id: $session_id})
+        RETURN i.item_id as item_uuid, i.scenario_item_id as scenario
+        LIMIT 1
+        """
+        results = await cypher_engine.run_cypher(
+            cypher, {"rule_id": rule_id, "session_id": session_id}
+        )
+        if results and results[0]:
+            val = results[0]
+            if isinstance(val, dict):
+                item_uuid = val.get("item_uuid", val.get("value", ""))
+                scenario = val.get("scenario", "")
+                if item_uuid:
+                    return (str(item_uuid).strip('"'), str(scenario).strip('"'))
+
+        # Fallback: SQL 조회
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_item.sql"
+        rows = await run_sql_query(sql_path, [session_id])
+        for row in rows:
+            if row.get("rule_id") == rule_id:
+                return (
+                    str(row.get("item_id", "")),
+                    str(row.get("scenario_item_id", "")),
+                )
+        raise HTTPException(
+            status_code=404,
+            detail=f"Item with rule_id {rule_id} not found in session",
+        )
+
+    async def _get_current_turn(self, session_id: str) -> int:
+        """현재 세션의 턴 번호 조회"""
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn.sql"
+        rows = await run_sql_query(sql_path, [session_id])
+        if rows:
+            return rows[0].get("current_turn", 0)
+        return 0
+
+    # ============================================================
+    # 인벤토리 Cypher 기반 메서드
+    # ============================================================
+
+    async def earn_item(
+        self, session_id: str, player_id: str, rule_id: int, quantity: int
+    ) -> Dict[str, Any]:
+        """아이템 획득 (Cypher 기반, delta 방식)
+
+        Args:
+            rule_id: 아이템 Rule ID
+            quantity: 획득할 수량 (양수)
+        """
+        # 필요한 ID들 조회
+        inventory_id = await self._get_player_inventory_id(session_id, player_id)
+        item_uuid, scenario = await self._get_item_by_rule(session_id, rule_id)
+
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inventory" / "earn_item.cypher"
+        )
+        params = {
+            "player_id": player_id,
+            "session_id": session_id,
+            "inventory_id": inventory_id,
+            "item_uuid": item_uuid,
+            "scenario": scenario,
+            "rule": rule_id,
+            "delta_qty": quantity,
+        }
+
+        results = await cypher_engine.run_cypher(cypher_path, params)
+
+        # 결과 처리
+        new_quantity = quantity
+        if results and results[0]:
+            val = results[0]
+            if isinstance(val, dict):
+                new_quantity = val.get("quantity", val.get("value", quantity))
+                if isinstance(new_quantity, str):
+                    new_quantity = int(new_quantity)
+
+        return {
+            "player_id": player_id,
+            "item_id": rule_id,
+            "quantity": quantity,
+            "total_quantity": new_quantity,
+        }
 
     async def use_item(
-        self, session_id: str, player_id: str, item_id: int, quantity: int
+        self, session_id: str, player_id: str, rule_id: int, quantity: int
     ) -> Dict[str, Any]:
-        sql_path = self.query_dir / "UPDATE" / "inventory" / "use_item.sql"
-        result = await run_sql_query(
-            sql_path, [session_id, player_id, item_id, quantity]
+        """아이템 사용 (Cypher 기반, delta 방식)
+
+        Args:
+            rule_id: 아이템 Rule ID
+            quantity: 사용할 수량 (양수). 수량 부족 시 0으로 처리
+        """
+        # 필요한 ID들 조회
+        inventory_id = await self._get_player_inventory_id(session_id, player_id)
+        item_uuid, scenario = await self._get_item_by_rule(session_id, rule_id)
+        current_turn = await self._get_current_turn(session_id)
+
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inventory" / "use_item.cypher"
         )
-        if result:
-            # turn 테이블에 아이템 사용 기록 추가
-            remaining_quantity = result[0].get("quantity", 0)
-            await self._record_item_use(
-                session_id, player_id, item_id, quantity, remaining_quantity
-            )
-            return result[0]
-        return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
+        params = {
+            "player_id": player_id,
+            "session_id": session_id,
+            "inventory_id": inventory_id,
+            "item_uuid": item_uuid,
+            "scenario": scenario,
+            "rule": rule_id,
+            "use_qty": quantity,
+            "turn": current_turn,
+        }
+
+        results = await cypher_engine.run_cypher(cypher_path, params)
+
+        # 결과 처리
+        remaining_quantity = 0
+        is_active = True
+        if results and results[0]:
+            val = results[0]
+            if isinstance(val, dict):
+                remaining_quantity = val.get("quantity", val.get("value", 0))
+                is_active = val.get("active", True)
+                if isinstance(remaining_quantity, str):
+                    remaining_quantity = int(remaining_quantity)
+
+        # turn 테이블에 아이템 사용 기록 추가
+        await self._record_item_use(
+            session_id, player_id, rule_id, quantity, remaining_quantity
+        )
+
+        return {
+            "player_id": player_id,
+            "item_id": rule_id,
+            "quantity": quantity,
+            "remaining_quantity": remaining_quantity,
+            "active": is_active,
+        }
 
     async def _record_item_use(
         self,

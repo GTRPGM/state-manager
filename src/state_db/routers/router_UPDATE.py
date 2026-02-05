@@ -87,7 +87,11 @@ async def update_npc_affinity_endpoint(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.update_npc_affinity(
-        request.player_id, request.npc_id, request.affinity_change
+        player_id=request.player_id,
+        npc_id=request.npc_id,
+        affinity_change=request.affinity_change,
+        session_id=request.session_id,
+        relation_type=request.relation_type,
     )
     return {"status": "success", "data": result}
 

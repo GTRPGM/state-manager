@@ -99,9 +99,11 @@ async def test_update_npc_affinity(async_client: AsyncClient):
         response = await async_client.put(
             "/state/npc/affinity",
             json={
+                "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
                 "npc_id": MOCK_NPC_ID,
                 "affinity_change": 10,
+                "relation_type": "neutral",
             },
         )
 
