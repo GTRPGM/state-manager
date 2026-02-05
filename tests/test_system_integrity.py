@@ -23,6 +23,7 @@ async def test_system_isolation_and_updates(async_client: AsyncClient):
         "enemies": [
             {
                 "scenario_enemy_id": "enemy-001",
+                "rule_id": 201,
                 "name": "I",
                 "state": {"numeric": {"HP": 50}},
             }

@@ -47,7 +47,7 @@ async def test_spawn_enemy(async_client: AsyncClient):
     ):
         response = await async_client.post(
             f"/state/session/{MOCK_SESSION_ID}/enemy/spawn",
-            json={"enemy_id": 1, "name": "Goblin"},
+            json={"scenario_enemy_id": "enemy-goblin", "rule_id": 1, "name": "Goblin"},
         )
         assert response.status_code == 200
 
@@ -73,7 +73,7 @@ async def test_spawn_npc(async_client: AsyncClient):
     ):
         response = await async_client.post(
             f"/state/session/{MOCK_SESSION_ID}/npc/spawn",
-            json={"npc_id": 1, "name": "Elder"},
+            json={"scenario_npc_id": "npc-elder", "rule_id": 101, "name": "Elder"},
         )
         assert response.status_code == 200
 

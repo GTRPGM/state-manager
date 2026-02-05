@@ -27,6 +27,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         "npcs": [
             {
                 "scenario_npc_id": "npc-guard",
+                "rule_id": 101,
                 "name": "Gate Guard",
                 "state": {"numeric": {"HP": 100}},
             }
@@ -34,13 +35,15 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         "enemies": [
             {
                 "scenario_enemy_id": "enemy-slime",
+                "rule_id": 201,
                 "name": "Slime",
                 "state": {"numeric": {"HP": 20}},
             }
         ],
         "items": [
             {
-                "item_id": 1,
+                "scenario_item_id": "item-red-potion",
+                "rule_id": 1,
                 "name": "Red Potion",
                 "description": "Heals 30 HP",
                 "item_type": "consumable",
@@ -101,10 +104,10 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     enemies_resp = await real_db_client.get(f"/state/session/{session_id}/enemies")
     enemies = enemies_resp.json()["data"]
     assert len(enemies) > 0
-    slime_instance_id = enemies[0]["enemy_instance_id"]
+    slime_id = enemies[0]["enemy_id"]
 
     defeat_resp = await real_db_client.post(
-        f"/state/enemy/{slime_instance_id}/defeat?session_id={session_id}"
+        f"/state/enemy/{slime_id}/defeat?session_id={session_id}"
     )
     assert defeat_resp.status_code == 200
 
@@ -127,16 +130,16 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     # 10. 인벤토리 수량 수정 검증
     async with infra.DatabaseManager.get_connection() as conn:
         row = await conn.fetchrow(
-            "SELECT item_id FROM item WHERE session_id = $1 LIMIT 1", session_id
+            "SELECT rule_id FROM item WHERE session_id = $1 LIMIT 1", session_id
         )
-        item_id = row["item_id"]
+        rule_id = row["rule_id"]
 
     earn_resp = await real_db_client.post(
         "/state/player/item/earn",
         json={
             "session_id": session_id,
             "player_id": player_id,
-            "item_id": item_id,
+            "rule_id": rule_id,
             "quantity": 5,
         },
     )
@@ -144,7 +147,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
 
     update_inv_resp = await real_db_client.put(
         "/state/inventory/update",
-        json={"player_id": player_id, "item_id": item_id, "quantity": 10},
+        json={"player_id": player_id, "rule_id": rule_id, "quantity": 10},
     )
     assert update_inv_resp.status_code == 200
     assert update_inv_resp.json()["data"]["quantity"] == 10

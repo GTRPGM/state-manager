@@ -75,7 +75,7 @@ async def test_update_inventory(async_client: AsyncClient):
     ):
         response = await async_client.put(
             "/state/inventory/update",
-            json={"player_id": MOCK_PLAYER_ID, "item_id": MOCK_ITEM_ID, "quantity": 5},
+            json={"player_id": MOCK_PLAYER_ID, "rule_id": MOCK_ITEM_ID, "quantity": 5},
         )
 
         assert response.status_code == 200
@@ -137,11 +137,8 @@ async def test_update_location(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_update_enemy_hp(async_client: AsyncClient):
     mock_response = {
-        "enemy_instance_id": MOCK_ENEMY_ID,
-        "name": "Goblin",
+        "enemy_id": MOCK_ENEMY_ID,
         "current_hp": 40,
-        "max_hp": 50,
-        "hp_change": -10,
         "is_defeated": False,
     }
 
@@ -163,7 +160,7 @@ async def test_update_enemy_hp(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_defeat_enemy(async_client: AsyncClient):
     mock_response = {
-        "enemy_instance_id": MOCK_ENEMY_ID,
+        "enemy_id": MOCK_ENEMY_ID,
         "status": "defeated",
     }
     with patch(
@@ -177,7 +174,7 @@ async def test_defeat_enemy(async_client: AsyncClient):
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
-        assert data["data"]["enemy_instance_id"] == MOCK_ENEMY_ID
+        assert data["data"]["enemy_id"] == MOCK_ENEMY_ID
         assert data["data"]["status"] == "defeated"
         mock_defeat.assert_called_once_with(MOCK_SESSION_ID, MOCK_ENEMY_ID)
 
@@ -200,7 +197,7 @@ async def test_earn_item(async_client: AsyncClient):
             json={
                 "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
-                "item_id": MOCK_ITEM_ID,
+                "rule_id": MOCK_ITEM_ID,
                 "quantity": 3,
             },
         )
@@ -229,7 +226,7 @@ async def test_use_item(async_client: AsyncClient):
             json={
                 "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
-                "item_id": MOCK_ITEM_ID,
+                "rule_id": MOCK_ITEM_ID,
                 "quantity": 1,
             },
         )

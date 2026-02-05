@@ -54,6 +54,12 @@ async def db_lifecycle(postgres_container):
     from state_db.infrastructure import DatabaseManager
 
     async with DatabaseManager.get_connection() as conn:
+        # Graph 정리 (AGE)
+        try:
+            await conn.execute("SELECT drop_graph('state_db', true);")
+        except Exception:
+            pass  # 그래프가 없으면 무시
+
         await conn.execute("""
             DROP TABLE IF EXISTS turn CASCADE;
             DROP TABLE IF EXISTS player_npc_relations CASCADE;
