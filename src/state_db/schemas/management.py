@@ -33,7 +33,6 @@ class SessionStartResponse(BaseModel):
     scenario_id: str
     current_act: int
     current_sequence: int
-    current_phase: str
     current_turn: int
     location: str
     status: str
@@ -54,7 +53,6 @@ class SessionInfoResponse(BaseModel):
     scenario_id: str
     current_act: int
     current_sequence: int
-    current_phase: str
     current_turn: int
     location: str
     status: str

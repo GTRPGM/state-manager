@@ -11,7 +11,6 @@ from state_db.models import (
     InventoryItem,
     ItemInfo,
     NPCInfo,
-    PhaseChangeResult,
     ScenarioActInfo,
     SequenceDetailInfo,
     SessionInfo,
@@ -105,7 +104,6 @@ async def get_session(
     return {"status": "success", "data": result}
 
 
-
 # ====================================================================
 # 플레이어 및 인벤토리 조회
 # ====================================================================
@@ -167,19 +165,8 @@ async def get_enemies(
 
 
 # ====================================================================
-# Phase/Turn 조회
+# Turn 조회
 # ====================================================================
-
-
-@router.get(
-    "/session/{session_id}/phase", response_model=WrappedResponse[PhaseChangeResult]
-)
-async def get_phase(
-    session_id: str,
-    repo: Annotated[LifecycleStateRepository, Depends(get_lifecycle_repo)],
-) -> Dict[str, Any]:
-    result = await repo.get_phase(session_id)
-    return {"status": "success", "data": result}
 
 
 @router.get("/session/{session_id}/turn", response_model=WrappedResponse[TurnAddResult])
@@ -195,7 +182,10 @@ async def get_turn(
     "/session/{session_id}/context",
     response_model=WrappedResponse[Dict[str, Any]],
     summary="GM용 통합 컨텍스트 조회",
-    description="GM이 판정을 내리는 데 필요한 모든 세션 상태(플레이어, NPC, 적, 인벤토리 등)를 한 번에 조회합니다.",
+    description=(
+        "GM이 판정을 내리는 데 필요한 모든 세션 상태"
+        "(플레이어, NPC, 적, 인벤토리 등)를 한 번에 조회합니다."
+    ),
 )
 async def get_session_context(
     session_id: str,

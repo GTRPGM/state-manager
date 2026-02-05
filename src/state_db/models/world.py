@@ -104,16 +104,9 @@ class LocationUpdateResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PhaseChangeResult(BaseModel):
-    session_id: Union[str, UUID]
-    current_phase: str
-    model_config = ConfigDict(from_attributes=True)
-
-
 class TurnAddResult(BaseModel):
     session_id: Union[str, UUID]
     current_turn: int
-    phase_at_turn: Optional[str] = None
     turn_type: Optional[str] = None
     created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
@@ -121,7 +114,6 @@ class TurnAddResult(BaseModel):
 
 class ActChangeResult(BaseModel):
     session_id: Union[str, UUID]
-    current_phase: str = ""
     current_act: int
     model_config = ConfigDict(from_attributes=True)
 

@@ -49,7 +49,7 @@ async def state_commit(
             diff = item.diff
 
             # 공통 세션 필드 처리 (어떤 엔티티 diff에 들어있든 세션 전역에 적용)
-            for session_field in ["location", "phase", "act", "sequence"]:
+            for session_field in ["location", "act", "sequence"]:
                 if session_field in diff:
                     changes[session_field] = diff[session_field]
 
@@ -61,7 +61,7 @@ async def state_commit(
                     changes["player_san"] = diff["san"]
                 if "stats" in diff:
                     changes["player_stats"] = diff["stats"]
-            
+
             # NPC 호감도 처리
             elif eid.startswith("npc"):
                 if "affinity" in diff:

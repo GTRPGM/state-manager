@@ -1,10 +1,6 @@
 -- B_session.sql
 -- 1. ENUM 타입 정의
 DO $$ BEGIN
-    CREATE TYPE phase_type AS ENUM ('exploration', 'combat', 'dialogue', 'rest');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
-DO $$ BEGIN
     CREATE TYPE session_status AS ENUM ('active', 'paused', 'ended');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
@@ -22,7 +18,6 @@ CREATE TABLE IF NOT EXISTS session (
     current_sequence_id VARCHAR(100) DEFAULT 'seq-1',
 
     -- 규칙 컨텍스트
-    current_phase phase_type NOT NULL DEFAULT 'dialogue',
     current_turn INTEGER NOT NULL DEFAULT 0,
 
     location TEXT,

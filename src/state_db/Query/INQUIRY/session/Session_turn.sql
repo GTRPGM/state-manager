@@ -8,7 +8,6 @@
 SELECT
     s.session_id,
     s.current_turn,
-    t.phase_at_turn,
     t.turn_type,
     COALESCE(t.created_at, s.created_at) AS created_at
 FROM session s

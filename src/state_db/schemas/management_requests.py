@@ -19,16 +19,6 @@ class SequenceChangeRequest(BaseModel):
     model_config = ConfigDict(json_schema_extra={"example": {"new_sequence": 2}})
 
 
-class PhaseChangeRequest(BaseModel):
-    """Phase 변경 요청"""
-
-    new_phase: str = Field(
-        ..., description="변경할 Phase (dialogue, exploration, combat, rest)"
-    )
-
-    model_config = ConfigDict(json_schema_extra={"example": {"new_phase": "combat"}})
-
-
 class EntitySpawnRequestBase(BaseModel):
     """엔티티 스폰 기본 요청"""
 

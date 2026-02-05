@@ -9,7 +9,6 @@ from state_db.models import (
     ActChangeResult,
     NPCDepartResult,
     NPCReturnResult,
-    PhaseChangeResult,
     RemoveEntityResult,
     SequenceChangeResult,
     SpawnResult,
@@ -25,7 +24,6 @@ from state_db.schemas import (
     ActChangeRequest,
     EnemySpawnRequest,
     NPCSpawnRequest,
-    PhaseChangeRequest,
     SequenceChangeRequest,
 )
 
@@ -81,8 +79,6 @@ async def delete_session(
     """세션 완전 삭제 (CASCADE로 모든 관련 데이터 삭제)"""
     result = await repo.delete(session_id)
     return {"status": "success", "data": result}
-
-
 
 
 # ====================================================================
@@ -174,20 +170,8 @@ async def return_npc_endpoint(
 
 
 # ====================================================================
-# Phase/Turn 관리
+# Turn 관리
 # ====================================================================
-
-
-@router.put(
-    "/session/{session_id}/phase", response_model=WrappedResponse[PhaseChangeResult]
-)
-async def change_phase_endpoint(
-    session_id: str,
-    request: PhaseChangeRequest,
-    repo: Annotated[LifecycleStateRepository, Depends(get_lifecycle_repo)],
-) -> Dict[str, Any]:
-    result = await repo.change_phase(session_id, request.new_phase)
-    return {"status": "success", "data": result}
 
 
 @router.post(

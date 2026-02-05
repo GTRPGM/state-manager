@@ -1,4 +1,5 @@
 from typing import Any, Dict
+
 from state_db.models import StateUpdateResult
 from state_db.services import StateService
 
@@ -40,32 +41,6 @@ async def process_action(
 
 async def process_combat_end(session_id: str, victory: bool) -> Dict[str, Any]:
     return await _service.process_combat_end(session_id, victory)
-
-
-async def get_current_phase(session_id: str):
-    return await _service.session_repo.get_phase(session_id)
-
-
-async def update_player_hp(
-    player_id: str, session_id: str, hp_change: int, reason: str = "unknown"
-):
-    return await _service.player_repo.update_hp(player_id, session_id, hp_change)
-
-
-async def update_location(session_id: str, new_location: str):
-    return await _service.session_repo.update_location(session_id, new_location)
-
-
-async def add_turn(session_id: str):
-    return await _service.session_repo.add_turn(session_id)
-
-
-async def process_combat_end(session_id: str, victory: bool) -> Dict[str, Any]:
-    return await _service.process_combat_end(session_id, victory)
-
-
-async def get_current_phase(session_id: str):
-    return await _service.session_repo.get_phase(session_id)
 
 
 async def update_player_hp(

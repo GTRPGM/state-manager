@@ -41,8 +41,7 @@ BEGIN
         current_act_id,
         current_sequence_id,
         location,
-        status,
-        current_phase
+        status
     )
     VALUES (
         p_scenario_id,
@@ -51,8 +50,7 @@ BEGIN
         v_first_act_id,
         v_first_sequence_id,
         p_location,
-        'active',
-        'dialogue'
+        'active'
     )
     RETURNING session_id INTO new_session_id;
 

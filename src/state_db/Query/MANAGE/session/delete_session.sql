@@ -26,5 +26,4 @@ RETURNING
 --   * enemy (session_id 참조)
 --   * player (session_id 참조)
 --   * player_inventory (session_id 참조)
---   * phase (session_id 참조)
 --   * turn (session_id 참조)

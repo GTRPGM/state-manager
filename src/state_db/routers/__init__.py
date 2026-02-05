@@ -1,11 +1,11 @@
 """Router modules for state management API.
 
-This package contains separated routers organized by Query folder structure:
-- router_START: Session initialization (Query/START_by_session)
-- router_INQUIRY: Data retrieval and queries (Query/INQUIRY)
-- router_UPDATE: State modifications (Query/UPDATE)
-- router_MANAGE: Entity and session management (Query/MANAGE)
-- router_TRACE: History tracking and analysis (Query/TRACE)
+This package contains separated routers organized by domain:
+- router_SESSION: Session lifecycle and progress management
+- router_INQUIRY: Data retrieval and queries
+- router_UPDATE: State modifications
+- router_MANAGE: Entity management
+- router_TRACE: History tracking and analysis
 - router_PROXY: Microservice proxy health check
 """
 
@@ -15,20 +15,21 @@ from . import (
     router_INQUIRY,
     router_MANAGE,
     router_PROXY,
-    router_START,
+    router_session,  # 파일명과 일치하게 수정
     router_TRACE,
-    router_TRACE_phase,
     router_UPDATE,
 )
+
+# 별칭 제공 (기존 코드와의 호환성 및 명명 규칙 통일)
+router_SESSION = router_session
 
 __all__ = [
     "router_COMMIT",
     "router_INJECT",
-    "router_START",
     "router_INQUIRY",
-    "router_UPDATE",
     "router_MANAGE",
-    "router_TRACE",
-    "router_TRACE_phase",
     "router_PROXY",
+    "router_SESSION",
+    "router_TRACE",
+    "router_UPDATE",
 ]

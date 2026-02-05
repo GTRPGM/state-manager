@@ -7,8 +7,7 @@
 WITH session_info AS (
     SELECT
         s.session_id,
-        s.current_turn + 1 AS new_turn_number,
-        s.phase AS current_phase
+        s.current_turn + 1 AS new_turn_number
     FROM session s
     WHERE s.session_id = $1::uuid
       AND s.status = 'active'
@@ -22,7 +21,6 @@ update_turn AS (
 INSERT INTO turn (
     session_id,
     turn_number,
-    phase_at_turn,
     turn_type,
     state_changes,
     related_entities
@@ -30,7 +28,6 @@ INSERT INTO turn (
 SELECT
     si.session_id,
     si.new_turn_number,
-    si.current_phase,
     'item_use',
     jsonb_build_object(
         'action', 'use_item',
@@ -43,5 +40,4 @@ FROM session_info si
 RETURNING
     turn_id::text,
     turn_number,
-    phase_at_turn::text,
     state_changes;

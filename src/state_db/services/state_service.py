@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Union
 
-from state_db.models import ApplyJudgmentSkipped, Phase, StateUpdateResult
+from state_db.models import ApplyJudgmentSkipped, StateUpdateResult
 from state_db.repositories import (
     EntityRepository,
     LifecycleStateRepository,
@@ -33,7 +33,6 @@ class StateService:
             session_id, active_only=True
         )
         inventory = await self.player_repo.get_inventory(session_id)
-        phase_info = await self.lifecycle_repo.get_phase(session_id)
         turn_info = await self.lifecycle_repo.get_turn(session_id)
 
         return {
@@ -43,7 +42,6 @@ class StateService:
             "npcs": npcs,
             "enemies": enemies,
             "inventory": inventory,
-            "phase": phase_info,
             "turn": turn_info,
             "snapshot_timestamp": session_info.updated_at,
         }
@@ -91,10 +89,6 @@ class StateService:
             await self.session_repo.update_location(session_id, changes["location"])
             results.append("location_updated")
 
-        if "phase" in changes:
-            await self.lifecycle_repo.change_phase(session_id, changes["phase"])
-            results.append("phase_updated")
-
         if changes.get("turn_increment", False):
             await self.lifecycle_repo.add_turn(session_id)
             results.append("turn_incremented")
@@ -118,14 +112,11 @@ class StateService:
     ) -> Dict[str, Any]:
         changes = {}
         if victory:
-            changes["phase"] = Phase.EXPLORATION.value
             enemies = await self.entity_repo.get_session_enemies(
                 session_id, active_only=True
             )
             for enemy in enemies:
                 await self.entity_repo.remove_enemy(session_id, enemy.enemy_instance_id)
-        else:
-            changes["phase"] = Phase.REST.value
 
         result = await self.write_state_changes(session_id, changes)
         return {"status": "success", "victory": victory, "result": result}

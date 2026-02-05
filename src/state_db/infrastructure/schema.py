@@ -22,7 +22,6 @@ async def initialize_schema(query_dir: Path) -> None:
         "B_npc.sql",
         "B_enemy.sql",
         "B_item.sql",
-        "B_phase.sql",
         "B_turn.sql",
     ]
     relation_tables = [
