@@ -191,6 +191,22 @@ async def get_turn(
     return {"status": "success", "data": result}
 
 
+@router.get(
+    "/session/{session_id}/context",
+    response_model=WrappedResponse[Dict[str, Any]],
+    summary="GM용 통합 컨텍스트 조회",
+    description="GM이 판정을 내리는 데 필요한 모든 세션 상태(플레이어, NPC, 적, 인벤토리 등)를 한 번에 조회합니다.",
+)
+async def get_session_context(
+    session_id: str,
+) -> Dict[str, Any]:
+    from state_db.services.state_service import StateService
+
+    service = StateService()
+    result = await service.get_state_snapshot(session_id)
+    return {"status": "success", "data": result}
+
+
 # ====================================================================
 # Act/Sequence/Location/Progress 조회
 # ====================================================================

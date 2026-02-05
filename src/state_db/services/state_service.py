@@ -23,8 +23,10 @@ class StateService:
         player_id = session_info.player_id
 
         player_stats = None
+        player_relations = []
         if player_id:
             player_stats = await self.player_repo.get_stats(player_id)
+            player_relations = await self.player_repo.get_npc_relations(player_id)
 
         npcs = await self.entity_repo.get_session_npcs(session_id)
         enemies = await self.entity_repo.get_session_enemies(
@@ -37,6 +39,7 @@ class StateService:
         return {
             "session": session_info,
             "player": player_stats,
+            "player_relations": player_relations,
             "npcs": npcs,
             "enemies": enemies,
             "inventory": inventory,
@@ -56,6 +59,11 @@ class StateService:
                 player_id, session_id, changes["player_hp"]
             )
             results.append("player_hp_updated")
+
+        if "player_san" in changes and player_id:
+            # SAN 업데이트 로직 추가 (세션 ID 기준)
+            await self.player_repo.update_san(session_id, changes["player_san"])
+            results.append("player_san_updated")
 
         if "player_stats" in changes and player_id:
             await self.player_repo.update_stats(

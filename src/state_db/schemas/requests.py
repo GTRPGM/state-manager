@@ -44,14 +44,14 @@ class InventoryUpdateRequest(BaseModel):
 
     player_id: str = Field(..., description="플레이어 UUID")
     item_id: int = Field(..., description="아이템 ID (정수)")
-    quantity: int = Field(..., description="설정할 수량")
+    quantity: int = Field(..., description="수량 변화량 (양수: 추가, 음수: 감소)")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
                 "item_id": 1,
-                "quantity": 5,
+                "quantity": 2,
             }
         }
     )

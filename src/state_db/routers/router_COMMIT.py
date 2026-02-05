@@ -33,49 +33,55 @@ async def state_commit(
         # turn_id format: session_id:seq
         session_id = request.turn_id.split(":")[0]
 
-        # 1. Transform EntityDiff list to internal 'changes' format
-        changes = {"player_id": None}
+        # 1. 초기 변경 데이터 세팅
+        changes = {
+            "player_id": None,
+            "turn_increment": True,  # GM 커밋은 기본적으로 턴 증가를 포함
+        }
 
-        # Get player_id from session info first
+        # 세션 정보에서 player_id 획득
         session_info = await service.session_repo.get_info(session_id)
         changes["player_id"] = session_info.player_id
 
-        # Map fields (Mapping GM Diff fields to State Manager internal change keys)
-        for d in request.diffs:
-            eid = d.entity_id
-            diff = d.diff
+        # 2. GM의 Diffs를 내부 changes 딕셔너리로 매핑
+        for item in request.diffs:
+            eid = item.entity_id.lower()
+            diff = item.diff
 
-            if eid.lower() == "player":
+            # 공통 세션 필드 처리 (어떤 엔티티 diff에 들어있든 세션 전역에 적용)
+            for session_field in ["location", "phase", "act", "sequence"]:
+                if session_field in diff:
+                    changes[session_field] = diff[session_field]
+
+            # 플레이어 데이터 처리
+            if eid == "player":
                 if "hp" in diff:
                     changes["player_hp"] = diff["hp"]
+                if "san" in diff:
+                    changes["player_san"] = diff["san"]
                 if "stats" in diff:
                     changes["player_stats"] = diff["stats"]
-            elif eid.startswith("npc-") or eid.startswith("npc"):
+            
+            # NPC 호감도 처리
+            elif eid.startswith("npc"):
                 if "affinity" in diff:
                     if "npc_affinity" not in changes:
                         changes["npc_affinity"] = {}
-                    changes["npc_affinity"][eid] = diff["affinity"]
-            elif eid.startswith("enemy-") or eid.startswith("enemy"):
+                    # GM은 'npc-1' 또는 UUID를 보낼 수 있음 (SQL에서 처리됨)
+                    changes["npc_affinity"][item.entity_id] = diff["affinity"]
+
+            # 적 HP 처리
+            elif eid.startswith("enemy"):
                 if "hp" in diff:
                     if "enemy_hp" not in changes:
                         changes["enemy_hp"] = {}
-                    changes["enemy_hp"][eid] = diff["hp"]
+                    # GM은 'enemy-1' 또는 UUID를 보낼 수 있음 (SQL에서 처리됨)
+                    changes["enemy_hp"][item.entity_id] = diff["hp"]
 
-            if "location" in diff:
-                changes["location"] = diff["location"]
-            if "phase" in diff:
-                changes["phase"] = diff["phase"]
-            if "act" in diff:
-                changes["act"] = diff["act"]
-            if "sequence" in diff:
-                changes["sequence"] = diff["sequence"]
-
-        changes["turn_increment"] = True
-
-        # 2. Write changes
+        # 3. 변경 사항 일괄 저장
         result = await service.write_state_changes(session_id, changes)
 
-        # 3. Generate commit_id
+        # 4. 커밋 ID 생성 및 응답
         commit_id = f"commit-{uuid.uuid4().hex[:8]}"
 
         return {

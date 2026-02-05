@@ -108,6 +108,11 @@ class PlayerRepository(BaseRepository):
             player_id=player_id, npc_id=npc_id, new_affinity=new_affinity
         )
 
+    async def update_san(self, session_id: str, san_change: int) -> None:
+        """이성(SAN) 수치 증분 업데이트"""
+        sql_path = self.query_dir / "UPDATE" / "player" / "update_player_san.sql"
+        await run_sql_query(sql_path, [session_id, san_change])
+
     async def earn_item(
         self, session_id: str, player_id: str, item_id: int, quantity: int
     ) -> Dict[str, Any]:
