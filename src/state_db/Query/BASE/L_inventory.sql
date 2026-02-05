@@ -5,9 +5,12 @@
 
 -- session의 시작에 의존한 player inventory 생성 함수
 CREATE OR REPLACE FUNCTION initialize_player_inventory()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $func$
 DECLARE
     v_player_id UUID;
+    v_inventory_id UUID;
+    params_text text;
+    cypher_query text;
 BEGIN
     -- [Logic] 해당 세션에 소속된 플레이어를 찾아 ID 확보
     SELECT player_id INTO v_player_id
@@ -17,7 +20,7 @@ BEGIN
 
     -- 플레이어가 존재할 경우에만 인벤토리 생성
     IF v_player_id IS NOT NULL THEN
-        -- 1. SQL 메타데이터 생성
+        -- 1. SQL 메타데이터 생성 및 inventory_id 확보
         INSERT INTO inventory (
             session_id,
             capacity,
@@ -29,17 +32,54 @@ BEGIN
             NULL,
             NULL,
             NEW.started_at
-        );
+        )
+        RETURNING inventory_id INTO v_inventory_id;
 
-        -- TODO: Phase C에서 Cypher를 통해 (:Player)-[:HAS_INVENTORY]->(:Inventory) 관계 생성 로직 추가 필요
-        -- 현재는 관계 테이블 제거 단계이므로 SQL 소유권 컬럼만 제거함
+        -- 2. Graph: Inventory 노드 생성
+        params_text := jsonb_build_object(
+            'inventory_id', v_inventory_id,
+            'session_id', NEW.session_id
+        )::text;
 
-        RAISE NOTICE '[Inventory] Initial SQL metadata created for session %', NEW.session_id;
+        cypher_query := '
+            CREATE (:Inventory {
+                id: $inventory_id,
+                session_id: $session_id,
+                active: true
+            })
+        ';
+        EXECUTE format('
+            SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
+        ', cypher_query)
+        USING params_text::ag_catalog.agtype;
+
+        -- 3. Graph: Player -[:HAS_INVENTORY]-> Inventory 엣지 생성
+        params_text := jsonb_build_object(
+            'player_id', v_player_id,
+            'inventory_id', v_inventory_id,
+            'session_id', NEW.session_id
+        )::text;
+
+        cypher_query := '
+            MATCH (p:Player {id: $player_id, session_id: $session_id})
+            MATCH (inv:Inventory {id: $inventory_id, session_id: $session_id})
+            CREATE (p)-[:HAS_INVENTORY {
+                active: true,
+                activated_turn: 0,
+                session_id: $session_id
+            }]->(inv)
+        ';
+        EXECUTE format('
+            SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
+        ', cypher_query)
+        USING params_text::ag_catalog.agtype;
+
+        RAISE NOTICE '[Inventory] SQL + Graph inventory created for session %, player %', NEW.session_id, v_player_id;
     END IF;
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$func$ LANGUAGE plpgsql;
 
 -- 트리거 설정: session 테이블 INSERT 후 실행
 DROP TRIGGER IF EXISTS trigger_04_initialize_inventory ON session;

@@ -81,9 +81,41 @@ class PlayerRepository(BaseRepository):
         return await self.get_stats(player_id)
 
     async def get_inventory(self, session_id: str) -> List[InventoryItem]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_inventory.sql"
-        results = await run_sql_query(sql_path, [session_id])
-        return [InventoryItem.model_validate(row) for row in results]
+        """플레이어 인벤토리 조회 (Cypher 기반)"""
+        # session에서 player_id 조회
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+        rows = await run_sql_query(sql_path, [session_id])
+        if not rows:
+            return []
+        player_id = str(rows[0].get("player_id", ""))
+        if not player_id:
+            return []
+
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inquiry" / "get_inventory.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"player_id": player_id, "session_id": session_id}
+        )
+
+        inventory_items = []
+        for row in results:
+            if row and isinstance(row, dict):
+                props = row.get("properties", row)
+                inventory_items.append(
+                    InventoryItem(
+                        player_id=props.get("player_id", player_id),
+                        item_id=props.get("item_id", ""),
+                        rule_id=props.get("rule_id", 0),
+                        item_name=props.get("item_name"),
+                        description=props.get("description"),
+                        quantity=props.get("quantity", 0),
+                        active=props.get("active", True),
+                        activated_turn=props.get("activated_turn", 0),
+                        deactivated_turn=props.get("deactivated_turn"),
+                    )
+                )
+        return inventory_items
 
     async def update_inventory(
         self, player_id: str, item_id: int, quantity: int

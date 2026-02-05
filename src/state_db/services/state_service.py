@@ -116,7 +116,7 @@ class StateService:
                 session_id, active_only=True
             )
             for enemy in enemies:
-                await self.entity_repo.remove_enemy(session_id, enemy.enemy_instance_id)
+                await self.entity_repo.remove_enemy(session_id, enemy.enemy_id)
 
         result = await self.write_state_changes(session_id, changes)
         return {"status": "success", "victory": victory, "result": result}

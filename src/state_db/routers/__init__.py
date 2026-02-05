@@ -14,19 +14,18 @@ from . import (
     router_INQUIRY,
     router_MANAGE,
     router_PROXY,
-    router_session,  # 파일명과 일치하게 수정
+    router_SCENARIO,
+    router_SESSION,
     router_TRACE,
     router_UPDATE,
 )
-
-# 별칭 제공 (기존 코드와의 호환성 및 명명 규칙 통일)
-router_SESSION = router_session
 
 __all__ = [
     "router_COMMIT",
     "router_INQUIRY",
     "router_MANAGE",
     "router_PROXY",
+    "router_SCENARIO",
     "router_SESSION",
     "router_TRACE",
     "router_UPDATE",

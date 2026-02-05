@@ -15,9 +15,9 @@ os.environ["APP_ENV"] = "test"
 @pytest.fixture(autouse=True)
 def mock_rule_engine_proxy():
     """Rule Engine 연동 자동 모킹"""
-    # 통합 라우터(router_session)로 패치 경로 수정
+    # 통합 라우터(router_SESSION)로 패치 경로 수정
     with patch(
-        "state_db.routers.router_session.RuleEngineProxy.add_session",
+        "state_db.routers.router_SESSION.RuleEngineProxy.add_session",
         new_callable=AsyncMock,
     ) as mock:
         mock.return_value = {"status": "success"}
