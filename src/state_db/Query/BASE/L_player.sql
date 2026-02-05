@@ -48,3 +48,7 @@ CREATE TRIGGER trigger_03_initialize_player
     AFTER INSERT ON session
     FOR EACH ROW
     EXECUTE FUNCTION initialize_player();
+
+-- TODO: [Graph Sync] SQL -> Graph 동기화 트리거 (Phase B/C 구현 예정)
+-- CREATE OR REPLACE FUNCTION sync_player_to_graph() ...
+-- CREATE TRIGGER trg_sync_player_graph AFTER INSERT OR UPDATE ON player ...

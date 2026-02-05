@@ -7,12 +7,12 @@ BEGIN
     INSERT INTO npc (
         npc_id, entity_type, name, description, session_id,
         assigned_sequence_id, assigned_location, scenario_id, scenario_npc_id,
-        tags, state, relations, is_departed, departed_at
+        rule_id, tags, state, is_departed, departed_at
     )
     SELECT
         gen_random_uuid(), n.entity_type, n.name, n.description, NEW.session_id,
         n.assigned_sequence_id, n.assigned_location, n.scenario_id, n.scenario_npc_id,
-        n.tags, n.state, n.relations, false, NULL
+        n.rule_id, n.tags, n.state, false, NULL
     FROM npc n
     WHERE n.session_id = MASTER_SESSION_ID
       AND n.scenario_id = NEW.scenario_id;
@@ -28,3 +28,7 @@ CREATE TRIGGER trigger_07_initialize_npcs
     FOR EACH ROW
     WHEN (NEW.session_id <> '00000000-0000-0000-0000-000000000000')
     EXECUTE FUNCTION initialize_npcs();
+
+-- TODO: [Graph Sync] SQL -> Graph 동기화 트리거 (Phase B/C 구현 예정)
+-- CREATE OR REPLACE FUNCTION sync_npc_to_graph() ...
+-- CREATE TRIGGER trg_sync_npc_graph AFTER INSERT OR UPDATE ON npc ...

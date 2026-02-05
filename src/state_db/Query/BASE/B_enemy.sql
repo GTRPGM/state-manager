@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS enemy (
     assigned_location VARCHAR(200),    -- 배치된 장소명
     scenario_id UUID NOT NULL,
     scenario_enemy_id VARCHAR(100) NOT NULL,  -- 시나리오 내 Enemy ID
+    rule_id INT NOT NULL DEFAULT 0,           -- Rule Engine ID
 
     -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -40,9 +41,6 @@ CREATE TABLE IF NOT EXISTS enemy (
     -- 상태 플래그
     is_defeated BOOLEAN NOT NULL DEFAULT false,
     defeated_at TIMESTAMP,
-
-    -- RELATION 엣지 ID 저장
-    relations JSONB DEFAULT '[]'::jsonb,
 
     -- 드롭 아이템 (item_id 리스트, INT 타입)
     dropped_items INT[] DEFAULT ARRAY[]::INT[]

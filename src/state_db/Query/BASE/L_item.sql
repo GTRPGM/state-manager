@@ -12,6 +12,7 @@ BEGIN
     -- [Deep Copy] Session 0에 저장된 해당 시나리오의 원본 아이템 데이터를 신규 세션 ID로 복제 삽입
     INSERT INTO item (
         item_id,
+        rule_id,
         entity_type,
         session_id,
         scenario_id,
@@ -23,7 +24,8 @@ BEGIN
         created_at
     )
     SELECT
-        item_id,            -- Rule Engine에서 전달받은 INT ID 그대로 사용
+        gen_random_uuid(),  -- 새로운 인스턴스 UUID 생성
+        rule_id,            -- Rule Engine ID
         entity_type,
         NEW.session_id,     -- 트리거를 발생시킨 실제 세션 ID
         scenario_id,
@@ -51,3 +53,7 @@ CREATE TRIGGER trigger_05_initialize_items
     -- 시스템 세션(Session 0) 자체 생성 시에는 복제를 수행하지 않음
     WHEN (NEW.session_id <> '00000000-0000-0000-0000-000000000000')
     EXECUTE FUNCTION initialize_items();
+
+-- TODO: [Graph Sync] SQL -> Graph 동기화 트리거 (Phase B/C 구현 예정)
+-- CREATE OR REPLACE FUNCTION sync_item_to_graph() ...
+-- CREATE TRIGGER trg_sync_item_graph AFTER INSERT OR UPDATE ON item ...

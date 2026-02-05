@@ -31,10 +31,7 @@ CREATE TABLE IF NOT EXISTS player (
             "SAN": 10
         },
         "boolean": {}
-    }'::jsonb,
-
-    -- RELATION 엣지 ID 저장
-    relations JSONB DEFAULT '[]'::jsonb
+    }'::jsonb
 );
 
 -- 인덱스 생성

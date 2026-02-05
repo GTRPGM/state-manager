@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS npc (
     assigned_location VARCHAR(200),    -- 배치된 장소명
     scenario_id UUID NOT NULL,
     scenario_npc_id VARCHAR(100) NOT NULL, -- 시나리오 내 NPC ID
+    rule_id INT NOT NULL DEFAULT 0,        -- Rule Engine ID
 
     -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -36,9 +37,6 @@ CREATE TABLE IF NOT EXISTS npc (
         },
         "boolean": {}
     }'::jsonb,
-
-    -- RELATION 엣지 ID 저장
-    relations JSONB DEFAULT '[]'::jsonb,
 
     -- 상태 플래그 (soft delete)
     is_departed BOOLEAN NOT NULL DEFAULT false,
