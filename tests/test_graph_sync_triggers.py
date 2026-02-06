@@ -251,9 +251,7 @@ async def test_spawn_npc_creates_graph_node(db_lifecycle):
     npc_id = str(result.id)
 
     # 그래프에 노드가 존재하고 minimalist 속성을 갖는지 확인
-    res = await engine.run_cypher(
-        f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n"
-    )
+    res = await engine.run_cypher(f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n")
     assert len(res) == 1
     props = res[0]["properties"]
     assert props["name"] == "Town Guard"
@@ -296,9 +294,7 @@ async def test_spawn_enemy_creates_graph_node(db_lifecycle):
     )
     enemy_id = str(result.id)
 
-    res = await engine.run_cypher(
-        f"MATCH (e:Enemy) WHERE e.id = '{enemy_id}' RETURN e"
-    )
+    res = await engine.run_cypher(f"MATCH (e:Enemy) WHERE e.id = '{enemy_id}' RETURN e")
     assert len(res) == 1
     props = res[0]["properties"]
     assert props["name"] == "Goblin"
@@ -339,9 +335,7 @@ async def test_remove_npc_deletes_graph_node(db_lifecycle):
     await repo.remove_npc(session_id, npc_id)
 
     # 그래프에서 노드가 사라졌는지 확인
-    res = await engine.run_cypher(
-        f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n"
-    )
+    res = await engine.run_cypher(f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n")
     assert len(res) == 0
 
 
@@ -376,9 +370,7 @@ async def test_remove_enemy_deletes_graph_node(db_lifecycle):
 
     await repo.remove_enemy(session_id, enemy_id)
 
-    res = await engine.run_cypher(
-        f"MATCH (e:Enemy) WHERE e.id = '{enemy_id}' RETURN e"
-    )
+    res = await engine.run_cypher(f"MATCH (e:Enemy) WHERE e.id = '{enemy_id}' RETURN e")
     assert len(res) == 0
 
 
@@ -414,18 +406,14 @@ async def test_npc_depart_sets_active_false(db_lifecycle):
     # 퇴장
     await repo.depart_npc(session_id, npc_id)
 
-    res = await engine.run_cypher(
-        f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n"
-    )
+    res = await engine.run_cypher(f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n")
     assert len(res) == 1
     assert res[0]["properties"]["active"] is False
 
     # 복귀
     await repo.return_npc(session_id, npc_id)
 
-    res2 = await engine.run_cypher(
-        f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n"
-    )
+    res2 = await engine.run_cypher(f"MATCH (n:NPC) WHERE n.id = '{npc_id}' RETURN n")
     assert len(res2) == 1
     assert res2[0]["properties"]["active"] is True
 
@@ -462,8 +450,6 @@ async def test_defeat_enemy_sets_active_false(db_lifecycle):
     # 처치
     await repo.defeat_enemy(session_id, enemy_id)
 
-    res = await engine.run_cypher(
-        f"MATCH (e:Enemy) WHERE e.id = '{enemy_id}' RETURN e"
-    )
+    res = await engine.run_cypher(f"MATCH (e:Enemy) WHERE e.id = '{enemy_id}' RETURN e")
     assert len(res) == 1
     assert res[0]["properties"]["active"] is False

@@ -62,8 +62,6 @@ async def db_lifecycle(postgres_container):
 
         await conn.execute("""
             DROP TABLE IF EXISTS turn CASCADE;
-            DROP TABLE IF EXISTS player_npc_relations CASCADE;
-            DROP TABLE IF EXISTS player_inventory CASCADE;
             DROP TABLE IF EXISTS inventory CASCADE;
             DROP TABLE IF EXISTS enemy CASCADE;
             DROP TABLE IF EXISTS npc CASCADE;

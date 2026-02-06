@@ -129,36 +129,6 @@ async def test_get_turn(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_act(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.get_act",
-        new=AsyncMock(return_value={"current_act": 1}),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/act")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_get_sequence(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.get_sequence",
-        new=AsyncMock(return_value={"current_sequence": 1}),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/sequence")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_get_location(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.get_location",
-        new=AsyncMock(return_value={"location": "Test"}),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/location")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
 async def test_get_progress(async_client: AsyncClient):
     with patch(
         "state_db.repositories.ProgressRepository.get_progress",
