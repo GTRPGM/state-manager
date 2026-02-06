@@ -129,6 +129,10 @@ async def run_verification():
                 "include_inactive": False,
                 "next_act_id": "act-next",
                 "next_sequence_id": "seq-next",
+                "cause_entity_id": "npc-1",
+                "effect_entity_id": "enemy-1",
+                "affinity_score": 0,
+                "quantity": 1,
             }
 
             for cf in cypher_files:
