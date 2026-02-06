@@ -32,15 +32,32 @@ BEGIN
     ELSIF TG_TABLE_NAME = 'item' THEN
         label_name := 'Item'; target_id := NEW.item_id; target_name := NEW.name;
         target_tid := NEW.scenario_item_id; target_scid := NEW.scenario_id;
+    ELSIF TG_TABLE_NAME = 'session' THEN
+        label_name := 'Session'; target_id := NEW.session_id; target_name := 'Session';
+        target_tid := NEW.current_act_id; target_scid := NEW.scenario_id;
     ELSE RETURN NEW;
     END IF;
 
+    -- 공통 속성 업데이트
     EXECUTE format('
         SELECT * FROM ag_catalog.cypher(''state_db'', $$
             MERGE (n:%s { id: %L, session_id: %L })
             SET n.name = %L, n.active = %s, n.tid = %L, n.scenario_id = %L
         $$) AS (result ag_catalog.agtype);
     ', label_name, target_id::text, NEW.session_id::text, COALESCE(target_name, 'Unknown'), is_active::text, COALESCE(target_tid, 'none'), target_scid::text);
+
+    -- Session 전용 속성 추가 업데이트
+    IF TG_TABLE_NAME = 'session' THEN
+        EXECUTE format('
+            SELECT * FROM ag_catalog.cypher(''state_db'', $$
+                MATCH (n:Session { id: %L, session_id: %L })
+                SET n.current_act = %s, n.current_sequence = %s,
+                    n.current_act_id = %L, n.current_sequence_id = %L
+            $$) AS (result ag_catalog.agtype);
+        ', target_id::text, NEW.session_id::text,
+        COALESCE(NEW.current_act, 1)::text, COALESCE(NEW.current_sequence, 1)::text,
+        COALESCE(NEW.current_act_id, 'none'), COALESCE(NEW.current_sequence_id, 'none'));
+    END IF;
 
     RETURN NEW;
 END;
@@ -49,6 +66,9 @@ $func$ LANGUAGE plpgsql;
 -- [Stage 300] Real-time Entity Sync
 DROP TRIGGER IF EXISTS trigger_300_sync_player_graph ON player;
 CREATE TRIGGER trigger_300_sync_player_graph AFTER INSERT OR UPDATE ON player FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
+
+DROP TRIGGER IF EXISTS trigger_305_sync_session_graph ON session;
+CREATE TRIGGER trigger_305_sync_session_graph AFTER INSERT OR UPDATE ON session FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
 
 DROP TRIGGER IF EXISTS trigger_310_sync_npc_graph ON npc;
 CREATE TRIGGER trigger_310_sync_npc_graph AFTER INSERT OR UPDATE ON npc FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
