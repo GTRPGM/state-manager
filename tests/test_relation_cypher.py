@@ -301,11 +301,11 @@ async def test_get_relations_cypher_returns_active_relations(db_lifecycle):
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
     CREATE (n1:NPC {
-        npc_id: $npc1_uuid, session_id: $session_id,
+        id: $npc1_uuid, session_id: $session_id,
         name: 'NPC1', active: true
     })
     CREATE (n2:NPC {
-        npc_id: $npc2_uuid, session_id: $session_id,
+        id: $npc2_uuid, session_id: $session_id,
         name: 'NPC2', active: true
     })
     CREATE (p)-[:RELATION {

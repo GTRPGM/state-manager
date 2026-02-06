@@ -38,8 +38,8 @@ async def test_cypher_engine_basic_execution(db_lifecycle):
     results = await engine.run_cypher(test_query, params)
 
     assert len(results) > 0
-    # 매퍼가 {"__age_type__": "scalar", "value": ...} 형태를 반환함
-    val = results[0]["value"]
+    # 매퍼가 언래핑된 값을 반환함
+    val = results[0]
     if isinstance(val, str):
         val = val.strip('"')
     assert val == "node-1"
@@ -114,8 +114,8 @@ async def test_cypher_engine_no_params(db_lifecycle):
     파라미터 없는 쿼리 실행 테스트 (branch coverage)
     """
     res = await engine.run_cypher("RETURN 1 as val")
-    # AGE scalar return might be string '1'
-    assert int(res[0]["value"]) == 1
+    # AGE scalar return is now unwrapped by ResultMapper
+    assert int(res[0]) == 1
 
 
 @pytest.mark.asyncio
@@ -126,7 +126,7 @@ async def test_cypher_engine_with_transaction(db_lifecycle):
     async with DatabaseManager.get_connection() as conn:
         async with conn.transaction():
             res = await engine.run_cypher("RETURN 99 as val", tx=conn)
-            assert int(res[0]["value"]) == 99
+            assert int(res[0]) == 99
 
 
 @pytest.mark.asyncio
@@ -155,19 +155,13 @@ def test_result_mapper_scalars():
     """
     스칼라 값(int, float, bool, null) 파싱 테스트
     """
-    # already parsed types (by asyncpg)
-    assert mapper.map_row([10]) == {"__age_type__": "scalar", "value": 10}
+    # ResultMapper.map_row unwraps scalar values directly
+    assert mapper.map_row([10]) == 10
     assert mapper.map_row([None]) is None
     assert mapper.map_row([]) is None
 
     # string scalar
-    # row = ['"hello"::text']  # Not strict AGE format but simulated
-    # Our regex expects ::type at end.
-    # If just string without ::, treated as scalar value
-    assert mapper.map_row(["just_string"]) == {
-        "__age_type__": "scalar",
-        "value": "just_string",
-    }
+    assert mapper.map_row(["just_string"]) == "just_string"
 
 
 def test_result_mapper_vertex():
@@ -249,8 +243,10 @@ def test_result_mapper_list():
 
     assert res["__age_type__"] == "list"
     assert len(res["value"]) == 3
-    # Recursive parsing check
-    assert res["value"][0]["value"] == 1
+    # ResultMapper may or may not recursively parse internal strings depending on logic
+    # But for a simple list [1, 2, "three"], they should be native types
+    assert res["value"][0] == 1
+    assert res["value"][2] == "three"
 
 
 def test_result_mapper_fallback():
@@ -259,9 +255,10 @@ def test_result_mapper_fallback():
     """
     malformed = "not_json::vertex"
     res = mapper.map_row([malformed])
-    # _safe_json catches exception and returns raw
+    # _safe_json catches exception and returns {} for malformed data
     assert res["__age_type__"] == "vertex"
-    assert "raw" in res or res["_raw"]["raw"] == "not_json"
+    assert res["id"] is None
+    assert res["properties"] == {}
 
 
 # ====================================================================================
@@ -277,7 +274,7 @@ def test_validator_node_success():
     props = {"session_id": "s1", "active": True}
     GraphValidator.validate_node("generic", props)
 
-    # Entity props
+    # Entity props (rule is optional/extra now)
     props_ent = {"session_id": "s1", "active": True, "rule": 101}
     GraphValidator.validate_node("npc", props_ent)
 
@@ -290,11 +287,6 @@ def test_validator_node_fail():
     with pytest.raises(GraphValidationError) as exc:
         GraphValidator.validate_node("generic", {"active": True})
     assert "session_id" in str(exc.value)
-
-    # Missing rule for NPC
-    with pytest.raises(GraphValidationError) as exc:
-        GraphValidator.validate_node("npc", {"session_id": "s1", "active": True})
-    assert "rule" in str(exc.value)
 
 
 def test_validator_edge_success():

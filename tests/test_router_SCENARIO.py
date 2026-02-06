@@ -50,11 +50,8 @@ async def test_scenario_validate_success(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_scenario_validate_fail(async_client: AsyncClient):
     """시나리오 검증 API 실패 케이스 (비정상 데이터)"""
-    # 필수 필드 누락 등 (Pydantic 수준 검증)
-    invalid_data = {
-        "title": "Invalid"
-        # npcs, acts 등 필수 리스트 누락
-    }
+    # 필수 필드 'title' 누락
+    invalid_data = {"description": "Missing title"}
     response = await async_client.post("/state/scenario/validate", json=invalid_data)
     assert response.status_code == 422  # Validation Error
 

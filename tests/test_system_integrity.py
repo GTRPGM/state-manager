@@ -48,7 +48,7 @@ async def test_system_isolation_and_updates(async_client: AsyncClient):
     assert len(data) > 0, "Enemy should be visible in Arena!"
     assert data[0]["assigned_location"] == "Arena"
 
-    enemy_a_instance_id = data[0]["enemy_instance_id"]
+    enemy_a_instance_id = data[0]["enemy_id"]
     await async_client.put(
         f"/state/enemy/{enemy_a_instance_id}/hp",
         json={"session_id": session_a_id, "hp_change": -20},
@@ -60,4 +60,4 @@ async def test_system_isolation_and_updates(async_client: AsyncClient):
     )
     session_b_id = session_b_resp.json()["data"]["session_id"]
     enemies_b_resp = await async_client.get(f"/state/session/{session_b_id}/enemies")
-    assert enemies_b_resp.json()["data"][0]["state"]["numeric"]["HP"] == 50
+    assert enemies_b_resp.json()["data"][0]["current_hp"] == 50

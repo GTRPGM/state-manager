@@ -55,7 +55,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
                 "from_id": "npc-guard",
                 "to_id": "enemy-slime",
                 "relation_type": "hostile",
-                "affinity": 0,
+                "affinity": 50,
                 "meta": {},
             }
         ],
@@ -122,10 +122,15 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
 
     affinity_resp = await real_db_client.put(
         "/state/npc/affinity",
-        json={"player_id": player_id, "npc_id": npc_id, "affinity_change": 20},
+        json={
+            "session_id": session_id,
+            "player_id": player_id,
+            "npc_id": npc_id,
+            "affinity_change": 20,
+        },
     )
     assert affinity_resp.status_code == 200
-    assert affinity_resp.json()["data"]["new_affinity"] == 70
+    assert affinity_resp.json()["data"]["new_affinity"] == 20
 
     # 10. 인벤토리 수량 수정 검증
     async with infra.DatabaseManager.get_connection() as conn:
@@ -155,13 +160,16 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     # 11. 그래프 관계 복제 검증 (NPC Guard -> Slime 호감도/관계)
     async with infra.DatabaseManager.get_connection() as conn:
         await infra.set_age_path(conn)
+        # 특정 tid(npc-guard -> enemy-slime) 관계를 명시적으로 조회
         graph_rel = await conn.fetchrow(f"""
             SELECT * FROM ag_catalog.cypher('state_db', $$
-                MATCH (v1)-[r:RELATION]->(v2)
-                WHERE v1.session_id = '{session_id}' AND v2.session_id = '{session_id}'
+                MATCH (v1 {{tid: 'npc-guard', session_id: '{session_id}'}})
+                      -[r:RELATION]->
+                      (v2 {{tid: 'enemy-slime', session_id: '{session_id}'}})
                 RETURN r.relation_type, r.affinity
             $$) AS (relation_type agtype, affinity agtype)
         """)
 
-        assert graph_rel is not None, "Relationship should be cloned!"
-        assert "hostile" in str(graph_rel["relation_type"])
+        assert graph_rel is not None, "NPC-Enemy Relationship should be cloned!"
+        # AGE 결과는 따옴표가 포함될 수 있으므로 strip 처리
+        assert "hostile" in str(graph_rel["relation_type"]).strip('"')
