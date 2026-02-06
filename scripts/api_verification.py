@@ -47,6 +47,7 @@ class APIVerifier:
             return res_data
         except Exception as e:
             self.results.append({"name": name, "status": "ERROR", "detail": str(e)})
+            print(f"  [ERROR]{name}: {str(e)}")
             return None
 
     def print_summary(self):
@@ -60,18 +61,19 @@ class APIVerifier:
         print("=" * 80 + "\n")
 
     def run(self):
-        # Correct path for proxy health: /state/health/proxy/rule-engine
-        print("[0] Checking Proxy Health...")
+        print("[0] Checking Health & Proxy...")
         self.check("Rule Engine Health", "GET", "/state/health/proxy/rule-engine")
 
-        print("[1] Injecting Scenario...")
+        print("[1] Scenario Management...")
         scenario_data = {
-            "title": "API Verification",
+            "title": f"Full Verification {int(time.time())}",
+            "description": "Comprehensive Test",
             "acts": [{"id": "act-1", "name": "Act 1", "sequences": ["seq-1"]}],
             "sequences": [
                 {
                     "id": "seq-1",
                     "name": "Seq 1",
+                    "location_name": "Testing Grounds",
                     "npcs": ["npc-1"],
                     "enemies": ["enemy-1"],
                 }
@@ -80,7 +82,15 @@ class APIVerifier:
             "enemies": [
                 {"scenario_enemy_id": "enemy-1", "name": "Goblin", "rule_id": 201}
             ],
-            "items": [],
+            "items": [
+                {
+                    "scenario_item_id": "item-potion",
+                    "name": "Healing Potion",
+                    "rule_id": 1,
+                    "item_type": "consumable",
+                    "meta": {"hp_heal": 20}
+                }
+            ],
             "relations": [],
         }
         res = self.check(
@@ -91,32 +101,107 @@ class APIVerifier:
         else:
             return
 
-        print("[2] Session Start...")
-        start_data = {"scenario_id": self.scenario_id, "location": "Tavern"}
+        self.check("Get Scenario List", "GET", "/state/scenarios")
+        self.check("Get Scenario Detail", "GET", f"/state/scenario/{self.scenario_id}")
+
+        print("[2] Session Lifecycle...")
+        start_data = {"scenario_id": self.scenario_id, "location": "Testing Grounds"}
         res = self.check("Start Session", "POST", "/state/session/start", start_data)
         if res and "data" in res:
             self.session_id = res["data"]["session_id"]
             self.player_id = res["data"].get("player_id")
 
-        print("[3] Inquiry...")
-        self.check("Get Context", "GET", f"/state/session/{self.session_id}/context")
-        self.check(
-            "Get Seq Details",
-            "GET",
-            f"/state/session/{self.session_id}/sequence/details",
-        )
+        self.check("Get Session List", "GET", "/state/sessions")
+        self.check("Get Session Detail", "GET", f"/state/session/{self.session_id}")
+        self.check("Pause Session", "POST", f"/state/session/{self.session_id}/pause")
+        self.check("Resume Session", "POST", f"/state/session/{self.session_id}/resume")
 
-        print("[4] Transition...")
-        # Update Sequence (New Schema)
+        print("[3] Inquiry (State)...")
+        self.check("Get Context", "GET", f"/state/session/{self.session_id}/context")
+        self.check("Get Progress", "GET", f"/state/session/{self.session_id}/progress")
+        self.check("Get Inventory", "GET", f"/state/session/{self.session_id}/inventory")
+
+        res_npcs = self.check("Get NPCs", "GET", f"/state/session/{self.session_id}/npcs")
+        if res_npcs and "data" in res_npcs and res_npcs["data"]:
+            self.npc_id = res_npcs["data"][0]["npc_id"]
+
+        res_enemies = self.check(
+            "Get Enemies", "GET", f"/state/session/{self.session_id}/enemies"
+        )
+        if res_enemies and "data" in res_enemies and res_enemies["data"]:
+            self.enemy_id = res_enemies["data"][0]["enemy_id"]
+
+        if self.player_id:
+            self.check("Get Player State", "GET", f"/state/player/{self.player_id}")
+
+        print("[4] State Updates...")
+        if self.player_id:
+            self.check(
+                "Update Player HP",
+                "PUT",
+                f"/state/player/{self.player_id}/hp",
+                {"session_id": self.session_id, "hp_change": -10},
+            )
+
+        if self.npc_id and self.player_id:
+            self.check(
+                "Update NPC Affinity",
+                "PUT",
+                "/state/npc/affinity",
+                {
+                    "session_id": self.session_id,
+                    "player_id": self.player_id,
+                    "npc_id": self.npc_id,
+                    "affinity_change": 5,
+                },
+            )
+
+        if self.enemy_id:
+            self.check(
+                "Update Enemy HP",
+                "PUT",
+                f"/state/enemy/{self.enemy_id}/hp",
+                {"session_id": self.session_id, "hp_change": -5},
+            )
+
+        if self.player_id:
+            self.check(
+                "Earn Item",
+                "POST",
+                "/state/player/item/earn",
+                {
+                    "session_id": self.session_id,
+                    "player_id": self.player_id,
+                    "rule_id": 1,
+                    "quantity": 2,
+                },
+            )
+
+        print("[5] Progress Management...")
+        self.check(
+            "Update Location",
+            "PUT",
+            f"/state/session/{self.session_id}/location",
+            {"new_location": "Dark Cave"},
+        )
+        self.check("Add Turn", "POST", f"/state/session/{self.session_id}/turn/add")
+        self.check("Get Current Turn", "GET", f"/state/session/{self.session_id}/turn")
+
         self.check(
             "Update Sequence",
             "PUT",
             f"/state/session/{self.session_id}/sequence",
             {"new_sequence": 1, "new_sequence_id": "seq-1"},
         )
+        self.check(
+            "Get Seq Details",
+            "GET",
+            f"/state/session/{self.session_id}/sequence/details",
+        )
 
-        print("[5] End...")
+        print("[6] Finalization...")
         self.check("End Session", "POST", f"/state/session/{self.session_id}/end")
+
         self.print_summary()
 
 
