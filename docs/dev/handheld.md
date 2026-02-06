@@ -96,4 +96,21 @@
     - `scripts/api_verification.py`: 실행 중인 서버에 시나리오 주입부터 세션 종료까지의 흐름을 검증하는 통합 테스트 스크립트.
   - **Robust Cypher Pattern**: SQL->Graph 동기화 시 트리거 로직에 따라 속성 키(예: `id` vs `npc_id`)가 달라질 수 있으므로, 조회 시 `coalesce(n.id, n.npc_id)` 패턴을 사용하는 것이 안전함.
 
+---
+
+### plan_0003 - ScenarioRepository Cypher Conversion
+
+- Work (brief):
+  - 시나리오 진행(Act/Sequence 전환) 로직을 Cypher로 전환 및 그래프 기반 세션 상태 관리 구현.
+- Actions taken (detailed):
+  - **Session Sync Trigger**: `session` 테이블 변경 시 그래프의 `Session` 노드를 자동 갱신하는 `trigger_305_sync_session_graph` 추가.
+  - **Hybrid Repository**: `ScenarioRepository`에서 SQL 업데이트(트리거 유도)와 Cypher 명시적 실행을 병행하여 상태 일관성 확보.
+  - **Schema Alignment**: `ActChangeRequest` 및 `SequenceChangeResult` 등에 문자열 기반 `act_id`, `sequence_id` 필드를 추가하여 그래프 메타데이터와 연동.
+  - **Multi-field Return**: Cypher에서 여러 필드를 반환할 때 `RETURN {key: value}` 맵 형식을 사용하여 `CypherEngine`의 단일 컬럼 제약을 준수함.
+  - **Model Robustness**: `PlayerStats` 모델에서 `str`, `int`와 같은 Python 예약어를 필드명으로 사용할 때 발생하는 Pydantic 검증 오류를 방지하기 위해 `strength`, `intelligence` 등으로 필드명을 변경하고 `Field(alias=...)`를 적용함.
+- What I learned / updated understanding:
+  - **Trigger Field Safety**: 공용 트리거 함수(`sync_entity_to_graph`)에서 `NEW` 레코드 접근 시 테이블별 필드 존재 여부를 반드시 체크해야 함 (`UndefinedColumnError` 방지).
+  - **Cypher Map Pattern**: `CypherEngine`은 현재 `AS (result agtype)`와 같이 단일 컬럼 반환을 전제로 하므로, 복수 필드 조회 시에는 반드시 Cypher 맵(`{...}`)을 리턴해야 함.
+  - **Pydantic Shadowing**: 모델 필드명으로 `str`, `int`, `type` 등을 사용하는 것은 가급적 피하고, 필요시 `Field(alias=...)`와 `populate_by_name=True` 설정을 통해 DB 컬럼명과 매핑해야 함.
+
 <!-- PROJ_WORKNOTES_END -->
