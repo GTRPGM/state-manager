@@ -1,6 +1,7 @@
 import os
 import time
 from typing import Any
+from uuid import uuid4
 
 import requests
 
@@ -49,9 +50,9 @@ def find_by(rows: list[dict[str, Any]], key: str, value: Any) -> dict[str, Any] 
     return None
 
 
-def inject_two_sequence_scenario() -> str:
+def inject_two_sequence_scenario(max_attempts: int = 3) -> str:
     payload = {
-        "title": f"State Guards {int(time.time())}",
+        "title": f"State Guards {time.time_ns()}-{uuid4().hex[:8]}",
         "description": "validate quantity, affinity, sequence scope, session isolation",
         "acts": [
             {
@@ -139,8 +140,22 @@ def inject_two_sequence_scenario() -> str:
             },
         ],
     }
-    injected = req("POST", "/state/scenario/inject", payload=payload)
-    return injected["data"]["scenario_id"]
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            injected = req("POST", "/state/scenario/inject", payload=payload)
+            return injected["data"]["scenario_id"]
+        except Exception as e:
+            last_error = e
+            if attempt == max_attempts:
+                break
+            # 간헐적 그래프 동기화 충돌(500) 완화를 위해 title을 갱신 후 재시도
+            payload["title"] = f"State Guards {time.time_ns()}-{uuid4().hex[:8]}"
+            time.sleep(0.3)
+
+    raise FlowError(
+        f"Scenario inject failed after {max_attempts} attempts: {last_error}"
+    )
 
 
 def start_session(scenario_id: str) -> tuple[str, str]:
@@ -153,13 +168,17 @@ def start_session(scenario_id: str) -> tuple[str, str]:
 
 
 def verify_item_quantity_flow(session_id: str, player_id: str) -> None:
+    items = req("GET", f"/state/session/{session_id}/items")["data"]
+    assert_true(bool(items), "No item found in session")
+    item_id = items[0]["item_id"]
+
     earn1 = req(
         "POST",
         "/state/player/item/earn",
         payload={
             "session_id": session_id,
             "player_id": player_id,
-            "rule_id": 1,
+            "state_entity_id": item_id,
             "quantity": 5,
         },
     )["data"]
@@ -171,7 +190,7 @@ def verify_item_quantity_flow(session_id: str, player_id: str) -> None:
         payload={
             "session_id": session_id,
             "player_id": player_id,
-            "rule_id": 1,
+            "state_entity_id": item_id,
             "quantity": 2,
         },
     )["data"]
@@ -183,7 +202,7 @@ def verify_item_quantity_flow(session_id: str, player_id: str) -> None:
         payload={
             "session_id": session_id,
             "player_id": player_id,
-            "rule_id": 1,
+            "state_entity_id": item_id,
             "quantity": 3,
         },
     )["data"]
@@ -193,8 +212,8 @@ def verify_item_quantity_flow(session_id: str, player_id: str) -> None:
     )
 
     inventory = req("GET", f"/state/session/{session_id}/inventory")["data"]
-    item = find_by(inventory, "rule_id", 1)
-    assert_true(item is not None, "rule_id=1 inventory row missing after use")
+    item = find_by(inventory, "item_id", item_id)
+    assert_true(item is not None, "item_id inventory row missing after use")
     assert_true(item["quantity"] == 4, "inventory final quantity mismatch")
 
 

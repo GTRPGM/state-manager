@@ -144,22 +144,20 @@ def run_flow() -> None:
     before_enemy_hp = enemies[0]["current_hp"]
 
     print("[4/7] Prepare quantity baseline (earn item)")
+    item_rows = req("GET", f"/state/session/{session_id}/items")["data"]
+    assert_true(bool(item_rows), "No item found in session")
+    item_row = item_rows[0]
+    item_uuid = item_row["item_id"]
     req(
         "POST",
         "/state/player/item/earn",
         payload={
             "session_id": session_id,
             "player_id": player_id,
-            "rule_id": 1,
+            "state_entity_id": item_uuid,
             "quantity": 5,
         },
     )
-
-    inventory = req("GET", f"/state/session/{session_id}/inventory")["data"]
-    assert_true(bool(inventory), "No inventory item found after earn")
-    item_row = find_by_key(inventory, "rule_id", 1)
-    assert_true(item_row is not None, "Rule 1 item not found in inventory")
-    item_uuid = item_row["item_id"]
 
     print("[5/7] Commit all entity changes (attributes, relations, quantity)")
     commit_payload = {

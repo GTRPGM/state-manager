@@ -29,6 +29,7 @@ class APIVerifier:
         self.player_id: str | None = None
         self.npc_id: str | None = None
         self.enemy_id: str | None = None
+        self.item_id: str | None = None
         self.spawned_npc_id: str | None = None
         self.spawned_enemy_id: str | None = None
 
@@ -455,12 +456,16 @@ class APIVerifier:
             f"/state/session/{self.session_id}/inventory",
             validator=self._assert_list_payload,
         )
-        self.check(
+        item_data = self.check(
             "Items",
             "GET",
             f"/state/session/{self.session_id}/items",
             validator=self._assert_list_payload,
         )
+        if item_data and isinstance(item_data.get("data"), list):
+            items = item_data["data"]
+            if items:
+                self.item_id = items[0].get("item_id")
 
         npcs = self.check(
             "NPCs",
@@ -579,7 +584,7 @@ class APIVerifier:
                 payload={
                     "session_id": self.session_id,
                     "player_id": self.player_id,
-                    "rule_id": 1,
+                    "state_entity_id": self.item_id,
                     "quantity": 2,
                 },
                 validator=self._assert_wrapped_success,
@@ -591,7 +596,7 @@ class APIVerifier:
                 payload={
                     "session_id": self.session_id,
                     "player_id": self.player_id,
-                    "rule_id": 1,
+                    "state_entity_id": self.item_id,
                     "quantity": 1,
                 },
                 validator=self._assert_wrapped_success,
