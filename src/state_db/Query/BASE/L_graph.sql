@@ -14,27 +14,32 @@ DECLARE
     target_name text;
     target_tid text := 'none';
     target_scid uuid;
+    target_rule integer := 0;
 BEGIN
     IF TG_TABLE_NAME = 'player' THEN
         label_name := 'Player'; target_id := NEW.player_id; target_name := NEW.name;
-        target_scid := NULL;
+        target_tid := 'player'; target_scid := NULL; target_rule := 0;
     ELSIF TG_TABLE_NAME = 'npc' THEN
         label_name := 'NPC'; target_id := NEW.npc_id; target_name := NEW.name;
         target_tid := NEW.scenario_npc_id; target_scid := NEW.scenario_id;
+        target_rule := NEW.rule_id;
         is_active := NOT COALESCE(NEW.is_departed, false);
     ELSIF TG_TABLE_NAME = 'enemy' THEN
         label_name := 'Enemy'; target_id := NEW.enemy_id; target_name := NEW.name;
         target_tid := NEW.scenario_enemy_id; target_scid := NEW.scenario_id;
+        target_rule := NEW.rule_id;
         is_active := NOT COALESCE(NEW.is_defeated, false);
     ELSIF TG_TABLE_NAME = 'inventory' THEN
         label_name := 'Inventory'; target_id := NEW.inventory_id; target_name := 'Inventory';
-        target_scid := NULL;
+        target_tid := 'none'; target_scid := NULL; target_rule := 0;
     ELSIF TG_TABLE_NAME = 'item' THEN
         label_name := 'Item'; target_id := NEW.item_id; target_name := NEW.name;
         target_tid := NEW.scenario_item_id; target_scid := NEW.scenario_id;
+        target_rule := NEW.rule_id;
     ELSIF TG_TABLE_NAME = 'session' THEN
         label_name := 'Session'; target_id := NEW.session_id; target_name := 'Session';
         target_tid := NEW.current_act_id; target_scid := NEW.scenario_id;
+        target_rule := 0;
     ELSE RETURN NEW;
     END IF;
 
@@ -42,9 +47,9 @@ BEGIN
     EXECUTE format('
         SELECT * FROM ag_catalog.cypher(''state_db'', $$
             MERGE (n:%s { id: %L, session_id: %L })
-            SET n.name = %L, n.active = %s, n.tid = %L, n.scenario_id = %L
+            SET n.name = %L, n.active = %s, n.tid = %L, n.scenario_id = %L, n.rule_id = %s
         $$) AS (result ag_catalog.agtype);
-    ', label_name, target_id::text, NEW.session_id::text, COALESCE(target_name, 'Unknown'), is_active::text, COALESCE(target_tid, 'none'), target_scid::text);
+    ', label_name, target_id::text, NEW.session_id::text, COALESCE(target_name, 'Unknown'), is_active::text, COALESCE(target_tid, 'none'), target_scid::text, target_rule::text);
 
     -- Session 전용 속성 추가 업데이트
     IF TG_TABLE_NAME = 'session' THEN

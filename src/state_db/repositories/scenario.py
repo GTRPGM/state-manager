@@ -521,6 +521,7 @@ class ScenarioRepository(BaseRepository):
                     RETURN {
                         npc_id: n.id,
                         npc_name: n.name,
+                        scenario_npc_id: n.tid,
                         affinity_score: r.affinity,
                         relation_type: r.relation_type
                     }
@@ -533,6 +534,7 @@ class ScenarioRepository(BaseRepository):
                             {
                                 "npc_id": row.get("npc_id"),
                                 "npc_name": row.get("npc_name"),
+                                "scenario_npc_id": row.get("scenario_npc_id"),
                                 "affinity_score": row.get("affinity_score", 0),
                                 "relation_type": row.get("relation_type", "neutral"),
                             }

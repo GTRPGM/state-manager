@@ -3,5 +3,6 @@ MATCH (p:Player {id: $player_id, session_id: $session_id})
       -[c:CONTAINS {active: true}]->(i:Item)
 RETURN {
     item_id: i.id,
+    rule_id: i.rule_id,
     quantity: c.quantity
 }

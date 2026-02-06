@@ -25,10 +25,22 @@ class PlayerRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Player not found")
 
     async def get_item_ids(self, player_id: str) -> List[int]:
-        """플레이어가 보유한 아이템 ID 리스트 조회"""
-        sql_path = self.query_dir / "INQUIRY" / "inventory" / "Player_item_ids.sql"
-        results = await run_sql_query(sql_path, [player_id])
-        return [row["item_id"] for row in results]
+        """플레이어가 보유한 아이템 Rule ID 리스트 조회 (Cypher 기반)"""
+        # session_id 조회를 위해 SQL 활용
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+        rows = await run_sql_query(sql_path, [player_id])
+        if not rows:
+            return []
+        session_id = str(rows[0].get("session_id", ""))
+
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inquiry" / "get_inventory.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"player_id": player_id, "session_id": session_id}
+        )
+
+        return [row.get("rule_id", 0) for row in results if row]
 
     async def get_full_state(self, player_id: str) -> FullPlayerState:
         try:

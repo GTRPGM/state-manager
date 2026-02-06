@@ -44,8 +44,8 @@ BEGIN
         )::text;
 
         cypher_query := '
-            MATCH (p:Player {player_id: $player_id, session_id: $session_id})
-            MATCH (inv:Inventory {inventory_id: $inventory_id, session_id: $session_id})
+            MATCH (p:Player {id: $player_id, session_id: $session_id})
+            MATCH (inv:Inventory {id: $inventory_id, session_id: $session_id})
             CREATE (p)-[:HAS_INVENTORY {
                 active: true,
                 activated_turn: 0,
