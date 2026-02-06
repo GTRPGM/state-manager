@@ -15,8 +15,6 @@ from .player import (
     NPCAffinityUpdateResult,
     NPCRelation,
     PlayerHPUpdateResult,
-    PlayerState,
-    PlayerStateNumeric,
     PlayerStateResponse,
     PlayerStats,
 )
@@ -45,8 +43,6 @@ __all__ = [
     "NPCInfo",
     "NPCRelation",
     "EnemyInfo",
-    "PlayerStateNumeric",
-    "PlayerState",
     "PlayerStats",
     "PlayerStateResponse",
     "FullPlayerState",

@@ -4,8 +4,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from .base import JsonField
-
 
 class InventoryItem(BaseModel):
     player_id: Optional[str] = None
@@ -34,31 +32,25 @@ class NPCRelation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PlayerStateNumeric(BaseModel):
-    HP: Optional[int] = None
-    MP: Optional[int] = None
-    gold: Optional[int] = None
-    model_config = ConfigDict(from_attributes=True)
-
-
-class PlayerState(BaseModel):
-    numeric: PlayerStateNumeric
-    boolean: Dict[str, bool] = {}
-    model_config = ConfigDict(from_attributes=True)
-
-
 class PlayerStats(BaseModel):
     player_id: Union[str, UUID]
     name: str
-    state: Union[JsonField, PlayerState]
-    relations: Optional[JsonField] = []
+    hp: int
+    mp: int
+    san: int
+    str: Optional[int] = None
+    dex: Optional[int] = None
+    int: Optional[int] = None
+    lux: Optional[int] = None
     tags: List[str] = []
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerStateResponse(BaseModel):
     hp: int
-    gold: int
+    gold: int = 0
     items: List[int] = []
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,10 +63,7 @@ class FullPlayerState(BaseModel):
 
 class PlayerHPUpdateResult(BaseModel):
     player_id: Union[str, UUID]
-    name: str
     current_hp: int
-    max_hp: int
-    hp_change: int
     model_config = ConfigDict(from_attributes=True)
 
 

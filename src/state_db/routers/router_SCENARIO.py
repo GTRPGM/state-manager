@@ -1,6 +1,6 @@
 from typing import Annotated, Any, Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from state_db.custom import WrappedResponse
 from state_db.graph.validator import GraphValidationError, GraphValidator
@@ -96,10 +96,7 @@ async def validate_scenario(
                 "message": str(e),
             },
         }
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Validation failed: {str(e)}"
-        ) from e
+    # 일반 Exception catch 제거하여 Pydantic ValidationError(422)가 정상 작동하게 함
 
 
 @router.post(
