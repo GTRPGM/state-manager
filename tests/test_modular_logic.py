@@ -142,13 +142,20 @@ async def test_step5_item_earn_logic(real_db_client: AsyncClient, scenario_paylo
     sid = start.json()["data"]["session_id"]
     pid = start.json()["data"]["player_id"]
 
-    # 세션 내 아이템이 있는지 먼저 확인
-    await real_db_client.get(f"/state/session/{sid}/items")
+    items_resp = await real_db_client.get(f"/state/session/{sid}/items")
+    items = items_resp.json()["data"]
+    assert items, "session items should not be empty"
+    item_id = items[0]["item_id"]
 
-    # 아이템 획득 시도 (rule_id: 1)
+    # 아이템 획득 시도 (state_entity_id 기반)
     resp = await real_db_client.post(
         "/state/player/item/earn",
-        json={"session_id": sid, "player_id": pid, "rule_id": 1, "quantity": 5},
+        json={
+            "session_id": sid,
+            "player_id": pid,
+            "state_entity_id": item_id,
+            "quantity": 5,
+        },
     )
     assert resp.status_code == 200
     assert resp.json()["data"]["total_quantity"] == 5

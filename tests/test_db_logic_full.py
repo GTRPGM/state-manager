@@ -133,18 +133,18 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     assert affinity_resp.json()["data"]["new_affinity"] == 20
 
     # 10. 인벤토리 수량 수정 검증
-    async with infra.DatabaseManager.get_connection() as conn:
-        row = await conn.fetchrow(
-            "SELECT rule_id FROM item WHERE session_id = $1 LIMIT 1", session_id
-        )
-        rule_id = row["rule_id"]
+    items_resp = await real_db_client.get(f"/state/session/{session_id}/items")
+    items = items_resp.json()["data"]
+    assert items, "session items should not be empty"
+    item_id = items[0]["item_id"]
+    rule_id = items[0]["rule_id"]
 
     earn_resp = await real_db_client.post(
         "/state/player/item/earn",
         json={
             "session_id": session_id,
             "player_id": player_id,
-            "rule_id": rule_id,
+            "state_entity_id": item_id,
             "quantity": 5,
         },
     )

@@ -9,6 +9,7 @@ MOCK_PLAYER_ID = "550e8400-e29b-41d4-a716-446655440002"
 MOCK_NPC_ID = "550e8400-e29b-41d4-a716-446655440004"
 MOCK_ENEMY_ID = "550e8400-e29b-41d4-a716-446655440003"
 MOCK_ITEM_ID = 5
+MOCK_ITEM_ENTITY_ID = "550e8400-e29b-41d4-a716-446655440005"
 
 
 @pytest.mark.asyncio
@@ -185,7 +186,7 @@ async def test_defeat_enemy(async_client: AsyncClient):
 async def test_earn_item(async_client: AsyncClient):
     mock_response = {
         "player_id": MOCK_PLAYER_ID,
-        "item_id": MOCK_ITEM_ID,
+        "item_id": MOCK_ITEM_ENTITY_ID,
         "quantity": 3,
         "total_quantity": 8,
     }
@@ -199,7 +200,7 @@ async def test_earn_item(async_client: AsyncClient):
             json={
                 "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
-                "rule_id": MOCK_ITEM_ID,
+                "state_entity_id": MOCK_ITEM_ENTITY_ID,
                 "quantity": 3,
             },
         )
@@ -214,7 +215,7 @@ async def test_earn_item(async_client: AsyncClient):
 async def test_use_item(async_client: AsyncClient):
     mock_response = {
         "player_id": MOCK_PLAYER_ID,
-        "item_id": MOCK_ITEM_ID,
+        "item_id": MOCK_ITEM_ENTITY_ID,
         "quantity": 1,
         "remaining_quantity": 7,
     }
@@ -228,7 +229,7 @@ async def test_use_item(async_client: AsyncClient):
             json={
                 "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
-                "rule_id": MOCK_ITEM_ID,
+                "state_entity_id": MOCK_ITEM_ENTITY_ID,
                 "quantity": 1,
             },
         )
@@ -237,3 +238,88 @@ async def test_use_item(async_client: AsyncClient):
         data = response.json()
         assert data["status"] == "success"
         assert data["data"]["quantity"] == 1
+
+
+@pytest.mark.asyncio
+async def test_earn_item_without_rule_id(async_client: AsyncClient):
+    mock_response = {
+        "player_id": MOCK_PLAYER_ID,
+        "item_id": None,
+        "quantity": 1,
+        "total_quantity": 0,
+        "skipped": True,
+    }
+    with patch(
+        "state_db.repositories.PlayerRepository.earn_item",
+        new=AsyncMock(return_value=mock_response),
+    ) as mock_earn:
+        response = await async_client.post(
+            "/state/player/item/earn",
+            json={
+                "session_id": MOCK_SESSION_ID,
+                "player_id": MOCK_PLAYER_ID,
+                "quantity": 1,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["skipped"] is True
+        mock_earn.assert_called_once_with(MOCK_SESSION_ID, MOCK_PLAYER_ID, None, 1)
+
+
+@pytest.mark.asyncio
+async def test_use_item_without_rule_id(async_client: AsyncClient):
+    mock_response = {
+        "player_id": MOCK_PLAYER_ID,
+        "item_id": None,
+        "quantity": 1,
+        "remaining_quantity": 0,
+        "active": False,
+        "skipped": True,
+    }
+    with patch(
+        "state_db.repositories.PlayerRepository.use_item",
+        new=AsyncMock(return_value=mock_response),
+    ) as mock_use:
+        response = await async_client.post(
+            "/state/player/item/use",
+            json={
+                "session_id": MOCK_SESSION_ID,
+                "player_id": MOCK_PLAYER_ID,
+                "quantity": 1,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["skipped"] is True
+        mock_use.assert_called_once_with(MOCK_SESSION_ID, MOCK_PLAYER_ID, None, 1)
+
+
+@pytest.mark.asyncio
+async def test_earn_item_invalid_uuid_returns_422(async_client: AsyncClient):
+    response = await async_client.post(
+        "/state/player/item/earn",
+        json={
+            "session_id": "x",
+            "player_id": "x",
+            "state_entity_id": MOCK_ITEM_ENTITY_ID,
+            "quantity": 1,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_use_item_invalid_uuid_returns_422(async_client: AsyncClient):
+    response = await async_client.post(
+        "/state/player/item/use",
+        json={
+            "session_id": "x",
+            "player_id": "x",
+            "state_entity_id": MOCK_ITEM_ENTITY_ID,
+            "quantity": 1,
+        },
+    )
+    assert response.status_code == 422
