@@ -23,6 +23,9 @@
 | plan_0002 | EntityRepo Cypher Conversion | docs/dev/detail/plan_0002.md | done |
 | plan_0003 | ScenarioRepo Cypher Conversion | docs/dev/detail/plan_0003.md | done |
 | plan_0004 | Graph Sync Refinement & Test Alignment | docs/dev/detail/plan_0004.md | done |
+| plan_0005 | GM Context Graph Relation Integration | docs/dev/detail/plan_0005.md | done |
+| plan_0006 | Commit Router Relation Support | docs/dev/detail/plan_0006.md | todo |
+| ref_0001 | Remove Legacy SQL Relation Tables | docs/dev/detail/ref_0001.md | done |
 <!-- PROJ_DASHBOARD_END -->
 
 <!-- PROJ_TODO_BEGIN -->
@@ -33,6 +36,8 @@
 - [x] docs/dev/detail/plan_0002.md
 - [x] docs/dev/detail/plan_0003.md
 - [x] docs/dev/detail/plan_0004.md
-- [ ] docs/dev/detail/ref_0001.md
+- [x] docs/dev/detail/plan_0005.md
+- [ ] docs/dev/detail/plan_0006.md
+- [x] docs/dev/detail/ref_0001.md
 
 <!-- PROJ_TODO_END -->

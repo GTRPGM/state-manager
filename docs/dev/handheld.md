@@ -66,6 +66,19 @@
 
 ---
 
+### plan_0005 - GM Context Graph Relation Integration
+
+- Work (brief):
+  - GM 클라이언트가 세션 컨텍스트 조회 시 엔티티 간 관계(Edge)를 시각화할 수 있도록 API를 확장함.
+- Actions taken (detailed):
+  - **Cypher Query**: `get_session_relations.cypher` 작성. `relation_type` 속성을 우선하여 비즈니스 관계 타입(예: "LOVES")을 반환하도록 처리.
+  - **Repository**: `EntityRepository.get_all_relations(session_id)` 추가. `EntityRelationInfo` 모델 매핑.
+  - **Service**: `StateService.get_state_snapshot`에 `relations` 필드 추가.
+  - **Test**: `tests/test_context_relations.py`를 통해 시나리오 주입 -> 세션 시작 -> 관계 조회 흐름 검증.
+- What I learned / updated understanding:
+  - **Edge Label vs Property**: AGE 그래프에서 관계의 Label은 보통 `RELATION`(또는 `HAS_INVENTORY` 등)으로 고정되고, 구체적인 의미(예: `hostile`, `friend`)는 `relation_type` 속성에 저장되는 패턴임을 확인함.
+  - **Cypher Coalesce**: 속성이 존재하지 않을 때 `null` 대신 기본값을 반환하기 위해 `coalesce` 사용이 필수적임.
+
 ### plan_0004 - Graph Sync Refinement & Test Suite Alignment
 
 - Work (brief):
@@ -112,6 +125,7 @@
   - **Trigger Field Safety**: 공용 트리거 함수(`sync_entity_to_graph`)에서 `NEW` 레코드 접근 시 테이블별 필드 존재 여부를 반드시 체크해야 함 (`UndefinedColumnError` 방지).
   - **Cypher Map Pattern**: `CypherEngine`은 현재 `AS (result agtype)`와 같이 단일 컬럼 반환을 전제로 하므로, 복수 필드 조회 시에는 반드시 Cypher 맵(`{...}`)을 리턴해야 함.
   - **Pydantic Shadowing**: 모델 필드명으로 `str`, `int`, `type` 등을 사용하는 것은 가급적 피하고, 필요시 `Field(alias=...)`와 `populate_by_name=True` 설정을 통해 DB 컬럼명과 매핑해야 함.
+
 ### plan_0002 - EntityRepository Cypher Conversion
 
 - Work (brief):
@@ -128,5 +142,18 @@
   - **AGE 단일 컬럼 제약**: `CypherEngine`이 `as (result ag_catalog.agtype)` 단일 컬럼으로 래핑하므로, Cypher RETURN은 반드시 단일 map(`{id: n.id, name: n.name}`)이어야 한다. `n.id as id, n.name as name` 형태는 다중 컬럼으로 인식되어 `DatatypeMismatchError` 발생.
   - **Trigger + 명시적 Cypher 공존**: 트리거(Stage 300)가 MERGE로 노드를 생성하고, 이후 명시적 Cypher도 MERGE를 사용하면 멱등성이 보장되어 충돌 없이 공존 가능.
   - **DELETE 트리거 부재**: SQL INSERT/UPDATE에는 `sync_entity_to_graph` 트리거가 있지만, DELETE에는 없으므로 `remove_*` 메서드에서 명시적 Cypher DETACH DELETE가 필수.
+
+### ref_0001 - Remove Legacy SQL Relation Tables
+
+- Work (brief):
+  - 더 이상 사용되지 않는 SQL 관계 테이블(`player_inventory`, `player_npc_relations`) 및 레거시 쿼리 파일을 제거하여 기술 부채 청산.
+- Actions taken (detailed):
+  - **Drop Tables**: `player_inventory`, `inventory_item`, `player_npc_relations` 테이블 DROP.
+  - **Remove SQL Files**: `UPDATE` 폴더 내 미사용 레거시 SQL 파일 5종 삭제.
+  - **Code Cleanup**: `schema.py` 초기화 목록 및 `PlayerRepository` 레거시 메서드(`update_inventory`) 정리.
+  - **Test Cleanup**: `tests/conftest.py`의 DB 초기화 구문에서 삭제된 테이블 참조 제거. `router_INQUIRY` 및 `router_MANAGE` 테스트에서 폐기된 엔드포인트 테스트 삭제.
+- What I learned / updated understanding:
+  - **Test Fixture Cleanup**: 테이블 삭제 시 `conftest.py` 등 테스트 픽스처의 초기화/정리 로직도 반드시 함께 수정해야 `UndefinedTable` 에러를 방지할 수 있음.
+  - **Endpoint Deprecation**: 단순 CRUD용 레거시 엔드포인트(예: `get_act`, `get_sequence`)는 통합 엔드포인트(`get_progress`)로 대체되었으므로, 관련 테스트 코드도 과감히 정리해야 함.
 
 <!-- PROJ_WORKNOTES_END -->
