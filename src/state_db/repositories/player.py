@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
@@ -361,24 +361,6 @@ class PlayerRepository(BaseRepository):
             return str(rows[0].get("inventory_id", ""))
         raise HTTPException(status_code=404, detail="Inventory not found for player")
 
-    async def _get_item_by_rule(self, session_id: str, rule_id: int) -> Tuple[str, str]:
-        """rule_id로부터 item_uuid와 scenario 조회 (Graph 우선)"""
-        # Note: rule은 현재 SQL 전용이므로 Graph 노드에는 tid만 있을 수 있음.
-        # 하지만 sync 시 rule 정보를 tid 등에 포함하지 않았다면 SQL 조회가 안전함.
-        # 평탄화 원칙에 따라 엔티티의 정적 메타데이터(rule_id 등)는 SQL 조회가 원칙.
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_item.sql"
-        rows = await run_sql_query(sql_path, [session_id])
-        for row in rows:
-            if row.get("rule_id") == rule_id:
-                return (
-                    str(row.get("item_id", "")),
-                    str(row.get("scenario_item_id", "")),
-                )
-        raise HTTPException(
-            status_code=404,
-            detail=f"Item with rule_id {rule_id} not found in session",
-        )
-
     async def _get_current_turn(self, session_id: str) -> int:
         """현재 세션의 턴 번호 조회"""
         sql_path = self.query_dir / "INQUIRY" / "session" / "Session_turn.sql"
@@ -392,30 +374,50 @@ class PlayerRepository(BaseRepository):
     # ============================================================
 
     async def earn_item(
-        self, session_id: str, player_id: str, rule_id: int, quantity: int
+        self, session_id: str, player_id: str, item_id: Optional[str], quantity: int
     ) -> Dict[str, Any]:
         """아이템 획득 (Cypher 기반, delta 방식)
 
         Args:
-            rule_id: 아이템 Rule ID
+            item_id: 아이템 상태 엔티티 ID(UUID)
             quantity: 획득할 수량 (양수)
         """
+        # item_id 누락 시 no-op 성공 처리
+        if item_id is None:
+            return {
+                "player_id": str(player_id),
+                "item_id": None,
+                "quantity": quantity,
+                "total_quantity": 0,
+                "skipped": True,
+                "reason": "state_entity_id(item_id) was not provided",
+            }
+
         # 필요한 ID들 조회
         inventory_id = await self._get_player_inventory_id(session_id, player_id)
-        item_uuid, scenario = await self._get_item_by_rule(session_id, rule_id)
 
         cypher_path = str(self.query_dir / "CYPHER" / "inventory" / "earn_item.cypher")
         params = {
             "player_id": player_id,
             "session_id": session_id,
             "inventory_id": inventory_id,
-            "item_uuid": item_uuid,
-            "scenario": scenario,
-            "rule": rule_id,
+            "item_uuid": item_id,
             "delta_qty": quantity,
         }
 
-        results = await cypher_engine.run_cypher(cypher_path, params)
+        try:
+            results = await cypher_engine.run_cypher(cypher_path, params)
+        except HTTPException as e:
+            if e.status_code == 404:
+                return {
+                    "player_id": str(player_id),
+                    "item_id": item_id,
+                    "quantity": quantity,
+                    "total_quantity": 0,
+                    "skipped": True,
+                    "reason": "item state_entity_id not found in session",
+                }
+            raise
 
         # 결과 처리
         new_quantity = quantity
@@ -427,24 +429,35 @@ class PlayerRepository(BaseRepository):
                     new_quantity = int(new_quantity)
 
         return {
-            "player_id": player_id,
-            "item_id": rule_id,
+            "player_id": str(player_id),
+            "item_id": item_id,
             "quantity": quantity,
             "total_quantity": new_quantity,
         }
 
     async def use_item(
-        self, session_id: str, player_id: str, rule_id: int, quantity: int
+        self, session_id: str, player_id: str, item_id: Optional[str], quantity: int
     ) -> Dict[str, Any]:
         """아이템 사용 (Cypher 기반, delta 방식)
 
         Args:
-            rule_id: 아이템 Rule ID
+            item_id: 아이템 상태 엔티티 ID(UUID)
             quantity: 사용할 수량 (양수). 수량 부족 시 0으로 처리
         """
+        # item_id 누락 시 no-op 성공 처리
+        if item_id is None:
+            return {
+                "player_id": str(player_id),
+                "item_id": None,
+                "quantity": quantity,
+                "remaining_quantity": 0,
+                "active": False,
+                "skipped": True,
+                "reason": "state_entity_id(item_id) was not provided",
+            }
+
         # 필요한 ID들 조회
         inventory_id = await self._get_player_inventory_id(session_id, player_id)
-        item_uuid, scenario = await self._get_item_by_rule(session_id, rule_id)
         current_turn = await self._get_current_turn(session_id)
 
         cypher_path = str(self.query_dir / "CYPHER" / "inventory" / "use_item.cypher")
@@ -452,14 +465,25 @@ class PlayerRepository(BaseRepository):
             "player_id": player_id,
             "session_id": session_id,
             "inventory_id": inventory_id,
-            "item_uuid": item_uuid,
-            "scenario": scenario,
-            "rule": rule_id,
+            "item_uuid": item_id,
             "use_qty": quantity,
             "turn": current_turn,
         }
 
-        results = await cypher_engine.run_cypher(cypher_path, params)
+        try:
+            results = await cypher_engine.run_cypher(cypher_path, params)
+        except HTTPException as e:
+            if e.status_code == 404:
+                return {
+                    "player_id": str(player_id),
+                    "item_id": item_id,
+                    "quantity": quantity,
+                    "remaining_quantity": 0,
+                    "active": False,
+                    "skipped": True,
+                    "reason": "item state_entity_id not found in session",
+                }
+            raise
 
         # 결과 처리
         remaining_quantity = 0
@@ -474,12 +498,12 @@ class PlayerRepository(BaseRepository):
 
         # turn 테이블에 아이템 사용 기록 추가
         await self._record_item_use(
-            session_id, player_id, rule_id, quantity, remaining_quantity
+            session_id, player_id, item_id, quantity, remaining_quantity
         )
 
         return {
-            "player_id": player_id,
-            "item_id": rule_id,
+            "player_id": str(player_id),
+            "item_id": item_id,
             "quantity": quantity,
             "remaining_quantity": remaining_quantity,
             "active": is_active,
@@ -489,7 +513,7 @@ class PlayerRepository(BaseRepository):
         self,
         session_id: str,
         player_id: str,
-        item_id: int,
+        item_id: str,
         quantity_used: int,
         remaining_quantity: int,
     ) -> None:

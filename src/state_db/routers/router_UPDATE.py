@@ -136,7 +136,10 @@ async def earn_item_endpoint(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.earn_item(
-        request.session_id, request.player_id, request.rule_id, request.quantity
+        str(request.session_id),
+        str(request.player_id),
+        str(request.state_entity_id) if request.state_entity_id else None,
+        request.quantity,
     )
     return {"status": "success", "data": result}
 
@@ -147,6 +150,9 @@ async def use_item_endpoint(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.use_item(
-        request.session_id, request.player_id, request.rule_id, request.quantity
+        str(request.session_id),
+        str(request.player_id),
+        str(request.state_entity_id) if request.state_entity_id else None,
+        request.quantity,
     )
     return {"status": "success", "data": result}

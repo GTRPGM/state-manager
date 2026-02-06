@@ -1,7 +1,7 @@
 -- --------------------------------------------------------------------
 -- record_item_use.sql
 -- 아이템 사용 기록을 turn 테이블에 추가
--- $1: session_id, $2: player_id, $3: item_id, $4: quantity_used, $5: remaining_quantity
+-- $1: session_id, $2: player_id, $3: item_id(state_entity_id), $4: quantity_used, $5: remaining_quantity
 -- --------------------------------------------------------------------
 
 WITH session_info AS (
@@ -31,7 +31,7 @@ SELECT
     'item_use',
     jsonb_build_object(
         'action', 'use_item',
-        'item_id', $3::int,
+        'item_id', $3::text,
         'quantity_used', $4::int,
         'remaining_quantity', $5::int
     ),
