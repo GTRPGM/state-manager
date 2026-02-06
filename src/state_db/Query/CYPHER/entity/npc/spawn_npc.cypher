@@ -12,4 +12,4 @@ CREATE (n:NPC {
     active: true
 })
 CREATE (s)-[:HAS_ENTITY]->(n)
-RETURN n.npc_id as id, n.name as name
+RETURN {id: n.npc_id, name: n.name}

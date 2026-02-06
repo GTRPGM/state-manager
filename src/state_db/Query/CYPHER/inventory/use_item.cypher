@@ -1,6 +1,6 @@
 MATCH (p:Player {id: $player_id, session_id: $session_id})
       -[:HAS_INVENTORY {active: true}]->(inv:Inventory {id: $inventory_id, session_id: $session_id})
-      -[c:CONTAINS {active: true}]->(i:Item {id: $item_uuid, session_id: $session_id, scenario: $scenario, rule: $rule})
+      -[c:CONTAINS {active: true}]->(i:Item {id: $item_uuid, session_id: $session_id})
 SET c.quantity = c.quantity - $use_qty
 WITH c, CASE WHEN c.quantity <= 0 THEN true ELSE false END as should_deactivate
 SET c.active = CASE WHEN should_deactivate THEN false ELSE c.active END,

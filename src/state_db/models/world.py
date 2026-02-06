@@ -122,12 +122,14 @@ class TurnAddResult(BaseModel):
 class ActChangeResult(BaseModel):
     session_id: Union[str, UUID]
     current_act: int
+    current_act_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class SequenceChangeResult(BaseModel):
     session_id: Union[str, UUID]
     current_sequence: int
+    current_sequence_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -18,6 +18,7 @@ from state_db.repositories import (
     EntityRepository,
     LifecycleStateRepository,
     ProgressRepository,
+    ScenarioRepository,
     SessionRepository,
 )
 from state_db.schemas import (
@@ -31,6 +32,7 @@ from .dependencies import (
     get_entity_repo,
     get_lifecycle_repo,
     get_progress_repo,
+    get_scenario_repo,
     get_session_repo,
 )
 
@@ -196,10 +198,19 @@ async def add_turn_endpoint(
 async def change_act_endpoint(
     session_id: str,
     request: ActChangeRequest,
-    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
+    repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)],
 ) -> Dict[str, Any]:
-    result = await repo.change_act(session_id, request.new_act)
-    return {"status": "success", "data": result}
+    await repo.advance_act(
+        session_id, request.new_act, request.new_act_id, request.new_sequence_id
+    )
+    return {
+        "status": "success",
+        "data": ActChangeResult(
+            session_id=session_id,
+            current_act=request.new_act,
+            current_act_id=request.new_act_id,
+        ),
+    }
 
 
 @router.put(
@@ -209,10 +220,19 @@ async def change_act_endpoint(
 async def change_sequence_endpoint(
     session_id: str,
     request: SequenceChangeRequest,
-    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
+    repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)],
 ) -> Dict[str, Any]:
-    result = await repo.change_sequence(session_id, request.new_sequence)
-    return {"status": "success", "data": result}
+    await repo.update_sequence(
+        session_id, request.new_sequence, request.new_sequence_id
+    )
+    return {
+        "status": "success",
+        "data": SequenceChangeResult(
+            session_id=session_id,
+            current_sequence=request.new_sequence,
+            current_sequence_id=request.new_sequence_id,
+        ),
+    }
 
 
 @router.post(

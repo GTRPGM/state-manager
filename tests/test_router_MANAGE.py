@@ -103,26 +103,36 @@ async def test_add_turn(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_change_act(async_client: AsyncClient):
-    mock_response = {"session_id": MOCK_SESSION_ID, "current_act": 2}
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_act": 2,
+        "current_act_id": "act-2",
+    }
     with patch(
-        "state_db.repositories.ProgressRepository.change_act",
+        "state_db.repositories.scenario.ScenarioRepository.advance_act",
         new=AsyncMock(return_value=mock_response),
     ):
         response = await async_client.put(
-            f"/state/session/{MOCK_SESSION_ID}/act", json={"new_act": 2}
+            f"/state/session/{MOCK_SESSION_ID}/act",
+            json={"new_act": 2, "new_act_id": "act-2", "new_sequence_id": "seq-2-1"},
         )
         assert response.status_code == 200
 
 
 @pytest.mark.asyncio
 async def test_change_sequence(async_client: AsyncClient):
-    mock_response = {"session_id": MOCK_SESSION_ID, "current_sequence": 2}
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_sequence": 2,
+        "current_sequence_id": "seq-2",
+    }
     with patch(
-        "state_db.repositories.ProgressRepository.change_sequence",
+        "state_db.repositories.scenario.ScenarioRepository.update_sequence",
         new=AsyncMock(return_value=mock_response),
     ):
         response = await async_client.put(
-            f"/state/session/{MOCK_SESSION_ID}/sequence", json={"new_sequence": 2}
+            f"/state/session/{MOCK_SESSION_ID}/sequence",
+            json={"new_sequence": 2, "new_sequence_id": "seq-2"},
         )
         assert response.status_code == 200
 

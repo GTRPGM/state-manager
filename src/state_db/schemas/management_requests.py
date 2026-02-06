@@ -7,16 +7,33 @@ class ActChangeRequest(BaseModel):
     """Act 변경 요청"""
 
     new_act: int = Field(..., description="변경할 Act 번호", ge=1)
+    new_act_id: str = Field(..., description="변경할 Act 식별자 (예: 'act-1')")
+    new_sequence_id: str = Field(
+        ..., description="변경할 Act의 첫 Sequence 식별자 (예: 'seq-1')"
+    )
 
-    model_config = ConfigDict(json_schema_extra={"example": {"new_act": 2}})
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "new_act": 2,
+                "new_act_id": "act-2",
+                "new_sequence_id": "seq-2-1",
+            }
+        }
+    )
 
 
 class SequenceChangeRequest(BaseModel):
     """Sequence 변경 요청"""
 
     new_sequence: int = Field(..., description="변경할 Sequence 번호", ge=1)
+    new_sequence_id: str = Field(
+        ..., description="변경할 Sequence 식별자 (예: 'seq-2')"
+    )
 
-    model_config = ConfigDict(json_schema_extra={"example": {"new_sequence": 2}})
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"new_sequence": 2, "new_sequence_id": "seq-2"}}
+    )
 
 
 class EntitySpawnRequestBase(BaseModel):

@@ -471,12 +471,6 @@ class ScenarioRepository(BaseRepository):
 
             if scenario_entity_ids:
                 # CypherEngine을 사용하여 관계 조회
-                # 주의: IN 절 처리가 까다로울 수 있으므로,
-                # 세션 ID 기준으로 전체 조회 후 필터링하거나
-                # 가능한 경우 Cypher 내에서 필터링.
-                # 여기서는 세션 내 전체 관계 중 해당 엔티티들 간의
-                # 것만 가져옴.
-
                 graph_results = await self.cypher.run_cypher(
                     """
                     MATCH (v1)-[r:RELATION]->(v2)
@@ -495,7 +489,7 @@ class ScenarioRepository(BaseRepository):
                     tx=conn,
                 )
 
-                # 메모리 내 필터링 (범위가 현재 시퀀스 내 엔티티로 한정됨)
+                # 메모리 내 필터링
                 for row in graph_results:
                     from_id = row.get("from_id")
                     to_id = row.get("to_id")
@@ -549,3 +543,72 @@ class ScenarioRepository(BaseRepository):
             "entity_relations": entity_relations,
             "player_npc_relations": player_npc_relations,
         }
+
+    async def advance_act(
+        self, session_id: str, next_act: int, next_act_id: str, next_sequence_id: str
+    ) -> Dict[str, Any]:
+        """시나리오 액트 전환 (SQL 업데이트 -> 트리거를 통한 그래프 동기화)"""
+        async with DatabaseManager.get_connection() as conn:
+            async with conn.transaction():
+                # 1. SQL 업데이트 (트리거가 그래프 Session 노드 동기화)
+                await conn.execute(
+                    """
+                    UPDATE session
+                    SET current_act = $2,
+                        current_act_id = $3,
+                        current_sequence = 1,
+                        current_sequence_id = $4,
+                        updated_at = NOW()
+                    WHERE session_id = $1 AND status = 'active'
+                    """,
+                    session_id,
+                    next_act,
+                    next_act_id,
+                    next_sequence_id,
+                )
+
+                # 2. 명시적 Cypher 실행 (비즈니스 로직 및 상태 확인)
+                cypher_path = (
+                    self.query_dir / "CYPHER" / "scenario" / "advance_act.cypher"
+                )
+                result = await self.cypher.run_cypher(
+                    str(cypher_path),
+                    {
+                        "session_id": session_id,
+                        "next_act_id": next_act_id,
+                        "next_sequence_id": next_sequence_id,
+                    },
+                    tx=conn,
+                )
+                return result[0] if result else {}
+
+    async def update_sequence(
+        self, session_id: str, next_sequence: int, next_sequence_id: str
+    ) -> Dict[str, Any]:
+        """시나리오 시퀀스 전환"""
+        async with DatabaseManager.get_connection() as conn:
+            async with conn.transaction():
+                # 1. SQL 업데이트
+                await conn.execute(
+                    """
+                    UPDATE session
+                    SET current_sequence = $2,
+                        current_sequence_id = $3,
+                        updated_at = NOW()
+                    WHERE session_id = $1 AND status = 'active'
+                    """,
+                    session_id,
+                    next_sequence,
+                    next_sequence_id,
+                )
+
+                # 2. 명시적 Cypher 실행
+                cypher_path = (
+                    self.query_dir / "CYPHER" / "scenario" / "update_sequence.cypher"
+                )
+                result = await self.cypher.run_cypher(
+                    str(cypher_path),
+                    {"session_id": session_id, "next_sequence_id": next_sequence_id},
+                    tx=conn,
+                )
+                return result[0] if result else {}
