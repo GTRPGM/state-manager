@@ -84,8 +84,8 @@ async def run_verification():
                 )
                 await conn.execute(
                     """
-                    INSERT INTO player (player_id, session_id, name, state)
-                    VALUES ($1, $2, 'Test Player', '{"numeric": {"HP": 100}}')
+                    INSERT INTO player (player_id, session_id, name, hp, mp, san)
+                    VALUES ($1, $2, 'Test Player', 100, 50, 10)
                 """,
                     str(uuid4()),
                     session_id,
@@ -127,6 +127,8 @@ async def run_verification():
                 "turn": 1,
                 "meta_json": "{}",
                 "include_inactive": False,
+                "next_act_id": "act-next",
+                "next_sequence_id": "seq-next",
             }
 
             for cf in cypher_files:
