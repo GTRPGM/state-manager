@@ -6,7 +6,6 @@ SELECT
     current_act,
     current_sequence,
     current_turn,
-    current_phase,
     location,
     -- 진행률 계산 (예시: Act당 10개 Sequence 가정)
     ROUND(((current_act - 1) * 10 + current_sequence)::numeric /

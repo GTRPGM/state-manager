@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "act_concept.json",
   "title": "Act Concept Schema",
-  "description": "플레이 세션 내 초기화 단위로, session이 선택한 story의 하위 단위이며 sequence/phase 초기화에 사용된다.",
+  "description": "플레이 세션 내 초기화 단위로, session이 선택한 story의 하위 단위이며 sequence 초기화에 사용된다.",
   "type": "object",
   "required": ["id", "entity_type", "meta"],
 
@@ -40,12 +40,6 @@
           "description": "이 act에서 시작하는 sequence 번호",
           "type": "integer",
           "default": 1
-        },
-        "current_phase": {
-          "description": "이 act 시작 시 session이 설정할 phase",
-          "type": "string",
-          "enum": ["exploration","combat","dialogue","rest"],
-          "default": "exploration"
         },
         "location": {
           "description": "이 act에서 기본으로 설정되는 위치",

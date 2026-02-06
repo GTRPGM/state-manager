@@ -77,18 +77,6 @@ async def get_turn_range_endpoint(
 
 
 @router.get(
-    "/session/{session_id}/turns/statistics/by-phase",
-    response_model=WrappedResponse[List[Dict[str, Any]]],
-)
-async def get_turn_statistics_by_phase_endpoint(
-    session_id: str, repo: Annotated[TraceRepository, Depends(get_trace_repo)]
-) -> Dict[str, Any]:
-    """Phase별 Turn 수 집계 및 상세 통계"""
-    result = await repo.get_turn_statistics_by_phase(session_id)
-    return {"status": "success", "data": result}
-
-
-@router.get(
     "/session/{session_id}/turns/statistics/by-type",
     response_model=WrappedResponse[List[Dict[str, Any]]],
 )

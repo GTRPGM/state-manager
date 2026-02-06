@@ -1,4 +1,7 @@
 -- L_npc.sql
+-- NPC 세션 초기화 로직 (Logic) - Flattened
+-- ====================================================================
+
 CREATE OR REPLACE FUNCTION initialize_npcs()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -7,12 +10,16 @@ BEGIN
     INSERT INTO npc (
         npc_id, entity_type, name, description, session_id,
         assigned_sequence_id, assigned_location, scenario_id, scenario_npc_id,
-        tags, state, relations, is_departed, departed_at
+        rule_id, tags,
+        hp, mp, str, dex, int, lux, san,
+        is_departed
     )
     SELECT
         gen_random_uuid(), n.entity_type, n.name, n.description, NEW.session_id,
         n.assigned_sequence_id, n.assigned_location, n.scenario_id, n.scenario_npc_id,
-        n.tags, n.state, n.relations, false, NULL
+        n.rule_id, n.tags,
+        n.hp, n.mp, n.str, n.dex, n.int, n.lux, n.san,
+        false
     FROM npc n
     WHERE n.session_id = MASTER_SESSION_ID
       AND n.scenario_id = NEW.scenario_id;
@@ -21,9 +28,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 트리거 삭제 및 재등록
-DROP TRIGGER IF EXISTS trigger_07_initialize_npcs ON session;
-CREATE TRIGGER trigger_07_initialize_npcs
+DROP TRIGGER IF EXISTS trigger_210_session_copy_npcs ON session;
+CREATE TRIGGER trigger_210_session_copy_npcs
     AFTER INSERT ON session
     FOR EACH ROW
     WHEN (NEW.session_id <> '00000000-0000-0000-0000-000000000000')

@@ -13,20 +13,18 @@ from state_db.models import (
 from state_db.repositories import (
     EntityRepository,
     PlayerRepository,
-    ProgressRepository,
 )
 from state_db.schemas import (
     EnemyHPUpdateRequest,
     InventoryUpdateRequest,
     ItemEarnRequest,
     ItemUseRequest,
-    LocationUpdateRequest,
     NPCAffinityUpdateRequest,
     PlayerHPUpdateRequest,
     PlayerStatsUpdateRequest,
 )
 
-from .dependencies import get_entity_repo, get_player_repo, get_progress_repo
+from .dependencies import get_entity_repo, get_player_repo
 
 router = APIRouter(tags=["State Updates"])
 
@@ -71,7 +69,7 @@ async def update_inventory(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.update_inventory(
-        request.player_id, request.item_id, request.quantity
+        request.player_id, request.rule_id, request.quantity
     )
     return {"status": "success", "data": result}
 
@@ -87,29 +85,13 @@ async def update_npc_affinity_endpoint(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.update_npc_affinity(
-        request.player_id, request.npc_id, request.affinity_change
+        player_id=request.player_id,
+        npc_id=request.npc_id,
+        affinity_change=request.affinity_change,
+        session_id=request.session_id,
+        relation_type=request.relation_type,
     )
     return {"status": "success", "data": result}
-
-
-# ====================================================================
-# 위치 업데이트
-# ====================================================================
-
-
-@router.put(
-    "/session/{session_id}/location", response_model=WrappedResponse[Dict[str, str]]
-)
-async def update_location_endpoint(
-    session_id: str,
-    request: LocationUpdateRequest,
-    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
-) -> Dict[str, Any]:
-    await repo.update_location(session_id, request.new_location)
-    return {
-        "status": "success",
-        "data": {"session_id": session_id, "location": request.new_location},
-    }
 
 
 # ====================================================================
@@ -118,32 +100,28 @@ async def update_location_endpoint(
 
 
 @router.put(
-    "/enemy/{enemy_instance_id}/hp",
+    "/enemy/{enemy_id}/hp",
     response_model=WrappedResponse[EnemyHPUpdateResult],
 )
 async def update_enemy_hp_endpoint(
-    enemy_instance_id: str,
+    enemy_id: str,
     request: EnemyHPUpdateRequest,
     repo: Annotated[EntityRepository, Depends(get_entity_repo)],
 ) -> Dict[str, Any]:
-    result = await repo.update_enemy_hp(
-        request.session_id, enemy_instance_id, request.hp_change
-    )
+    result = await repo.update_enemy_hp(request.session_id, enemy_id, request.hp_change)
     return {"status": "success", "data": result}
 
 
-@router.post(
-    "/enemy/{enemy_instance_id}/defeat", response_model=WrappedResponse[Dict[str, str]]
-)
+@router.post("/enemy/{enemy_id}/defeat", response_model=WrappedResponse[Dict[str, str]])
 async def defeat_enemy_endpoint(
-    enemy_instance_id: str,
+    enemy_id: str,
     session_id: str,
     repo: Annotated[EntityRepository, Depends(get_entity_repo)],
 ) -> Dict[str, Any]:
-    await repo.defeat_enemy(session_id, enemy_instance_id)
+    await repo.defeat_enemy(session_id, enemy_id)
     return {
         "status": "success",
-        "data": {"enemy_instance_id": enemy_instance_id, "status": "defeated"},
+        "data": {"enemy_id": enemy_id, "status": "defeated"},
     }
 
 
@@ -158,7 +136,10 @@ async def earn_item_endpoint(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.earn_item(
-        request.session_id, request.player_id, request.item_id, request.quantity
+        str(request.session_id),
+        str(request.player_id),
+        str(request.state_entity_id) if request.state_entity_id else None,
+        request.quantity,
     )
     return {"status": "success", "data": result}
 
@@ -169,6 +150,9 @@ async def use_item_endpoint(
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
 ) -> Dict[str, Any]:
     result = await repo.use_item(
-        request.session_id, request.player_id, request.item_id, request.quantity
+        str(request.session_id),
+        str(request.player_id),
+        str(request.state_entity_id) if request.state_entity_id else None,
+        request.quantity,
     )
     return {"status": "success", "data": result}

@@ -2,8 +2,9 @@
 -- 현재 세션의 '위치'와 '시퀀스'에 맞는 적들만 조회
 
 SELECT
-    e.enemy_id AS enemy_instance_id,
+    e.enemy_id,
     e.scenario_enemy_id,
+    e.rule_id,
     e.name,
     e.description,
     e.state,

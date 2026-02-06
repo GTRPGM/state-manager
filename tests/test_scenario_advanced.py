@@ -22,6 +22,9 @@ async def test_inject_scenario_id_reuse():
         relations=[],
     )
 
+    # cypher.run_cypher 모킹 (AsyncMock 필수)
+    repo.cypher.run_cypher = AsyncMock(return_value=[])
+
     with patch(
         "state_db.repositories.scenario.DatabaseManager.get_connection"
     ) as mock_conn_ctx:

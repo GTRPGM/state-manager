@@ -51,6 +51,16 @@ class StateMixin(BaseModel):
     )
 
 
+class GraphEdgeMixin(BaseModel):
+    """그래프 엣지(관계)의 공통 상태 필드"""
+
+    active: bool = Field(default=True, description="관계 활성화 여부")
+    activated_turn: int = Field(default=0, description="관계가 생성/활성화된 턴")
+    deactivated_turn: Optional[int] = Field(
+        default=None, description="관계가 비활성화된 턴"
+    )
+
+
 class LoggableMixin(BaseModel):
     """엔티티 로깅 표준화를 위한 믹스인
 

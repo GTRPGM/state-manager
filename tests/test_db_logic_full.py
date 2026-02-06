@@ -27,6 +27,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         "npcs": [
             {
                 "scenario_npc_id": "npc-guard",
+                "rule_id": 101,
                 "name": "Gate Guard",
                 "state": {"numeric": {"HP": 100}},
             }
@@ -34,13 +35,15 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         "enemies": [
             {
                 "scenario_enemy_id": "enemy-slime",
+                "rule_id": 201,
                 "name": "Slime",
                 "state": {"numeric": {"HP": 20}},
             }
         ],
         "items": [
             {
-                "item_id": 1,
+                "scenario_item_id": "item-red-potion",
+                "rule_id": 1,
                 "name": "Red Potion",
                 "description": "Heals 30 HP",
                 "item_type": "consumable",
@@ -52,7 +55,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
                 "from_id": "npc-guard",
                 "to_id": "enemy-slime",
                 "relation_type": "hostile",
-                "affinity": 0,
+                "affinity": 50,
                 "meta": {},
             }
         ],
@@ -97,24 +100,14 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     assert add_turn_resp.status_code == 200
     assert add_turn_resp.json()["data"]["current_turn"] == 1
 
-    # 7. 페이즈 변경 및 이력 확인
-    phase_resp = await real_db_client.put(
-        f"/state/session/{session_id}/phase", json={"new_phase": "combat"}
-    )
-    assert phase_resp.status_code == 200
-
-    phase_history_resp = await real_db_client.get(f"/state/session/{session_id}/phases")
-    phases = phase_history_resp.json()["data"]
-    assert len(phases) >= 2
-
     # 8. 적 처치 검증
     enemies_resp = await real_db_client.get(f"/state/session/{session_id}/enemies")
     enemies = enemies_resp.json()["data"]
     assert len(enemies) > 0
-    slime_instance_id = enemies[0]["enemy_instance_id"]
+    slime_id = enemies[0]["enemy_id"]
 
     defeat_resp = await real_db_client.post(
-        f"/state/enemy/{slime_instance_id}/defeat?session_id={session_id}"
+        f"/state/enemy/{slime_id}/defeat?session_id={session_id}"
     )
     assert defeat_resp.status_code == 200
 
@@ -129,24 +122,29 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
 
     affinity_resp = await real_db_client.put(
         "/state/npc/affinity",
-        json={"player_id": player_id, "npc_id": npc_id, "affinity_change": 20},
+        json={
+            "session_id": session_id,
+            "player_id": player_id,
+            "npc_id": npc_id,
+            "affinity_change": 20,
+        },
     )
     assert affinity_resp.status_code == 200
-    assert affinity_resp.json()["data"]["new_affinity"] == 70
+    assert affinity_resp.json()["data"]["new_affinity"] == 20
 
     # 10. 인벤토리 수량 수정 검증
-    async with infra.DatabaseManager.get_connection() as conn:
-        row = await conn.fetchrow(
-            "SELECT item_id FROM item WHERE session_id = $1 LIMIT 1", session_id
-        )
-        item_id = row["item_id"]
+    items_resp = await real_db_client.get(f"/state/session/{session_id}/items")
+    items = items_resp.json()["data"]
+    assert items, "session items should not be empty"
+    item_id = items[0]["item_id"]
+    rule_id = items[0]["rule_id"]
 
     earn_resp = await real_db_client.post(
         "/state/player/item/earn",
         json={
             "session_id": session_id,
             "player_id": player_id,
-            "item_id": item_id,
+            "state_entity_id": item_id,
             "quantity": 5,
         },
     )
@@ -154,7 +152,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
 
     update_inv_resp = await real_db_client.put(
         "/state/inventory/update",
-        json={"player_id": player_id, "item_id": item_id, "quantity": 10},
+        json={"player_id": player_id, "rule_id": rule_id, "quantity": 10},
     )
     assert update_inv_resp.status_code == 200
     assert update_inv_resp.json()["data"]["quantity"] == 10
@@ -162,13 +160,16 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
     # 11. 그래프 관계 복제 검증 (NPC Guard -> Slime 호감도/관계)
     async with infra.DatabaseManager.get_connection() as conn:
         await infra.set_age_path(conn)
+        # 특정 tid(npc-guard -> enemy-slime) 관계를 명시적으로 조회
         graph_rel = await conn.fetchrow(f"""
             SELECT * FROM ag_catalog.cypher('state_db', $$
-                MATCH (v1)-[r:RELATION]->(v2)
-                WHERE v1.session_id = '{session_id}' AND v2.session_id = '{session_id}'
+                MATCH (v1 {{tid: 'npc-guard', session_id: '{session_id}'}})
+                      -[r:RELATION]->
+                      (v2 {{tid: 'enemy-slime', session_id: '{session_id}'}})
                 RETURN r.relation_type, r.affinity
             $$) AS (relation_type agtype, affinity agtype)
         """)
 
-        assert graph_rel is not None, "Relationship should be cloned!"
-        assert "hostile" in str(graph_rel["relation_type"])
+        assert graph_rel is not None, "NPC-Enemy Relationship should be cloned!"
+        # AGE 결과는 따옴표가 포함될 수 있으므로 strip 처리
+        assert "hostile" in str(graph_rel["relation_type"]).strip('"')

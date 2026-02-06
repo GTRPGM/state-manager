@@ -66,7 +66,6 @@ async def test_get_session_info(async_client: AsyncClient):
                 "scenario_id": "id",
                 "current_act": 1,
                 "current_sequence": 1,
-                "current_phase": "exploration",
                 "current_turn": 1,
                 "location": "Arena",
                 "status": "active",
@@ -82,7 +81,23 @@ async def test_get_player_state(async_client: AsyncClient):
     with patch(
         "state_db.repositories.PlayerRepository.get_full_state",
         new=AsyncMock(
-            return_value={"player": {"hp": 100, "gold": 0}, "player_npc_relations": []}
+            return_value={
+                "player": {
+                    "hp": 100,
+                    "gold": 0,
+                    "items": [
+                        {
+                            "item_id": "ITEM_POTION_001",
+                            "name": "Potion",
+                            "description": "Heal",
+                            "item_type": "consumable",
+                            "meta": {"heal_amount": 20},
+                            "is_stackable": True,
+                        }
+                    ],
+                },
+                "player_npc_relations": [],
+            }
         ),
     ):
         response = await async_client.get(f"/state/player/{MOCK_PLAYER_ID}")
@@ -120,54 +135,12 @@ async def test_get_enemies(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_phase(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.LifecycleStateRepository.get_phase",
-        new=AsyncMock(
-            return_value={"session_id": "id", "current_phase": "exploration"}
-        ),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/phase")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
 async def test_get_turn(async_client: AsyncClient):
     with patch(
         "state_db.repositories.LifecycleStateRepository.get_turn",
         new=AsyncMock(return_value={"session_id": "id", "current_turn": 1}),
     ):
         response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/turn")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_get_act(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.get_act",
-        new=AsyncMock(return_value={"current_act": 1}),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/act")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_get_sequence(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.get_sequence",
-        new=AsyncMock(return_value={"current_sequence": 1}),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/sequence")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_get_location(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.get_location",
-        new=AsyncMock(return_value={"location": "Test"}),
-    ):
-        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/location")
         assert response.status_code == 200
 
 

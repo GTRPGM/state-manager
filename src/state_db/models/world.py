@@ -39,6 +39,7 @@ class SequenceEntityInfo(BaseModel):
 
     id: Union[str, UUID]
     scenario_entity_id: str  # scenario_npc_id or scenario_enemy_id
+    rule_id: int = 0
     name: str
     description: Optional[str] = None
     entity_type: str  # 'npc' or 'enemy'
@@ -58,6 +59,10 @@ class EntityRelationInfo(BaseModel):
     to_name: str
     relation_type: str
     affinity: Optional[int] = None
+    quantity: Optional[int] = None
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,6 +76,9 @@ class PlayerNPCRelationInfo(BaseModel):
     affinity_score: int
     relation_type: str
     interaction_count: int = 0
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -104,16 +112,9 @@ class LocationUpdateResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PhaseChangeResult(BaseModel):
-    session_id: Union[str, UUID]
-    current_phase: str
-    model_config = ConfigDict(from_attributes=True)
-
-
 class TurnAddResult(BaseModel):
     session_id: Union[str, UUID]
     current_turn: int
-    phase_at_turn: Optional[str] = None
     turn_type: Optional[str] = None
     created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
@@ -121,14 +122,15 @@ class TurnAddResult(BaseModel):
 
 class ActChangeResult(BaseModel):
     session_id: Union[str, UUID]
-    current_phase: str = ""
     current_act: int
+    current_act_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class SequenceChangeResult(BaseModel):
     session_id: Union[str, UUID]
     current_sequence: int
+    current_sequence_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

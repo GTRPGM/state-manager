@@ -8,7 +8,6 @@ SELECT
     turn_id,
     session_id,
     turn_number,
-    phase_at_turn,
     turn_type,
     state_changes,
     created_at

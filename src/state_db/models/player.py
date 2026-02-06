@@ -1,21 +1,33 @@
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
-
-from .base import JsonField
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InventoryItem(BaseModel):
     player_id: Optional[str] = None
-    item_id: int
+    item_id: Union[str, UUID]
+    rule_id: int
     item_name: Optional[str] = None
     description: Optional[str] = None
     quantity: int
+    active: bool = True
+    activated_turn: int = 0
+    deactivated_turn: Optional[int] = None
     category: Optional[str] = None
     item_state: Optional[Dict] = None
     acquired_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ItemBase(BaseModel):
+    item_id: str
+    name: str
+    description: Optional[str] = ""
+    item_type: str
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    is_stackable: bool = True
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -26,47 +38,38 @@ class NPCRelation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PlayerStateNumeric(BaseModel):
-    HP: Optional[int] = None
-    MP: Optional[int] = None
-    gold: Optional[int] = None
-    model_config = ConfigDict(from_attributes=True)
-
-
-class PlayerState(BaseModel):
-    numeric: PlayerStateNumeric
-    boolean: Dict[str, bool] = {}
-    model_config = ConfigDict(from_attributes=True)
-
-
 class PlayerStats(BaseModel):
     player_id: Union[str, UUID]
     name: str
-    state: Union[JsonField, PlayerState]
-    relations: Optional[JsonField] = []
-    tags: List[str] = []
-    model_config = ConfigDict(from_attributes=True)
+    hp: int
+    mp: int
+    san: int
+    strength: Optional[int] = Field(None, alias="str")
+    dexterity: Optional[int] = Field(None, alias="dex")
+    intelligence: Optional[int] = Field(None, alias="int")
+    luck: Optional[int] = Field(None, alias="lux")
+    tags: List[str] = Field(default_factory=list)
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class PlayerStateResponse(BaseModel):
     hp: int
-    gold: int
-    items: List[int] = []
+    gold: int = 0
+    items: List[ItemBase] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 
 class FullPlayerState(BaseModel):
     player: PlayerStateResponse
-    player_npc_relations: List[NPCRelation]
+    player_npc_relations: List[NPCRelation] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerHPUpdateResult(BaseModel):
     player_id: Union[str, UUID]
-    name: str
     current_hp: int
-    max_hp: int
-    hp_change: int
     model_config = ConfigDict(from_attributes=True)
 
 

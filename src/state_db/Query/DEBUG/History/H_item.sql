@@ -2,7 +2,6 @@
 -- [설명] state_changes 내에 아이템 관련 키가 포함된 기록 검색
 SELECT
     t.turn_number,
-    t.phase_at_turn,
     t.state_changes,
     t.created_at
 FROM turn t

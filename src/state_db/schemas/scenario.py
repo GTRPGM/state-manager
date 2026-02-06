@@ -21,6 +21,7 @@ class ScenarioInjectNPC(BaseModel):
     """주입용 NPC 정보"""
 
     scenario_npc_id: str = Field(..., description="NPC 식별자 (예: npc-elder)")
+    rule_id: int = Field(default=0, description="Rule Engine ID")
     name: str = Field(..., description="NPC 이름")
     description: str = Field(default="", description="NPC 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
@@ -32,6 +33,7 @@ class ScenarioInjectEnemy(BaseModel):
     """주입용 적 정보"""
 
     scenario_enemy_id: str = Field(..., description="적 식별자 (예: enemy-goblin)")
+    rule_id: int = Field(default=0, description="Rule Engine ID")
     name: str = Field(..., description="적 이름")
     description: str = Field(default="", description="적 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
@@ -40,14 +42,15 @@ class ScenarioInjectEnemy(BaseModel):
         description="상태 (hp, attack 등)",
     )
     dropped_items: List[int] = Field(
-        default_factory=list, description="드롭 아이템 ID 리스트"
+        default_factory=list, description="드롭 아이템 Rule ID 리스트"
     )
 
 
 class ScenarioInjectItem(BaseModel):
     """주입용 아이템 정보"""
 
-    item_id: int = Field(..., description="아이템 ID (정수)")
+    scenario_item_id: str = Field(..., description="아이템 식별자 (예: item-potion)")
+    rule_id: int = Field(..., description="아이템 Rule ID (정수)")
     name: str = Field(..., description="아이템 이름")
     description: str = Field(default="", description="아이템 설명")
     item_type: str = Field(
@@ -108,64 +111,77 @@ class ScenarioInjectRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "title": "The Lost Kingdom",
-                "description": "A brave adventurer seeks to reclaim the lost kingdom",
+                "title": "안개 낀 검은 숲의 비밀",
+                "description": (
+                    "고대 저주가 잠든 검은 숲에서 실종된 탐사대를 찾고 "
+                    "숲의 심장에 도달해야 합니다."
+                ),
                 "acts": [
                     {
                         "id": "act-1",
-                        "name": "The Beginning",
-                        "description": "The hero starts their journey",
-                        "exit_criteria": "Complete all sequences",
-                        "sequences": ["seq-1"],
+                        "name": "서막: 숲의 입구",
+                        "description": "탐사대의 마지막 행적을 쫓아 숲으로 들어섭니다.",
+                        "exit_criteria": "경비병의 허가를 받거나 몰래 통과하기",
+                        "sequences": ["seq-entrance", "seq-camp"],
                     }
                 ],
                 "sequences": [
                     {
-                        "id": "seq-1",
-                        "name": "Town Square",
-                        "location_name": "Starting Town",
-                        "description": "The central plaza",
-                        "goal": "Talk to the elder",
-                        "exit_triggers": ["talk_to_elder"],
-                        "npcs": ["npc-elder"],
-                        "enemies": [],
+                        "id": "seq-entrance",
+                        "name": "숲의 검문소",
+                        "location_name": "서부 초소",
+                        "description": (
+                            "숲으로 통하는 유일한 길목을 지키는 낡은 검문소입니다."
+                        ),
+                        "goal": "초소장 '아이작'과 대화하여 정보를 얻으십시오.",
+                        "exit_triggers": ["talked_to_isaac"],
+                        "npcs": ["npc-isaac"],
+                        "enemies": ["enemy-patrol"],
                         "items": [],
                     }
                 ],
                 "npcs": [
                     {
-                        "scenario_npc_id": "npc-elder",
-                        "name": "Village Elder",
-                        "description": "A wise old man",
-                        "tags": ["quest_giver", "friendly"],
-                        "state": {"mood": "worried"},
+                        "scenario_npc_id": "npc-isaac",
+                        "rule_id": 1001,
+                        "name": "초소장 아이작",
+                        "description": (
+                            "과거 숲의 탐사대원이었으나 다리를 다쳐 은퇴한 "
+                            "노련한 군인입니다."
+                        ),
+                        "tags": ["경비", "정보원", "은퇴자"],
+                        "state": {"trust_level": 50, "is_drunk": False},
+                        "is_departed": False,
                     }
                 ],
                 "enemies": [
                     {
-                        "scenario_enemy_id": "enemy-goblin",
-                        "name": "Forest Goblin",
-                        "description": "A small goblin",
-                        "tags": ["weak", "melee"],
-                        "state": {"hp": 30, "attack": 5},
-                        "dropped_items": [1],
+                        "scenario_enemy_id": "enemy-patrol",
+                        "rule_id": 2001,
+                        "name": "검은 숲 정찰병",
+                        "description": "숲의 그림자에 잠식된 정체불명의 존재입니다.",
+                        "tags": ["그림자", "정찰"],
+                        "state": {"numeric": {"hp": 50, "attack": 8, "defense": 3}},
+                        "dropped_items": [3001],
                     }
                 ],
                 "items": [
                     {
-                        "item_id": 1,
-                        "name": "Healing Potion",
-                        "description": "Restores 50 HP",
-                        "item_type": "consumable",
-                        "meta": {"heal_amount": 50},
+                        "scenario_item_id": "item-insignia",
+                        "rule_id": 3001,
+                        "name": "부러진 탐사대 휘장",
+                        "description": "실종된 탐사대의 표식이 새겨진 낡은 휘장입니다.",
+                        "item_type": "material",
+                        "meta": {"rarity": "common", "quest_item": True},
                     }
                 ],
                 "relations": [
                     {
-                        "from_id": "npc-elder",
-                        "to_id": "enemy-goblin",
-                        "relation_type": "enemy",
-                        "affinity": 0,
+                        "from_id": "npc-isaac",
+                        "to_id": "enemy-patrol",
+                        "relation_type": "hostile",
+                        "affinity": -100,
+                        "meta": {"reason": "과거 동료들을 잃은 원한"},
                     }
                 ],
             }

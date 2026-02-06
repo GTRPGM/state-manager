@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS turn (
 
     -- 상태 변화 시퀀스 (1회 변화 = 1턴)
     turn_number INTEGER NOT NULL,
-    phase_at_turn phase_type NOT NULL,
     turn_type VARCHAR(50) NOT NULL, -- action, event, system 등
     state_changes JSONB DEFAULT '{}'::jsonb,
     related_entities UUID[],

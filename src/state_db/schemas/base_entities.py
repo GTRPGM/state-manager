@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from state_db.schemas.mixins import EntityBaseMixin, SessionContextMixin, StateMixin
 
@@ -17,6 +17,7 @@ class NPCBase(SessionContextMixin, EntityBaseMixin, StateMixin):
     npc_id: str = Field(..., description="NPC 고유 UUID")
     scenario_id: str = Field(..., description="소속된 시나리오의 UUID")
     scenario_npc_id: str = Field(..., description="시나리오 내 마스터 NPC 식별자")
+    rule_id: int = Field(default=0, description="Rule Engine 내 식별자")
     relations: List[Dict[str, Any]] = Field(
         default_factory=list, description="엔티티 간의 관계 데이터"
     )
@@ -26,20 +27,21 @@ class EnemyBase(SessionContextMixin, EntityBaseMixin, StateMixin):
     """적(Enemy) 기본 스키마"""
 
     enemy_id: str = Field(..., description="적 개체 고유 UUID")
+    scenario_id: str = Field(..., description="소속된 시나리오의 UUID")
     scenario_enemy_id: str = Field(..., description="시나리오 내 마스터 적 식별자")
-    dropped_items: List[Dict[str, Any]] = Field(
-        default_factory=list, description="드롭 아이템 목록"
+    rule_id: int = Field(default=0, description="Rule Engine 내 식별자")
+    dropped_items: List[int] = Field(
+        default_factory=list, description="드롭 아이템 목록 (Rule ID 리스트)"
     )
 
 
-class ItemBase(BaseModel):
+class ItemBase(SessionContextMixin, EntityBaseMixin):
     """아이템 기본 스키마"""
 
-    item_id: int = Field(
-        ..., description="아이템 고유 식별자 (Rule Engine에서 전달받는 INT)"
-    )
-    name: str = Field(..., description="아이템 이름")
-    description: Optional[str] = Field("", description="아이템 설명")
+    item_id: str = Field(..., description="아이템 고유 UUID")
+    scenario_id: str = Field(..., description="소속된 시나리오의 UUID")
+    scenario_item_id: str = Field(..., description="시나리오 내 마스터 아이템 식별자")
+    rule_id: int = Field(..., description="Rule Engine 내 식별자")
     item_type: str = Field(..., description="아이템 분류")
     meta: Dict[str, Any] = Field(default_factory=dict, description="아이템 세부 속성")
     is_stackable: bool = Field(default=True, description="중첩 가능 여부")

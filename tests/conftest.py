@@ -1,4 +1,5 @@
 import os
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -9,6 +10,18 @@ from state_db.main import app
 
 # 테스트 환경 변수 설정
 os.environ["APP_ENV"] = "test"
+
+
+@pytest.fixture(autouse=True)
+def mock_rule_engine_proxy():
+    """Rule Engine 연동 자동 모킹"""
+    # 통합 라우터(router_SESSION)로 패치 경로 수정
+    with patch(
+        "state_db.routers.router_SESSION.RuleEngineProxy.add_session",
+        new_callable=AsyncMock,
+    ) as mock:
+        mock.return_value = {"status": "success"}
+        yield mock
 
 
 @pytest.fixture(scope="session")
@@ -41,12 +54,14 @@ async def db_lifecycle(postgres_container):
     from state_db.infrastructure import DatabaseManager
 
     async with DatabaseManager.get_connection() as conn:
+        # Graph 정리 (AGE)
+        try:
+            await conn.execute("SELECT drop_graph('state_db', true);")
+        except Exception:
+            pass  # 그래프가 없으면 무시
+
         await conn.execute("""
             DROP TABLE IF EXISTS turn CASCADE;
-            DROP TABLE IF EXISTS phase CASCADE;
-            DROP TABLE IF EXISTS phase_rules CASCADE;
-            DROP TABLE IF EXISTS player_npc_relations CASCADE;
-            DROP TABLE IF EXISTS player_inventory CASCADE;
             DROP TABLE IF EXISTS inventory CASCADE;
             DROP TABLE IF EXISTS enemy CASCADE;
             DROP TABLE IF EXISTS npc CASCADE;
@@ -59,7 +74,6 @@ async def db_lifecycle(postgres_container):
             DROP TABLE IF EXISTS item CASCADE;
 
             -- 타입 및 함수 정리 (잔재 제거)
-            DROP TYPE IF EXISTS phase_type CASCADE;
             DROP TYPE IF EXISTS session_status CASCADE;
             DROP FUNCTION IF EXISTS initialize_enemies CASCADE;
             DROP FUNCTION IF EXISTS initialize_npcs CASCADE;

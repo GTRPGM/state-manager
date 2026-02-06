@@ -11,7 +11,12 @@ logger = logging.getLogger("state_db.infrastructure.connection")
 
 
 async def _init_connection(conn: asyncpg.Connection) -> None:
-    """연결 초기화: JSON/JSONB 타입 자동 파싱 설정"""
+    """연결 초기화: Apache AGE 로드 및 JSON 타입 설정"""
+    # 1. Apache AGE 로드 및 경로 설정
+    await conn.execute("LOAD 'age';")
+    await conn.execute('SET search_path = public, ag_catalog, "$user";')
+
+    # 2. JSON/JSONB 타입 자동 파싱 설정
     await conn.set_type_codec(
         "json",
         encoder=json.dumps,

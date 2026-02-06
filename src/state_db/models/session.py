@@ -19,7 +19,6 @@ class SessionInfo(BaseModel):
     current_act_id: Optional[str] = "act-1"
     current_sequence_id: Optional[str] = "seq-1"
 
-    current_phase: str = "exploration"
     current_turn: int = 1
     location: Optional[str] = None
     status: str

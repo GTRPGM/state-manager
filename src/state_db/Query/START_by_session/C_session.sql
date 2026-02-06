@@ -3,5 +3,6 @@ SELECT create_session(
     :scenario_id,
     :current_act,
     :current_sequence,
-    :location
+    :location,
+    :user_id
 );

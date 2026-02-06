@@ -1,6 +1,6 @@
 -- --------------------------------------------------------------------
 -- spawn_npc.sql
--- NPC 동적 생성
+-- NPC 동적 생성 - Flattened
 -- --------------------------------------------------------------------
 
 INSERT INTO npc (
@@ -9,7 +9,7 @@ INSERT INTO npc (
     scenario_npc_id,
     name,
     description,
-    state,
+    hp, mp, san,
     tags
 )
 SELECT
@@ -18,19 +18,12 @@ SELECT
     COALESCE($2::text, gen_random_uuid()::text),
     $3::text,
     COALESCE($4::text, ''),
-    jsonb_build_object(
-        'numeric', jsonb_build_object(
-            'HP', COALESCE($5, 100)::int,
-            'MP', 50
-        ),
-        'boolean', '{}'::jsonb
-    ),
+    COALESCE($5, 100)::int,
+    50, 10,
     COALESCE($6, ARRAY['npc']::TEXT[])
 FROM session WHERE session_id = $1::UUID
 RETURNING
     npc_id AS id,
     name,
-    description,
-    state,
-    tags,
-    created_at;
+    scenario_npc_id,
+    scenario_id;

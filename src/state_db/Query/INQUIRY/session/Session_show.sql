@@ -2,12 +2,12 @@
 SELECT
     s.session_id,
     s.scenario_id,
+    s.user_id,
     p.player_id,
     s.current_act,
     s.current_sequence,
     s.current_act_id,
     s.current_sequence_id,
-    s.current_phase,
     s.current_turn,
     s.location,
     s.status,

@@ -12,12 +12,23 @@ services:
     networks:
       - gtrpgm-net
 
+  # Mock Rule Engine (로컬 테스트용)
+  rule-engine:
+    image: python:3.11-alpine
+    container_name: mock-rule-engine
+    command: ["python", "-c", "from http.server import HTTPServer, BaseHTTPRequestHandler; import json; H=type('H',(BaseHTTPRequestHandler,),{'do_GET':lambda s:(s.send_response(200),s.send_header('Content-Type','application/json'),s.end_headers(),s.wfile.write(b'{\"status\":\"success\"}')),'do_POST':lambda s:(s.send_response(200),s.send_header('Content-Type','application/json'),s.end_headers(),s.wfile.write(b'{\"status\":\"success\"}')),'log_message':lambda s,f,*a:print(f'[Mock] {a[0]}')}); print('Mock Rule Engine on 8050'); HTTPServer(('0.0.0.0',8050),H).serve_forever()"]
+    ports:
+      - "8050:8050"
+    networks:
+      - gtrpgm-net
+
   state-manager:
     build: .
     container_name: state-manager
     restart: unless-stopped
     depends_on:
       - db
+      - rule-engine
     ports:
       - "8030:8030"
     environment:

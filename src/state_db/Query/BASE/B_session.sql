@@ -1,10 +1,6 @@
 -- B_session.sql
 -- 1. ENUM 타입 정의
 DO $$ BEGIN
-    CREATE TYPE phase_type AS ENUM ('exploration', 'combat', 'dialogue', 'rest');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
-DO $$ BEGIN
     CREATE TYPE session_status AS ENUM ('active', 'paused', 'ended');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
@@ -12,6 +8,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 CREATE TABLE IF NOT EXISTS session (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scenario_id UUID NOT NULL REFERENCES scenario(scenario_id) ON DELETE RESTRICT,
+    user_id BIGINT,
 
     -- [기존 유지] 숫자 기반 카운터
     current_act INTEGER NOT NULL DEFAULT 1,
@@ -22,7 +19,6 @@ CREATE TABLE IF NOT EXISTS session (
     current_sequence_id VARCHAR(100) DEFAULT 'seq-1',
 
     -- 규칙 컨텍스트
-    current_phase phase_type NOT NULL DEFAULT 'dialogue',
     current_turn INTEGER NOT NULL DEFAULT 0,
 
     location TEXT,
@@ -35,6 +31,9 @@ CREATE TABLE IF NOT EXISTS session (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE session
+ADD COLUMN IF NOT EXISTS user_id BIGINT;
 
 CREATE INDEX IF NOT EXISTS idx_session_scenario_id ON session(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_session_status ON session(status);

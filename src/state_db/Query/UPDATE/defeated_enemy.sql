@@ -5,16 +5,11 @@
 -- API: POST /state/enemy/{enemy_instance_id}/defeat
 -- --------------------------------------------------------------------
 
--- 적 처치 상태 업데이트
 UPDATE enemy
 SET
     is_defeated = true,
     defeated_at = NOW(),
-    state = jsonb_set(
-        state,
-        '{numeric,HP}',
-        '0'::jsonb
-    ),
+    hp = 0,
     updated_at = NOW()
 WHERE enemy_id = $1
   AND session_id = $2
@@ -24,4 +19,4 @@ RETURNING
     enemy_id,
     name,
     defeated_at,
-    (state->'numeric'->>'HP')::int AS final_hp;
+    hp AS final_hp;

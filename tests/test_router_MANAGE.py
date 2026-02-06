@@ -47,7 +47,7 @@ async def test_spawn_enemy(async_client: AsyncClient):
     ):
         response = await async_client.post(
             f"/state/session/{MOCK_SESSION_ID}/enemy/spawn",
-            json={"enemy_id": 1, "name": "Goblin"},
+            json={"scenario_enemy_id": "enemy-goblin", "rule_id": 1, "name": "Goblin"},
         )
         assert response.status_code == 200
 
@@ -73,7 +73,7 @@ async def test_spawn_npc(async_client: AsyncClient):
     ):
         response = await async_client.post(
             f"/state/session/{MOCK_SESSION_ID}/npc/spawn",
-            json={"npc_id": 1, "name": "Elder"},
+            json={"scenario_npc_id": "npc-elder", "rule_id": 101, "name": "Elder"},
         )
         assert response.status_code == 200
 
@@ -91,20 +91,6 @@ async def test_remove_npc(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_change_phase(async_client: AsyncClient):
-    mock_response = {"session_id": MOCK_SESSION_ID, "current_phase": "combat"}
-    with patch(
-        "state_db.repositories.LifecycleStateRepository.change_phase",
-        new=AsyncMock(return_value=mock_response),
-    ):
-        response = await async_client.put(
-            f"/state/session/{MOCK_SESSION_ID}/phase",
-            json={"new_phase": "combat"},
-        )
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
 async def test_add_turn(async_client: AsyncClient):
     mock_response = {"session_id": MOCK_SESSION_ID, "current_turn": 2}
     with patch(
@@ -117,73 +103,35 @@ async def test_add_turn(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_change_act(async_client: AsyncClient):
-    mock_response = {"session_id": MOCK_SESSION_ID, "current_act": 2}
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_act": 2,
+        "current_act_id": "act-2",
+    }
     with patch(
-        "state_db.repositories.ProgressRepository.change_act",
+        "state_db.repositories.scenario.ScenarioRepository.advance_act",
         new=AsyncMock(return_value=mock_response),
     ):
         response = await async_client.put(
-            f"/state/session/{MOCK_SESSION_ID}/act", json={"new_act": 2}
+            f"/state/session/{MOCK_SESSION_ID}/act",
+            json={"new_act": 2, "new_act_id": "act-2", "new_sequence_id": "seq-2-1"},
         )
         assert response.status_code == 200
 
 
 @pytest.mark.asyncio
 async def test_change_sequence(async_client: AsyncClient):
-    mock_response = {"session_id": MOCK_SESSION_ID, "current_sequence": 2}
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_sequence": 2,
+        "current_sequence_id": "seq-2",
+    }
     with patch(
-        "state_db.repositories.ProgressRepository.change_sequence",
+        "state_db.repositories.scenario.ScenarioRepository.update_sequence",
         new=AsyncMock(return_value=mock_response),
     ):
         response = await async_client.put(
-            f"/state/session/{MOCK_SESSION_ID}/sequence", json={"new_sequence": 2}
-        )
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_add_act(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.add_act",
-        new=AsyncMock(return_value={"session_id": MOCK_SESSION_ID, "current_act": 2}),
-    ):
-        response = await async_client.post(f"/state/session/{MOCK_SESSION_ID}/act/add")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_back_act(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.back_act",
-        new=AsyncMock(return_value={"session_id": MOCK_SESSION_ID, "current_act": 1}),
-    ):
-        response = await async_client.post(f"/state/session/{MOCK_SESSION_ID}/act/back")
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_add_sequence(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.add_sequence",
-        new=AsyncMock(
-            return_value={"session_id": MOCK_SESSION_ID, "current_sequence": 2}
-        ),
-    ):
-        response = await async_client.post(
-            f"/state/session/{MOCK_SESSION_ID}/sequence/add"
-        )
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_back_sequence(async_client: AsyncClient):
-    with patch(
-        "state_db.repositories.ProgressRepository.back_sequence",
-        new=AsyncMock(
-            return_value={"session_id": MOCK_SESSION_ID, "current_sequence": 1}
-        ),
-    ):
-        response = await async_client.post(
-            f"/state/session/{MOCK_SESSION_ID}/sequence/back"
+            f"/state/session/{MOCK_SESSION_ID}/sequence",
+            json={"new_sequence": 2, "new_sequence_id": "seq-2"},
         )
         assert response.status_code == 200

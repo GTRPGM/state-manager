@@ -14,13 +14,12 @@ CREATE OR REPLACE FUNCTION record_state_change(
 RETURNS INTEGER AS $$
 DECLARE
     v_next_turn INTEGER;
-    v_current_phase phase_type;
 BEGIN
     -- [Logic] 세션 테이블의 current_turn을 1 증가시키고 현재 정보를 가져옴
     UPDATE session
     SET current_turn = current_turn + 1
     WHERE session_id = p_session_id AND status = 'active'
-    RETURNING current_turn, current_phase INTO v_next_turn, v_current_phase;
+    RETURNING current_turn INTO v_next_turn;
 
     -- [Logic] 증가된 턴 번호와 함께 상세 내역을 turn 테이블에 기록
     IF v_next_turn IS NOT NULL THEN
@@ -28,7 +27,6 @@ BEGIN
             turn_id,
             session_id,
             turn_number,
-            phase_at_turn,
             turn_type,
             state_changes,
             related_entities
@@ -37,7 +35,6 @@ BEGIN
             gen_random_uuid(),
             p_session_id,
             v_next_turn,
-            v_current_phase,
             p_turn_type,
             p_state_changes,
             p_entities
@@ -56,7 +53,6 @@ BEGIN
         turn_id,
         session_id,
         turn_number,
-        phase_at_turn,
         turn_type,
         state_changes,
         created_at
@@ -65,7 +61,6 @@ BEGIN
         gen_random_uuid(),
         NEW.session_id,
         0, -- 시작 지점은 0턴으로 정의
-        NEW.current_phase,
         'initial_state',
         '{}'::jsonb,
         NEW.started_at
@@ -76,8 +71,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_02_initialize_turn ON session;
-CREATE TRIGGER trigger_02_initialize_turn
+DROP TRIGGER IF EXISTS trigger_100_session_init_turn ON session;
+CREATE TRIGGER trigger_100_session_init_turn
     AFTER INSERT ON session
     FOR EACH ROW
     EXECUTE FUNCTION initialize_turn();
