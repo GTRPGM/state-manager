@@ -104,7 +104,67 @@ async def run_verification():
                 )
                 logger.info("     -> Success.")
 
-            logger.info("🎉 All SQL and Trigger verifications PASSED!")
+            # 4. Pure Cypher 파일 검증
+            logger.info("▶️  Running pure Cypher files verification...")
+            from state_db.graph.cypher_engine import engine
+
+            cypher_dir = project_root / "src" / "state_db" / "Query" / "CYPHER"
+            cypher_files = list(cypher_dir.rglob("*.cypher"))
+            logger.info(f"   - Found {len(cypher_files)} .cypher files.")
+
+            dummy_params = {
+                "session_id": session_id,
+                "player_id": str(uuid4()),
+                "inventory_id": str(uuid4()),
+                "item_uuid": str(uuid4()),
+                "npc_uuid": str(uuid4()),
+                "scenario": "test",
+                "rule": 1,
+                "delta_qty": 1,
+                "use_qty": 1,
+                "delta_affinity": 10,
+                "relation_type": "neutral",
+                "turn": 1,
+                "meta_json": "{}",
+                "include_inactive": False,
+            }
+
+            for cf in cypher_files:
+                rel_path = cf.relative_to(cypher_dir)
+                try:
+                    # 실제 실행 대신 EXPLAIN으로 문법 체크를 하고 싶지만
+                    # AGE는 EXPLAIN 지원이 제한적일 수 있음.
+                    # 따라서 실제 실행하되 트랜잭션 롤백을 활용하거나,
+                    # 읽기 전용으로 체크.
+                    # 여기서는 간단히 실행해보고 에러가 나는지만 확인
+                    # (데이터가 없으므로 빈 결과가 나오거나 에러)
+                    # 단, 파라미터가 없으면 에러가 날 수 있으므로
+                    # 더미 파라미터 주입
+
+                    # 파일 경로를 엔진이 인식하는 상대 경로 키로 변환
+                    # (예: inventory/earn_item.cypher)
+                    # 엔진은 registry를 통해 로드하므로 절대 경로를
+                    # 직접 사용하지 않고 load_query를 이용하거나
+                    # 직접 텍스트를 읽어서 run_cypher에 주입해야 함.
+                    # 여기서는 엔진의 정규화 로직까지 테스트하기 위해
+                    # run_cypher 사용
+
+                    # 쿼리 캐시에 강제 로드 (경로 문제 회피)
+                    engine.load_query(cf)
+
+                    # 실행 (경로 기반)
+                    # 주의: registry는 "inventory/earn_item.cypher" 형태의
+                    # 키를 기대할 수 있음. 하지만 load_query는 절대경로로
+                    # 로드하고 cache에는 절대경로로 저장됨.
+                    # run_cypher는 절대경로 키를 받아서 실행 가능.
+
+                    await engine.run_cypher(str(cf), dummy_params)
+                    logger.info(f"   - ✅ {rel_path} passed.")
+                except Exception as e:
+                    logger.error(f"   - ❌ {rel_path} FAILED: {e}")
+                    raise
+
+            logger.info("🎉 All SQL, Trigger, and Cypher verifications PASSED!")
 
         except Exception as e:
             logger.error(f"❌ Verification FAILED: {e}")

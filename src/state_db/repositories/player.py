@@ -80,6 +80,32 @@ class PlayerRepository(BaseRepository):
         await run_sql_command(sql_path, params)
         return await self.get_stats(player_id)
 
+    async def get_full_context(
+        self, session_id: str, include_inactive: bool = False
+    ) -> Dict[str, Any]:
+        """세션의 전체 컨텍스트(인벤토리 + 관계)를 한 번에 조회 (Cypher 기반)"""
+        # session에서 player_id 조회
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+        rows = await run_sql_query(sql_path, [session_id])
+        if not rows:
+            return {"items": [], "npcs": []}
+        player_id = str(rows[0].get("player_id", ""))
+
+        cypher_path = str(self.query_dir / "CYPHER" / "inquiry" / "context.cypher")
+        params = {
+            "player_id": player_id,
+            "session_id": session_id,
+            "include_inactive": include_inactive,
+        }
+
+        results = await cypher_engine.run_cypher(cypher_path, params)
+
+        if results and results[0]:
+            # ResultMapper에 의해 파싱된 dict 반환
+            return results[0]
+
+        return {"items": [], "npcs": []}
+
     async def get_inventory(self, session_id: str) -> List[InventoryItem]:
         """플레이어 인벤토리 조회 (Cypher 기반)"""
         # session에서 player_id 조회
@@ -222,9 +248,7 @@ class PlayerRepository(BaseRepository):
             player_id=player_id, npc_id=npc_id, new_affinity=new_affinity
         )
 
-    async def _get_npc_context(
-        self, npc_id: str, session_id: str
-    ) -> Dict[str, Any]:
+    async def _get_npc_context(self, npc_id: str, session_id: str) -> Dict[str, Any]:
         """NPC의 scenario와 rule 조회 (Graph fallback SQL)"""
         cypher = """
         MATCH (n:NPC {npc_id: $npc_id, session_id: $session_id})
@@ -261,9 +285,7 @@ class PlayerRepository(BaseRepository):
     # 인벤토리 헬퍼 메서드
     # ============================================================
 
-    async def _get_player_inventory_id(
-        self, session_id: str, player_id: str
-    ) -> str:
+    async def _get_player_inventory_id(self, session_id: str, player_id: str) -> str:
         """Player의 Inventory ID 조회 (Graph 우선, SQL fallback)"""
         cypher = """
         MATCH (p:Player {id: $player_id, session_id: $session_id})
@@ -288,9 +310,7 @@ class PlayerRepository(BaseRepository):
             return str(rows[0].get("inventory_id", ""))
         raise HTTPException(status_code=404, detail="Inventory not found for player")
 
-    async def _get_item_by_rule(
-        self, session_id: str, rule_id: int
-    ) -> Tuple[str, str]:
+    async def _get_item_by_rule(self, session_id: str, rule_id: int) -> Tuple[str, str]:
         """rule_id로부터 item_uuid와 scenario 조회 (Graph 우선)"""
         cypher = """
         MATCH (i:Item {rule: $rule_id, session_id: $session_id})
@@ -347,9 +367,7 @@ class PlayerRepository(BaseRepository):
         inventory_id = await self._get_player_inventory_id(session_id, player_id)
         item_uuid, scenario = await self._get_item_by_rule(session_id, rule_id)
 
-        cypher_path = str(
-            self.query_dir / "CYPHER" / "inventory" / "earn_item.cypher"
-        )
+        cypher_path = str(self.query_dir / "CYPHER" / "inventory" / "earn_item.cypher")
         params = {
             "player_id": player_id,
             "session_id": session_id,
@@ -392,9 +410,7 @@ class PlayerRepository(BaseRepository):
         item_uuid, scenario = await self._get_item_by_rule(session_id, rule_id)
         current_turn = await self._get_current_turn(session_id)
 
-        cypher_path = str(
-            self.query_dir / "CYPHER" / "inventory" / "use_item.cypher"
-        )
+        cypher_path = str(self.query_dir / "CYPHER" / "inventory" / "use_item.cypher")
         params = {
             "player_id": player_id,
             "session_id": session_id,

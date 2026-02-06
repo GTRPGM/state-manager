@@ -2,8 +2,8 @@
 -- $1: session_id, $2: san_change
 UPDATE player
 SET state = jsonb_set(
-    state, 
-    '{numeric, SAN}', 
+    state,
+    '{numeric, SAN}',
     (COALESCE((state->'numeric'->>'SAN')::int, 0) + $2::int)::text::jsonb
 )
 WHERE session_id = $1::uuid;

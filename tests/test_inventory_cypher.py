@@ -7,7 +7,6 @@ import pytest
 
 from state_db.graph.cypher_engine import engine
 
-
 # ====================================================================================
 # 1. earn_item.cypher 테스트
 # ====================================================================================
@@ -27,7 +26,10 @@ async def test_earn_item_cypher_creates_contains_relation(db_lifecycle):
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
     CREATE (inv:Inventory {id: $inventory_id, session_id: $session_id, active: true})
-    CREATE (i:Item {id: $item_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
+    CREATE (i:Item {
+        id: $item_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
     RETURN p.id as pid
     """
     await engine.run_cypher(
@@ -54,14 +56,24 @@ async def test_earn_item_cypher_creates_contains_relation(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 수량이 5로 설정되어야 함
+    # 검증
     assert len(results) > 0
     val = results[0]
+    print(f"\nDEBUG: type(val)={type(val)}, val={val}")
+
+    quantity = 0
     if isinstance(val, dict):
-        quantity = val.get("quantity", val.get("value", 0))
+        if "quantity" in val:
+            quantity = val["quantity"]
+        elif "properties" in val:
+            quantity = val["properties"].get("quantity", 0)
+        elif "value" in val:
+            inner = val["value"]
+            quantity = inner.get("quantity", 0) if isinstance(inner, dict) else inner
     else:
         quantity = val
-    assert int(str(quantity).strip('"')) == 5
+
+    assert int(quantity) == 5
 
 
 @pytest.mark.asyncio
@@ -78,7 +90,10 @@ async def test_earn_item_cypher_adds_to_existing_quantity(db_lifecycle):
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
     CREATE (inv:Inventory {id: $inventory_id, session_id: $session_id, active: true})
-    CREATE (i:Item {id: $item_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
+    CREATE (i:Item {
+        id: $item_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
     CREATE (inv)-[:CONTAINS {quantity: 10, active: true}]->(i)
     RETURN p.id as pid
     """
@@ -106,14 +121,23 @@ async def test_earn_item_cypher_adds_to_existing_quantity(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 수량이 15가 되어야 함 (10 + 5)
+    # 검증
     assert len(results) > 0
     val = results[0]
+
+    quantity = 0
     if isinstance(val, dict):
-        quantity = val.get("quantity", val.get("value", 0))
+        if "quantity" in val:
+            quantity = val["quantity"]
+        elif "properties" in val:
+            quantity = val["properties"].get("quantity", 0)
+        elif "value" in val:
+            inner = val["value"]
+            quantity = inner.get("quantity", 0) if isinstance(inner, dict) else inner
     else:
         quantity = val
-    assert int(str(quantity).strip('"')) == 15
+
+    assert int(quantity) == 15
 
 
 # ====================================================================================
@@ -135,7 +159,10 @@ async def test_use_item_cypher_decreases_quantity(db_lifecycle):
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
     CREATE (inv:Inventory {id: $inventory_id, session_id: $session_id, active: true})
-    CREATE (i:Item {id: $item_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
+    CREATE (i:Item {
+        id: $item_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
     CREATE (p)-[:HAS_INVENTORY {active: true}]->(inv)
     CREATE (inv)-[:CONTAINS {quantity: 10, active: true}]->(i)
     RETURN p.id as pid
@@ -168,14 +195,29 @@ async def test_use_item_cypher_decreases_quantity(db_lifecycle):
     # 검증: 수량이 7이 되어야 함 (10 - 3)
     assert len(results) > 0
     val = results[0]
+
+    quantity = 0
+    active = False
     if isinstance(val, dict):
-        quantity = val.get("quantity", val.get("value", 0))
-        active = val.get("active", True)
+        if "quantity" in val:
+            quantity = val["quantity"]
+            active = val.get("active", True)
+        elif "properties" in val:
+            quantity = val["properties"].get("quantity", 0)
+            active = val["properties"].get("active", True)
+        elif "value" in val:
+            inner = val["value"]
+            if isinstance(inner, dict):
+                quantity = inner.get("quantity", 0)
+                active = inner.get("active", True)
+            else:
+                quantity = inner
+                active = True
     else:
         quantity = val
         active = True
 
-    assert int(str(quantity).strip('"')) == 7
+    assert int(quantity) == 7
     assert active is True
 
 
@@ -193,7 +235,10 @@ async def test_use_item_cypher_deactivates_when_zero(db_lifecycle):
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
     CREATE (inv:Inventory {id: $inventory_id, session_id: $session_id, active: true})
-    CREATE (i:Item {id: $item_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
+    CREATE (i:Item {
+        id: $item_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
     CREATE (p)-[:HAS_INVENTORY {active: true}]->(inv)
     CREATE (inv)-[:CONTAINS {quantity: 3, active: true}]->(i)
     RETURN p.id as pid
@@ -226,12 +271,27 @@ async def test_use_item_cypher_deactivates_when_zero(db_lifecycle):
     # 검증: 수량이 0이고 비활성화되어야 함
     assert len(results) > 0
     val = results[0]
+
+    quantity = 0
+    active = True
     if isinstance(val, dict):
-        quantity = val.get("quantity", val.get("value", 0))
-        active = val.get("active", True)
+        if "quantity" in val:
+            quantity = val["quantity"]
+            active = val.get("active", True)
+        elif "properties" in val:
+            quantity = val["properties"].get("quantity", 0)
+            active = val["properties"].get("active", True)
+        elif "value" in val:
+            inner = val["value"]
+            if isinstance(inner, dict):
+                quantity = inner.get("quantity", 0)
+                active = inner.get("active", True)
+            else:
+                quantity = inner
+                active = True
     else:
         quantity = val
         active = True
 
-    assert int(str(quantity).strip('"')) == 0
+    assert int(quantity) == 0
     assert active is False

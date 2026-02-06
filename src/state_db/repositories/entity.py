@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 
 from fastapi import HTTPException
 
+from state_db.graph.cypher_engine import engine as cypher_engine
 from state_db.infrastructure import run_sql_command, run_sql_query
 from state_db.models import (
     EnemyHPUpdateResult,
@@ -19,17 +20,25 @@ from state_db.repositories.base import BaseRepository
 class EntityRepository(BaseRepository):
     # Item
     async def get_session_items(self, session_id: str) -> List[ItemInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_item.sql"
-        results = await run_sql_query(sql_path, [session_id])
-        return [ItemInfo.model_validate(row) for row in results]
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inquiry" / "get_session_items.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"session_id": session_id}
+        )
+        return [ItemInfo.model_validate(row) for row in results if row]
 
     # NPC
     async def get_session_npcs(
         self, session_id: str, active_only: bool = True
     ) -> List[NPCInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc.sql"
-        results = await run_sql_query(sql_path, [session_id, active_only])
-        return [NPCInfo.model_validate(row) for row in results]
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inquiry" / "get_session_npcs.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"session_id": session_id, "active_only": active_only}
+        )
+        return [NPCInfo.model_validate(row) for row in results if row]
 
     async def spawn_npc(self, session_id: str, data: Dict[str, Any]) -> SpawnResult:
         sql_path = self.query_dir / "MANAGE" / "npc" / "spawn_npc.sql"
@@ -75,9 +84,13 @@ class EntityRepository(BaseRepository):
     async def get_session_enemies(
         self, session_id: str, active_only: bool = True
     ) -> List[EnemyInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_enemy.sql"
-        results = await run_sql_query(sql_path, [session_id, active_only])
-        return [EnemyInfo.model_validate(row) for row in results]
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inquiry" / "get_session_enemies.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"session_id": session_id, "active_only": active_only}
+        )
+        return [EnemyInfo.model_validate(row) for row in results if row]
 
     async def spawn_enemy(self, session_id: str, data: Dict[str, Any]) -> SpawnResult:
         sql_path = self.query_dir / "MANAGE" / "enemy" / "spawn_enemy.sql"

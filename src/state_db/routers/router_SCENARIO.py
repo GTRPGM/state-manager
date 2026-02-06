@@ -3,13 +3,13 @@ from typing import Annotated, Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException
 
 from state_db.custom import WrappedResponse
+from state_db.graph.validator import GraphValidationError, GraphValidator
 from state_db.repositories.scenario import ScenarioRepository
 from state_db.schemas import (
+    ScenarioInfo,
     ScenarioInjectRequest,
     ScenarioInjectResponse,
-    ScenarioInfo,
 )
-from state_db.graph.validator import GraphValidator, GraphValidationError
 
 router = APIRouter(prefix="/scenario", tags=["Scenario Management"])
 
@@ -35,7 +35,9 @@ async def list_scenarios(
     "/validate",
     response_model=WrappedResponse[Dict[str, Any]],
     summary="시나리오 데이터 사전 검증",
-    description="주입 전, 시나리오 데이터가 그래프 DB 규격(필수 속성 등)에 맞는지 검증합니다.",
+    description=(
+        "주입 전, 시나리오 데이터가 그래프 DB 규격(필수 속성 등)에 맞는지 검증합니다."
+    ),
 )
 async def validate_scenario(
     request: ScenarioInjectRequest,
@@ -53,7 +55,7 @@ async def validate_scenario(
                 "session_id": "00000000-0000-0000-0000-000000000000",
                 "active": True,
                 "rule": 0,
-                "activated_turn": 0
+                "activated_turn": 0,
             }
             GraphValidator.validate_node("npc", props)
 
@@ -64,16 +66,13 @@ async def validate_scenario(
                 "session_id": "00000000-0000-0000-0000-000000000000",
                 "active": True,
                 "rule": 0,
-                "activated_turn": 0
+                "activated_turn": 0,
             }
             GraphValidator.validate_node("enemy", props)
 
         # 3. 관계 검증
-        for rel in request.relations:
-            props = {
-                "active": True,
-                "activated_turn": 0
-            }
+        for _rel in request.relations:
+            props = {"active": True, "activated_turn": 0}
             GraphValidator.validate_edge("RELATION", props)
 
         return {
@@ -85,8 +84,8 @@ async def validate_scenario(
                     "npcs": len(request.npcs),
                     "enemies": len(request.enemies),
                     "relations": len(request.relations),
-                }
-            }
+                },
+            },
         }
     except GraphValidationError as e:
         return {
@@ -94,11 +93,13 @@ async def validate_scenario(
             "data": {
                 "is_valid": False,
                 "error_type": "GraphValidationError",
-                "message": str(e)
-            }
+                "message": str(e),
+            },
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Validation failed: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Validation failed: {str(e)}"
+        ) from e
 
 
 @router.post(
@@ -111,6 +112,7 @@ async def inject_scenario(
     request: ScenarioInjectRequest,
     repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)],
 ) -> Dict[str, Any]:
-    # 내부적으로 ScenarioRepository.inject_scenario 내에서 GraphValidator를 한 번 더 호출함
+    # 내부적으로 ScenarioRepository.inject_scenario 내에서
+    # GraphValidator를 한 번 더 호출함
     result = await repo.inject_scenario(request)
     return {"status": "success", "data": result.model_dump()}

@@ -1,15 +1,18 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
+
 
 class GraphValidationError(Exception):
     """그래프 데이터 검증 실패 예외"""
+
     pass
+
 
 class GraphValidator:
     """Graph 노드 및 엣지 데이터 정합성 검증기"""
 
     # 모든 노드 공통 필수 속성
     COMMON_NODE_PROPS = {"session_id", "active"}
-    
+
     # 엔티티별 추가 필수 속성 (rule은 3-ID 체계의 핵심)
     ENTITY_NODE_PROPS = {"rule"}
 
@@ -25,7 +28,7 @@ class GraphValidator:
         :raises GraphValidationError: 필수 속성 누락 시
         """
         missing = []
-        
+
         # 1. 공통 속성 체크
         for p in cls.COMMON_NODE_PROPS:
             if p not in props:
@@ -52,7 +55,7 @@ class GraphValidator:
         :raises GraphValidationError: 필수 속성 누락 시
         """
         missing = []
-        
+
         # 1. 공통 속성 체크
         for p in cls.COMMON_EDGE_PROPS:
             if p not in props:

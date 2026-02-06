@@ -1,39 +1,56 @@
 # Handheld
 
 <!-- PROJ_UNDERSTANDING_BEGIN -->
+
 ## Project Understanding
+
 ### What this project is
-- **GTRPGM State Truth**: GTRPGM 엔진의 중앙 상태 저장소로, 정형 데이터(PostgreSQL)와 관계 데이터(Apache AGE)를 일관성 있게 관리합니다.
-- **Rule Separation**: 판정 로직(Rule Engine)과 상태 저장 로직을 분리하여, 판정 결과만 수동적으로 기록합니다.
-- **Hybrid Persistence**:
-  - PostgreSQL: 수치(HP/Gold) 및 정적 속성 관리.
-  - Apache AGE: 엔티티 간 가변 관계(호감도/적대 등) 및 동적 상태 관리.
+
+- **GTRPGM State Truth**: GTRPGM 엔진의 중앙 상태 저장소로, 정형 데이터(PostgreSQL)와 가변적 관계 데이터(Apache AGE)를 관리합니다.
+- **Hybrid Storage**:
+  - **PostgreSQL**: 엔티티의 수명 주기, 정적 메타데이터(ID, 이름, 기본 스펙) 관리.
+  - **Apache AGE**: 동적 상태 및 관계(위치, 인벤토리, 호감도 등)를 그래프로 관리.
+- **Graph-First Migration**: SQL 테이블 중심의 관계 데이터를 AGE 그래프로 전환하는 마이그레이션이 진행 중입니다.
 
 ### Architecture link
+
 - <!-- PROJ_ARCH_LINK -->docs/dev/architect/architecture_v0.0.0.md
 
 ### How to run
-- 로컬 실행: `bin/project run` (uv 사용)
-- Docker Compose 실행: `bin/project run-compose` (docker-compose.dev.yml 사용)
-- 주요 작업 엔트리포인트: `bin/project {lint|pre-commit|ci-dev|run|run-compose}`
+
+- **Local API**: `bin/project run` (Uses `uv run python src/state_db/main.py`)
+- **Docker Compose (Dev)**: `bin/project run-compose` (Starts DB & App containers)
+- **Utilities**: `bin/project {lint|pre-commit}`
 
 ### How to test (unit)
+
 - `uv run pytest tests`
-- **주의**: Apache AGE 및 복잡한 SQL 트리거 의존성으로 인해 `testcontainers` 기반의 격리 테스트가 필수적입니다 (SQLite 대체 불가).
+- **Important**: Tests require `testcontainers[postgres]`. Ensure Docker is running.
+- **Environment**: `pyproject.toml` configures strict `mypy` and `ruff`.
 
 ### How to run e2e
-- `bin/project ci-dev` (GitHub Actions 워크플로우 로컬 시뮬레이션)
+
+- `bin/project ci-dev`
+  - Uses `act` to simulate GitHub Actions locally.
+  - Requires `docker` context setup (handled by script).
 
 ### Conventions / gotchas
-- **Session 0 (Master)**: 모든 시나리오 원본 데이터는 세션 ID `000...000`에 저장되며, 플레이어 세션 시작 시 이 데이터가 Deep Copy(복제)됩니다.
-- **SQL/Graph Sync**: RDB 테이블 변경 시 트리거(`sync_entity_to_graph`)를 통해 AGE 그래프 노드가 실시간 동기화됩니다.
-- **Asyncpg Parameter**: SQL 작성 시 반드시 `$1`, `$2` 포지셔널 파라미터를 사용해야 합니다. (`:name` 지원 안 함)
-- **Restart Required**: `src/state_db/Query/BASE/`의 SQL 로직 수정 시 서버 재시작이 필요합니다 (`startup()` 시점에 로드됨).
+
+- **Session 0 (Master)**: 모든 시나리오 데이터의 원본은 세션 ID `000...000`이며, 새 세션 생성 시 그래프 상에서 Deep Copy 됩니다.
+- **SQL-to-Graph Sync**: RDB 테이블 변경 시 `sync_entity_to_graph` 트리거가 작동하여 그래프 노드를 실시간 동기화합니다.
+- **Cypher Parameter**: 보안을 위해 `$param` 형식을 필수 사용 (`CypherEngine.run_cypher`).
+- **Agtype Handling**: AGE 쿼리 결과는 `ResultMapper`를 통해 Python Native Type으로 변환 후 사용해야 합니다.
+- **Legacy Dependencies**: `pyproject.toml`에 포함된 `langgraph`, `langchain-core`는 현재 사용되지 않는 레거시 의존성입니다.
+- **Branch Strategy**: 현재 진행 중인 모든 Refactoring 및 Plan(`plan_####`) 작업은 별도 브랜치 생성 없이 `refactor/mk-graph` 브랜치에 직접 커밋합니다. 커밋은 각 플랜(Plan) 단위로 구분하여 수행합니다.
+
 <!-- PROJ_UNDERSTANDING_END -->
 
 <!-- PROJ_WORKNOTES_BEGIN -->
+
 ## Work Notes by Detail
+
 ### ref_0000 - Core Engine Handover Notes
+
 - Work (brief):
   - 기존 핸드북 및 핸드헬드 문서에서 핵심 설계 원칙과 트러블슈팅 가이드를 이관함.
 - Actions taken (detailed):
@@ -45,4 +62,21 @@
     - `agtype` Casting: `result::text`로 캐스팅 후 Python `json.loads()` 처리 권장.
 - What I learned / updated understanding:
   - 시스템이 'Session 0'을 마스터 템플릿으로 사용하며, 세션 생성 시 RDB와 Graph 양쪽에서 원자적 복제(Atomic Deep Copy)가 일어나는 것이 핵심 로직임.
+
+---
+
+### plan_0001 - Graph Migration Phase C & D Implementation Plan
+
+- Work (brief):
+  - 인벤토리/관계 도메인 Cypher 쿼리 구현 및 리포지토리의 Graph 전환(Phase C/D) 완료.
+- Actions taken (detailed):
+  - **Cypher Implementation**: `inventory`(`earn_item`, `use_item`) 및 `relation`(`get_relations`) 도메인 쿼리 구현.
+  - **Repository Migration**: `EntityRepository` 및 `PlayerRepository`의 주요 조회 로직을 `CypherEngine` 기반으로 전환.
+  - **Mapper Enhancement**: `ResultMapper`가 JSON 문자열 형태의 스칼라 값과 Map/List `agtype`을 자동으로 파싱하도록 개선하여 Pydantic 모델 매핑 호환성 확보.
+- What I learned / updated understanding:
+  - **Scripts Usage**:
+    - `scripts/verify_sql_syntax.py`: 정적 SQL, 동적 트리거, 순수 Cypher 파일(더미 파라미터 주입)의 문법을 테스트 컨테이너 환경에서 검증함. (`uv run python scripts/verify_sql_syntax.py`)
+    - `scripts/api_verification.py`: 실행 중인 서버에 시나리오 주입부터 세션 종료까지의 흐름을 검증하는 통합 테스트 스크립트.
+  - **Robust Cypher Pattern**: SQL->Graph 동기화 시 트리거 로직에 따라 속성 키(예: `id` vs `npc_id`)가 달라질 수 있으므로, 조회 시 `coalesce(n.id, n.npc_id)` 패턴을 사용하는 것이 안전함.
+
 <!-- PROJ_WORKNOTES_END -->

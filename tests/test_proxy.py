@@ -37,7 +37,7 @@ class TestHTTPClientManager:
     @pytest.mark.asyncio
     async def test_get_client_after_close_creates_new(self):
         """종료 후 다시 호출하면 새 클라이언트 생성"""
-        client1 = await HTTPClientManager.get_client()
+        _client1 = await HTTPClientManager.get_client()
         await HTTPClientManager.close_client()
         client2 = await HTTPClientManager.get_client()
 

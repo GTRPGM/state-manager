@@ -1,15 +1,23 @@
 from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
+
 from state_db.schemas.scenario import ScenarioInjectResponse
+
 
 @pytest.mark.asyncio
 async def test_scenario_list(async_client: AsyncClient):
     """시나리오 목록 조회 API 테스트"""
-    with patch("state_db.repositories.scenario.ScenarioRepository.get_all_scenarios", new=AsyncMock(return_value=[])):
+    repo_path = "state_db.repositories.scenario.ScenarioRepository.get_all_scenarios"
+    with patch(
+        repo_path,
+        new=AsyncMock(return_value=[]),
+    ):
         response = await async_client.get("/state/scenario/list")
         assert response.status_code == 200
         assert response.json()["status"] == "success"
+
 
 @pytest.mark.asyncio
 async def test_scenario_validate_success(async_client: AsyncClient):
@@ -25,18 +33,19 @@ async def test_scenario_validate_success(async_client: AsyncClient):
                 "name": "NPC 1",
                 "description": "Desc",
                 "tags": [],
-                "state": {}
+                "state": {},
             }
         ],
         "enemies": [],
         "items": [],
-        "relations": []
+        "relations": [],
     }
     response = await async_client.post("/state/scenario/validate", json=valid_data)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
     assert data["data"]["is_valid"] is True
+
 
 @pytest.mark.asyncio
 async def test_scenario_validate_fail(async_client: AsyncClient):
@@ -47,7 +56,8 @@ async def test_scenario_validate_fail(async_client: AsyncClient):
         # npcs, acts 등 필수 리스트 누락
     }
     response = await async_client.post("/state/scenario/validate", json=invalid_data)
-    assert response.status_code == 422 # Validation Error
+    assert response.status_code == 422  # Validation Error
+
 
 @pytest.mark.asyncio
 async def test_scenario_inject(async_client: AsyncClient):
@@ -60,7 +70,11 @@ async def test_scenario_inject(async_client: AsyncClient):
         message="Scenario structure injected successfully",
     )
 
-    with patch("state_db.repositories.scenario.ScenarioRepository.inject_scenario", new=AsyncMock(return_value=mock_response)):
+    repo_path = "state_db.repositories.scenario.ScenarioRepository.inject_scenario"
+    with patch(
+        repo_path,
+        new=AsyncMock(return_value=mock_response),
+    ):
         inject_data = {
             "title": "Test Scenario",
             "description": "Desc",
@@ -69,7 +83,7 @@ async def test_scenario_inject(async_client: AsyncClient):
             "npcs": [],
             "enemies": [],
             "items": [],
-            "relations": []
+            "relations": [],
         }
         response = await async_client.post("/state/scenario/inject", json=inject_data)
         assert response.status_code == 200

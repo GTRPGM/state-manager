@@ -81,10 +81,31 @@ async def test_cypher_engine_file_execution(db_lifecycle):
 
     results = await engine.run_cypher(query_path, params)
     assert len(results) > 0
-    val = results[0]["value"]
-    if isinstance(val, str):
-        val = val.strip('"')
-    assert int(val) == 5
+    val = results[0]
+
+    # ResultMapper가 반환하는 구조에 따라 분기
+    # 1. 래핑된 경우: {"__age_type__": ..., "properties": {...}}
+    # 2. Map 반환: {"quantity": 5}
+
+    qty = 0
+    if isinstance(val, dict):
+        if "quantity" in val:
+            qty = val["quantity"]
+        elif "properties" in val:
+            props = val["properties"]
+            if isinstance(props, dict):
+                qty = props.get("quantity", 0)
+        elif "value" in val:
+            # 스칼라 값 래핑 등
+            inner = val["value"]
+            if isinstance(inner, dict):
+                qty = inner.get("quantity", 0)
+            else:
+                qty = inner
+    else:
+        qty = val
+
+    assert int(qty) == 5
 
 
 @pytest.mark.asyncio

@@ -6,4 +6,4 @@ WITH c, CASE WHEN c.quantity <= 0 THEN true ELSE false END as should_deactivate
 SET c.active = CASE WHEN should_deactivate THEN false ELSE c.active END,
     c.deactivated_turn = CASE WHEN should_deactivate THEN $turn ELSE c.deactivated_turn END,
     c.quantity = CASE WHEN c.quantity < 0 THEN 0 ELSE c.quantity END
-RETURN c.quantity as quantity, c.active as active
+RETURN {quantity: c.quantity, active: c.active}

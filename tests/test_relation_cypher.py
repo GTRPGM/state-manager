@@ -7,7 +7,6 @@ import pytest
 
 from state_db.graph.cypher_engine import engine
 
-
 # ====================================================================================
 # 1. relation.cypher 테스트 (호감도 업데이트)
 # ====================================================================================
@@ -25,7 +24,10 @@ async def test_relation_cypher_creates_new_relation(db_lifecycle):
     # Setup: Player, NPC 노드 생성
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
-    CREATE (n:NPC {id: $npc_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
+    CREATE (n:NPC {
+        id: $npc_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
     RETURN p.id as pid
     """
     await engine.run_cypher(
@@ -53,17 +55,32 @@ async def test_relation_cypher_creates_new_relation(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 호감도가 50으로 설정되어야 함
+    # 검증
     assert len(results) > 0
     val = results[0]
+
+    affinity = 0
+    active = False
     if isinstance(val, dict):
-        affinity = val.get("affinity", val.get("value", 0))
-        active = val.get("active", True)
+        if "affinity" in val:
+            affinity = val["affinity"]
+            active = val.get("active", True)
+        elif "properties" in val:
+            affinity = val["properties"].get("affinity", 0)
+            active = val["properties"].get("active", True)
+        elif "value" in val:
+            inner = val["value"]
+            if isinstance(inner, dict):
+                affinity = inner.get("affinity", 0)
+                active = inner.get("active", True)
+            else:
+                affinity = inner
+                active = True
     else:
         affinity = val
         active = True
 
-    assert int(str(affinity).strip('"')) == 50
+    assert int(affinity) == 50
     assert active is True
 
 
@@ -79,8 +96,14 @@ async def test_relation_cypher_updates_existing_affinity(db_lifecycle):
     # Setup: Player, NPC + 기존 RELATION 생성 (호감도 50)
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
-    CREATE (n:NPC {id: $npc_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
-    CREATE (p)-[:RELATION {relation_type: 'neutral', affinity: 50, active: true, activated_turn: 0}]->(n)
+    CREATE (n:NPC {
+        id: $npc_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
+    CREATE (p)-[:RELATION {
+        relation_type: 'neutral', affinity: 50,
+        active: true, activated_turn: 0
+    }]->(n)
     RETURN p.id as pid
     """
     await engine.run_cypher(
@@ -108,15 +131,23 @@ async def test_relation_cypher_updates_existing_affinity(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 호감도가 65가 되어야 함 (50 + 15)
+    # 검증
     assert len(results) > 0
     val = results[0]
+
+    affinity = 0
     if isinstance(val, dict):
-        affinity = val.get("affinity", val.get("value", 0))
+        if "affinity" in val:
+            affinity = val["affinity"]
+        elif "properties" in val:
+            affinity = val["properties"].get("affinity", 0)
+        elif "value" in val:
+            inner = val["value"]
+            affinity = inner.get("affinity", 0) if isinstance(inner, dict) else inner
     else:
         affinity = val
 
-    assert int(str(affinity).strip('"')) == 65
+    assert int(affinity) == 65
 
 
 @pytest.mark.asyncio
@@ -131,8 +162,14 @@ async def test_relation_cypher_caps_affinity_at_100(db_lifecycle):
     # Setup: Player, NPC + 기존 RELATION (호감도 90)
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
-    CREATE (n:NPC {id: $npc_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
-    CREATE (p)-[:RELATION {relation_type: 'neutral', affinity: 90, active: true, activated_turn: 0}]->(n)
+    CREATE (n:NPC {
+        id: $npc_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
+    CREATE (p)-[:RELATION {
+        relation_type: 'neutral', affinity: 90,
+        active: true, activated_turn: 0
+    }]->(n)
     RETURN p.id as pid
     """
     await engine.run_cypher(
@@ -160,15 +197,23 @@ async def test_relation_cypher_caps_affinity_at_100(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 호감도가 100으로 제한되어야 함
+    # 검증
     assert len(results) > 0
     val = results[0]
+
+    affinity = 0
     if isinstance(val, dict):
-        affinity = val.get("affinity", val.get("value", 0))
+        if "affinity" in val:
+            affinity = val["affinity"]
+        elif "properties" in val:
+            affinity = val["properties"].get("affinity", 0)
+        elif "value" in val:
+            inner = val["value"]
+            affinity = inner.get("affinity", 0) if isinstance(inner, dict) else inner
     else:
         affinity = val
 
-    assert int(str(affinity).strip('"')) == 100
+    assert int(affinity) == 100
 
 
 @pytest.mark.asyncio
@@ -183,8 +228,14 @@ async def test_relation_cypher_caps_affinity_at_0(db_lifecycle):
     # Setup: Player, NPC + 기존 RELATION (호감도 10)
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
-    CREATE (n:NPC {id: $npc_uuid, session_id: $session_id, scenario: 'test', rule: 1, active: true})
-    CREATE (p)-[:RELATION {relation_type: 'neutral', affinity: 10, active: true, activated_turn: 0}]->(n)
+    CREATE (n:NPC {
+        id: $npc_uuid, session_id: $session_id,
+        scenario: 'test', rule: 1, active: true
+    })
+    CREATE (p)-[:RELATION {
+        relation_type: 'neutral', affinity: 10,
+        active: true, activated_turn: 0
+    }]->(n)
     RETURN p.id as pid
     """
     await engine.run_cypher(
@@ -212,15 +263,23 @@ async def test_relation_cypher_caps_affinity_at_0(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 호감도가 0으로 제한되어야 함
+    # 검증
     assert len(results) > 0
     val = results[0]
+
+    affinity = 0
     if isinstance(val, dict):
-        affinity = val.get("affinity", val.get("value", 0))
+        if "affinity" in val:
+            affinity = val["affinity"]
+        elif "properties" in val:
+            affinity = val["properties"].get("affinity", 0)
+        elif "value" in val:
+            inner = val["value"]
+            affinity = inner.get("affinity", 0) if isinstance(inner, dict) else inner
     else:
         affinity = val
 
-    assert int(str(affinity).strip('"')) == 0
+    assert int(affinity) == 0
 
 
 # ====================================================================================
@@ -241,10 +300,23 @@ async def test_get_relations_cypher_returns_active_relations(db_lifecycle):
     # Setup: Player + 2개의 NPC (1개는 active, 1개는 inactive)
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
-    CREATE (n1:NPC {npc_id: $npc1_uuid, session_id: $session_id, name: 'NPC1', active: true})
-    CREATE (n2:NPC {npc_id: $npc2_uuid, session_id: $session_id, name: 'NPC2', active: true})
-    CREATE (p)-[:RELATION {affinity: 60, active: true, activated_turn: 1, relation_type: 'friend'}]->(n1)
-    CREATE (p)-[:RELATION {affinity: 30, active: false, activated_turn: 1, deactivated_turn: 2, relation_type: 'neutral'}]->(n2)
+    CREATE (n1:NPC {
+        npc_id: $npc1_uuid, session_id: $session_id,
+        name: 'NPC1', active: true
+    })
+    CREATE (n2:NPC {
+        npc_id: $npc2_uuid, session_id: $session_id,
+        name: 'NPC2', active: true
+    })
+    CREATE (p)-[:RELATION {
+        affinity: 60, active: true,
+        activated_turn: 1, relation_type: 'friend'
+    }]->(n1)
+    CREATE (p)-[:RELATION {
+        affinity: 30, active: false,
+        activated_turn: 1, deactivated_turn: 2,
+        relation_type: 'neutral'
+    }]->(n2)
     RETURN p.id as pid
     """
     await engine.run_cypher(
@@ -266,15 +338,30 @@ async def test_get_relations_cypher_returns_active_relations(db_lifecycle):
 
     results = await engine.run_cypher(cypher_path, params)
 
-    # 검증: 활성 관계(NPC1)만 반환되어야 함
+    # 검증
     assert len(results) == 1
     val = results[0]
+
+    npc_id_val = ""
+    affinity = 0
     if isinstance(val, dict):
-        npc_id = val.get("npc_id", val.get("value", ""))
-        affinity = val.get("affinity_score", 0)
+        if "npc_id" in val:
+            npc_id_val = val["npc_id"]
+            affinity = val.get("affinity_score", 0)
+        elif "properties" in val:
+            npc_id_val = val["properties"].get("npc_id", "")
+            affinity = val["properties"].get("affinity_score", 0)
+        elif "value" in val:
+            inner = val["value"]
+            if isinstance(inner, dict):
+                npc_id_val = inner.get("npc_id", "")
+                affinity = inner.get("affinity_score", 0)
+            else:
+                npc_id_val = inner
+                affinity = 0
     else:
-        npc_id = val
+        npc_id_val = val
         affinity = 0
 
-    assert str(npc_id).strip('"') == npc1_uuid
-    assert int(str(affinity).strip('"')) == 60
+    assert str(npc_id_val).strip('"') == npc1_uuid
+    assert int(affinity) == 60

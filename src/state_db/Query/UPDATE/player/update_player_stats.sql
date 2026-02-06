@@ -9,7 +9,7 @@ SET
         (
             SELECT jsonb_object_agg(key, val)
             FROM (
-                SELECT 
+                SELECT
                     COALESCE(new_stats.key, old_stats.key) as key,
                     (COALESCE(old_stats.value::text::int, 0) + COALESCE(new_stats.value::text::int, 0)) as val
                 FROM jsonb_each(state->'numeric') old_stats

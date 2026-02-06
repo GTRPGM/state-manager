@@ -32,14 +32,28 @@ class CypherEngine:
         if params is None:
             params = {}
 
-        # 1. 쿼리 로드
-        cypher_text = registry.get_query(query_or_path)
+        # 1. 쿼리 로드 및 정규화
+        raw_cypher = registry.get_query(query_or_path)
+
+        # 주석 제거 및 한 줄 변환
+        # 1. 줄 단위로 분리
+        lines = raw_cypher.splitlines()
+        # 2. 각 줄에서 // 주석 제거 (단순화된 처리: //가 있으면 그 뒤는 무시)
+        cleaned_lines = []
+        for line in lines:
+            if "//" in line:
+                line = line.split("//")[0]
+            cleaned_lines.append(line.strip())
+
+        # 3. 공백으로 연결하여 한 줄로 만듦
+        cypher_text = " ".join(filter(None, cleaned_lines))
+
         params_json = json.dumps(params)
 
         # 2. SQL 준비
-        # AGE의 cypher() 함수는 query_string 인자로 리터럴($$ $$)을
-        # 강력하게 권장/요구함.
-        # 내부 파라미터($params)는 agtype 인자를 통해 안전하게 전달 가능.
+        # AGE의 cypher() 함수는 첫 번째 인자로 리터럴($$ $$)을 강력히 요구함.
+        # 파라미터($1)로 전달 시 'a dollar-quoted string constant is expected'
+        # 에러 발생.
         if params:
             final_sql = f"""
                 SELECT * FROM ag_catalog.cypher(

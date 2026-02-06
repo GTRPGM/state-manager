@@ -23,25 +23,22 @@ class StateService:
         player_id = session_info.player_id
 
         player_stats = None
-        player_relations = []
+        graph_context = {"items": [], "npcs": [], "enemies": []}
+
         if player_id:
             player_stats = await self.player_repo.get_stats(player_id)
-            player_relations = await self.player_repo.get_npc_relations(player_id)
+            # Cypher 기반 통합 컨텍스트 조회 (Inventory, Relations, Enemies)
+            graph_context = await self.player_repo.get_full_context(session_id)
 
-        npcs = await self.entity_repo.get_session_npcs(session_id)
-        enemies = await self.entity_repo.get_session_enemies(
-            session_id, active_only=True
-        )
-        inventory = await self.player_repo.get_inventory(session_id)
         turn_info = await self.lifecycle_repo.get_turn(session_id)
 
         return {
             "session": session_info,
             "player": player_stats,
-            "player_relations": player_relations,
-            "npcs": npcs,
-            "enemies": enemies,
-            "inventory": inventory,
+            "player_relations": graph_context.get("npcs", []),
+            "npcs": graph_context.get("npcs", []),  # 하위 호환성 유지
+            "enemies": graph_context.get("enemies", []),
+            "inventory": graph_context.get("items", []),
             "turn": turn_info,
             "snapshot_timestamp": session_info.updated_at,
         }

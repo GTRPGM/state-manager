@@ -143,7 +143,7 @@ async def proxy_request(
                 "message": f"서비스에 연결할 수 없습니다: {base_url}",
                 "detail": str(e),
             },
-        )
+        ) from e
     except httpx.TimeoutException as e:
         logger.error(f"Request timeout to {base_url}: {e}")
         raise HTTPException(
@@ -154,4 +154,4 @@ async def proxy_request(
                 "message": f"서비스 응답 시간 초과: {base_url}",
                 "detail": str(e),
             },
-        )
+        ) from e

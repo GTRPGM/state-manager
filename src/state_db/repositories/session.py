@@ -39,7 +39,7 @@ class SessionRepository(BaseRepository):
 
     async def end(self, session_id: str) -> None:
         sql_path = self.query_dir / "MANAGE" / "session" / "end_session.sql"
-        
+
         await run_sql_command(sql_path, [session_id])
 
     async def delete(self, session_id: str) -> dict:
@@ -91,4 +91,3 @@ class SessionRepository(BaseRepository):
         sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
-

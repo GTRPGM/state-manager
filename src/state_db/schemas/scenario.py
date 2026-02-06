@@ -112,14 +112,17 @@ class ScenarioInjectRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "title": "안개 낀 검은 숲의 비밀",
-                "description": "고대 저주가 잠든 검은 숲에서 실종된 탐사대를 찾고 숲의 심장에 도달해야 합니다.",
+                "description": (
+                    "고대 저주가 잠든 검은 숲에서 실종된 탐사대를 찾고 "
+                    "숲의 심장에 도달해야 합니다."
+                ),
                 "acts": [
                     {
                         "id": "act-1",
                         "name": "서막: 숲의 입구",
                         "description": "탐사대의 마지막 행적을 쫓아 숲으로 들어섭니다.",
                         "exit_criteria": "경비병의 허가를 받거나 몰래 통과하기",
-                        "sequences": ["seq-entrance", "seq-camp"]
+                        "sequences": ["seq-entrance", "seq-camp"],
                     }
                 ],
                 "sequences": [
@@ -127,12 +130,14 @@ class ScenarioInjectRequest(BaseModel):
                         "id": "seq-entrance",
                         "name": "숲의 검문소",
                         "location_name": "서부 초소",
-                        "description": "숲으로 통하는 유일한 길목을 지키는 낡은 검문소입니다.",
+                        "description": (
+                            "숲으로 통하는 유일한 길목을 지키는 낡은 검문소입니다."
+                        ),
                         "goal": "초소장 '아이작'과 대화하여 정보를 얻으십시오.",
                         "exit_triggers": ["talked_to_isaac"],
                         "npcs": ["npc-isaac"],
                         "enemies": ["enemy-patrol"],
-                        "items": []
+                        "items": [],
                     }
                 ],
                 "npcs": [
@@ -140,10 +145,13 @@ class ScenarioInjectRequest(BaseModel):
                         "scenario_npc_id": "npc-isaac",
                         "rule_id": 1001,
                         "name": "초소장 아이작",
-                        "description": "과거 숲의 탐사대원이었으나 다리를 다쳐 은퇴한 노련한 군인입니다.",
+                        "description": (
+                            "과거 숲의 탐사대원이었으나 다리를 다쳐 은퇴한 "
+                            "노련한 군인입니다."
+                        ),
                         "tags": ["경비", "정보원", "은퇴자"],
                         "state": {"trust_level": 50, "is_drunk": False},
-                        "is_departed": False
+                        "is_departed": False,
                     }
                 ],
                 "enemies": [
@@ -154,7 +162,7 @@ class ScenarioInjectRequest(BaseModel):
                         "description": "숲의 그림자에 잠식된 정체불명의 존재입니다.",
                         "tags": ["그림자", "정찰"],
                         "state": {"numeric": {"hp": 50, "attack": 8, "defense": 3}},
-                        "dropped_items": [3001]
+                        "dropped_items": [3001],
                     }
                 ],
                 "items": [
@@ -164,7 +172,7 @@ class ScenarioInjectRequest(BaseModel):
                         "name": "부러진 탐사대 휘장",
                         "description": "실종된 탐사대의 표식이 새겨진 낡은 휘장입니다.",
                         "item_type": "material",
-                        "meta": {"rarity": "common", "quest_item": True}
+                        "meta": {"rarity": "common", "quest_item": True},
                     }
                 ],
                 "relations": [
@@ -173,9 +181,9 @@ class ScenarioInjectRequest(BaseModel):
                         "to_id": "enemy-patrol",
                         "relation_type": "hostile",
                         "affinity": -100,
-                        "meta": {"reason": "과거 동료들을 잃은 원한"}
+                        "meta": {"reason": "과거 동료들을 잃은 원한"},
                     }
-                ]
+                ],
             }
         }
     )
