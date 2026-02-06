@@ -56,7 +56,8 @@ class APIVerifier:
         print("-" * 80)
         for r in self.results:
             print(
-                f"{r['name']:<35} | {r.get('method', 'N/A'):<6} | {r['status']:<6} | {r.get('ms', 0):<8}"
+                f"{r['name']:<35} | {r.get('method', 'N/A'):<6} | "
+                f"{r['status']:<6} | {r.get('ms', 0):<8}"
             )
         print("=" * 80 + "\n")
 
@@ -88,7 +89,7 @@ class APIVerifier:
                     "name": "Healing Potion",
                     "rule_id": 1,
                     "item_type": "consumable",
-                    "meta": {"hp_heal": 20}
+                    "meta": {"hp_heal": 20},
                 }
             ],
             "relations": [],
@@ -119,9 +120,13 @@ class APIVerifier:
         print("[3] Inquiry (State)...")
         self.check("Get Context", "GET", f"/state/session/{self.session_id}/context")
         self.check("Get Progress", "GET", f"/state/session/{self.session_id}/progress")
-        self.check("Get Inventory", "GET", f"/state/session/{self.session_id}/inventory")
+        self.check(
+            "Get Inventory", "GET", f"/state/session/{self.session_id}/inventory"
+        )
 
-        res_npcs = self.check("Get NPCs", "GET", f"/state/session/{self.session_id}/npcs")
+        res_npcs = self.check(
+            "Get NPCs", "GET", f"/state/session/{self.session_id}/npcs"
+        )
         if res_npcs and "data" in res_npcs and res_npcs["data"]:
             self.npc_id = res_npcs["data"][0]["npc_id"]
 
