@@ -97,26 +97,6 @@ async def update_npc_affinity_endpoint(
 
 
 # ====================================================================
-# 위치 업데이트
-# ====================================================================
-
-
-@router.put(
-    "/session/{session_id}/location", response_model=WrappedResponse[Dict[str, str]]
-)
-async def update_location_endpoint(
-    session_id: str,
-    request: LocationUpdateRequest,
-    repo: Annotated[ProgressRepository, Depends(get_progress_repo)],
-) -> Dict[str, Any]:
-    await repo.update_location(session_id, request.new_location)
-    return {
-        "status": "success",
-        "data": {"session_id": session_id, "location": request.new_location},
-    }
-
-
-# ====================================================================
 # Enemy 상태 업데이트
 # ====================================================================
 
