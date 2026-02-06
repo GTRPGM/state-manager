@@ -62,6 +62,23 @@
     - `agtype` Casting: `result::text`로 캐스팅 후 Python `json.loads()` 처리 권장.
 - What I learned / updated understanding:
   - 시스템이 'Session 0'을 마스터 템플릿으로 사용하며, 세션 생성 시 RDB와 Graph 양쪽에서 원자적 복제(Atomic Deep Copy)가 일어나는 것이 핵심 로직임.
+  - **Schema Note**: ~~JSONB state~~ (틀린 이해: 복잡한 쿼리와 경로 오류 유발). 대신 **명시적 SQL 컬럼 평탄화(Flattening)**가 안정성 면에서 압도적으로 유리함.
+
+---
+
+### plan_0004 - Graph Sync Refinement & Test Suite Alignment
+
+- Work (brief):
+  - 스키마 평탄화 및 트리거 실행 순서 정립을 통해 시스템 안정성 확보.
+- Actions taken (detailed):
+  - **Schema Flattening**: `player`, `npc`, `enemy` 테이블의 `state` JSONB 컬럼을 제거하고 개별 컬럼(`hp`, `mp` 등)으로 변환.
+  - **Trigger Numbering**: PostgreSQL 실행 규칙에 따라 `trigger_100_`, `trigger_200_` 등 번호 체계 도입 (`docs/TRIGGER_ORDER.md` 생성).
+  - **Graph Minimalist**: AGE 노드 속성을 `id`, `tid`, `name`, `active`, `scenario_id`로 최소화.
+  - **Query Alignment**: `EntityRepository` 및 `PlayerRepository`의 모든 SQL/Cypher 호출부를 평탄화된 스키마에 맞게 전수 수정.
+- What I learned / updated understanding:
+  - **Trigger Race Condition**: 관계 복제 트리거(`Stage 900`)는 반드시 엔티티 생성 트리거(`Stage 200`)보다 나중에 실행되어야 함.
+  - **Transaction Visibility**: 동일 트랜잭션 내에서 Cypher 실행 시 트리거가 만든 노드를 찾지 못할 수 있으므로 `MERGE`를 통한 명시적 존재 보장이 안전함.
+  - **Field Consistency**: API 응답 필드(`npc_id`)와 그래프 속성 필드(`id`) 간의 매핑을 리포지토리 레이어에서 철저히 관리해야 함.
 
 ---
 
