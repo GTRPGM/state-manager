@@ -42,20 +42,10 @@ class PlayerRepository(BaseRepository):
         relations = await self.get_npc_relations(player_id)
         item_ids = await self.get_item_ids(player_id)
 
-        # state가 dict인 경우와 객체인 경우를 모두 처리
-        state_data = stats.state
-        if isinstance(state_data, dict):
-            numeric = state_data.get("numeric", {})
-            hp = numeric.get("HP") or 0
-            gold = numeric.get("gold") or 0
-        else:
-            hp = state_data.numeric.HP or 0
-            gold = state_data.numeric.gold or 0
-
         return FullPlayerState(
             player=PlayerStateResponse(
-                hp=hp,
-                gold=gold,
+                hp=stats.hp,
+                gold=0,  # gold는 현재 스키마에 없으므로 0 기본값
                 items=item_ids,
             ),
             player_npc_relations=relations,
@@ -251,8 +241,8 @@ class PlayerRepository(BaseRepository):
     async def _get_npc_context(self, npc_id: str, session_id: str) -> Dict[str, Any]:
         """NPC의 scenario와 rule 조회 (Graph fallback SQL)"""
         cypher = """
-        MATCH (n:NPC {npc_id: $npc_id, session_id: $session_id})
-        RETURN n.scenario_npc_id as scenario, n.rule_id as rule
+        MATCH (n:NPC {id: $npc_id, session_id: $session_id})
+        RETURN {scenario: n.tid, rule: n.rule}
         LIMIT 1
         """
         results = await cypher_engine.run_cypher(
@@ -262,7 +252,7 @@ class PlayerRepository(BaseRepository):
             val = results[0]
             if isinstance(val, dict):
                 return {
-                    "scenario": val.get("scenario", val.get("value", "")),
+                    "scenario": val.get("scenario", ""),
                     "rule": val.get("rule", 0),
                 }
         # Fallback: SQL 조회
@@ -290,7 +280,7 @@ class PlayerRepository(BaseRepository):
         cypher = """
         MATCH (p:Player {id: $player_id, session_id: $session_id})
               -[:HAS_INVENTORY]->(inv:Inventory)
-        RETURN inv.inventory_id as inventory_id
+        RETURN {inventory_id: inv.id}
         LIMIT 1
         """
         results = await cypher_engine.run_cypher(
@@ -299,7 +289,7 @@ class PlayerRepository(BaseRepository):
         if results and results[0]:
             val = results[0]
             if isinstance(val, dict):
-                inv_id = val.get("inventory_id", val.get("value", ""))
+                inv_id = val.get("inventory_id")
                 if inv_id:
                     return str(inv_id).strip('"')
 
@@ -312,23 +302,9 @@ class PlayerRepository(BaseRepository):
 
     async def _get_item_by_rule(self, session_id: str, rule_id: int) -> Tuple[str, str]:
         """rule_id로부터 item_uuid와 scenario 조회 (Graph 우선)"""
-        cypher = """
-        MATCH (i:Item {rule: $rule_id, session_id: $session_id})
-        RETURN i.item_id as item_uuid, i.scenario_item_id as scenario
-        LIMIT 1
-        """
-        results = await cypher_engine.run_cypher(
-            cypher, {"rule_id": rule_id, "session_id": session_id}
-        )
-        if results and results[0]:
-            val = results[0]
-            if isinstance(val, dict):
-                item_uuid = val.get("item_uuid", val.get("value", ""))
-                scenario = val.get("scenario", "")
-                if item_uuid:
-                    return (str(item_uuid).strip('"'), str(scenario).strip('"'))
-
-        # Fallback: SQL 조회
+        # Note: rule은 현재 SQL 전용이므로 Graph 노드에는 tid만 있을 수 있음.
+        # 하지만 sync 시 rule 정보를 tid 등에 포함하지 않았다면 SQL 조회가 안전함.
+        # 평탄화 원칙에 따라 엔티티의 정적 메타데이터(rule_id 등)는 SQL 조회가 원칙.
         sql_path = self.query_dir / "INQUIRY" / "session" / "Session_item.sql"
         rows = await run_sql_query(sql_path, [session_id])
         for row in rows:

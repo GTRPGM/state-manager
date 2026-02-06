@@ -13,8 +13,9 @@ class GraphValidator:
     # 모든 노드 공통 필수 속성
     COMMON_NODE_PROPS = {"session_id", "active"}
 
-    # 엔티티별 추가 필수 속성 (rule은 3-ID 체계의 핵심)
-    ENTITY_NODE_PROPS = {"rule"}
+    # 엔티티별 추가 필수 속성 (최소화 원칙에 따라 현재는 추가 필수 속성 없음)
+    # 기존에 있던 'rule'은 SQL 테이블에서 관리하므로 그래프 노드에서는 필수 제외함
+    ENTITY_NODE_PROPS = set()
 
     # 모든 엣지 공통 필수 속성
     COMMON_EDGE_PROPS = {"active", "activated_turn"}

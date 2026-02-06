@@ -146,6 +146,8 @@ class ScenarioRepository(BaseRepository):
                             generated_npc_id = str(uuid.uuid4())
 
                             # 3. SQL Insert with generated UUID
+                            state = n.state or {}
+                            num_state = state.get("numeric", {})
                             await conn.execute(
                                 """
                                 INSERT INTO npc (
@@ -153,9 +155,11 @@ class ScenarioRepository(BaseRepository):
                                     scenario_id, scenario_npc_id,
                                     rule_id, session_id,
                                     assigned_sequence_id, assigned_location,
-                                    tags, state, is_departed
+                                    tags, is_departed,
+                                    hp, mp, str, dex, int, lux, san
                                 ) VALUES (
-                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                                    $12, $13, $14, $15, $16, $17, $18
                                 )
                                 """,
                                 generated_npc_id,
@@ -168,27 +172,14 @@ class ScenarioRepository(BaseRepository):
                                 seq.id,
                                 seq.location_name,
                                 n.tags,
-                                json.dumps(n.state),
                                 n.is_departed,
-                            )
-
-                            # 4. Graph Node Create (with npc_id for SQL-Graph mapping)
-                            node_props["npc_id"] = generated_npc_id
-                            await self.cypher.run_cypher(
-                                """
-                                CREATE (:NPC {
-                                    npc_id: $npc_id,
-                                    name: $name,
-                                    scenario_id: $scenario_id,
-                                    scenario_npc_id: $scenario_npc_id,
-                                    session_id: $session_id,
-                                    active: $active,
-                                    rule: $rule,
-                                    activated_turn: $activated_turn
-                                })
-                                """,
-                                node_props,
-                                tx=conn,
+                                num_state.get("HP", 100),
+                                num_state.get("MP", 50),
+                                num_state.get("STR"),
+                                num_state.get("DEX"),
+                                num_state.get("INT"),
+                                num_state.get("LUX"),
+                                num_state.get("SAN", 10),
                             )
                         else:
                             msg = (
@@ -225,6 +216,9 @@ class ScenarioRepository(BaseRepository):
                             generated_enemy_id = str(uuid.uuid4())
 
                             # 3. SQL Insert with generated UUID
+                            state = e.state or {}
+                            num_state = state.get("numeric", {})
+                            hp = num_state.get("HP", 30)
                             await conn.execute(
                                 """
                                 INSERT INTO enemy (
@@ -232,9 +226,11 @@ class ScenarioRepository(BaseRepository):
                                     scenario_id, scenario_enemy_id,
                                     rule_id, session_id,
                                     assigned_sequence_id, assigned_location,
-                                    tags, state, dropped_items
+                                    tags, dropped_items,
+                                    hp, max_hp, attack, defense
                                 ) VALUES (
-                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                                    $12, $13, $14, $15
                                 )
                                 """,
                                 generated_enemy_id,
@@ -247,27 +243,11 @@ class ScenarioRepository(BaseRepository):
                                 seq.id,
                                 seq.location_name,
                                 e.tags,
-                                json.dumps(e.state),
                                 e.dropped_items,
-                            )
-
-                            # 4. Graph Node Create (with enemy_id for SQL-Graph mapping)
-                            node_props["enemy_id"] = generated_enemy_id
-                            await self.cypher.run_cypher(
-                                """
-                                CREATE (:Enemy {
-                                    enemy_id: $enemy_id,
-                                    name: $name,
-                                    scenario_id: $scenario_id,
-                                    scenario_enemy_id: $scenario_enemy_id,
-                                    session_id: $session_id,
-                                    active: $active,
-                                    rule: $rule,
-                                    activated_turn: $activated_turn
-                                })
-                                """,
-                                node_props,
-                                tx=conn,
+                                hp,
+                                hp,
+                                num_state.get("attack", 10),
+                                num_state.get("defense", 5),
                             )
                         else:
                             msg = (
@@ -325,25 +305,18 @@ class ScenarioRepository(BaseRepository):
                         "scenario_id": scenario_id,
                         "active": True,
                         "activated_turn": 0,
-                        "deactivated_turn": None,  # Explicitly null
+                        "deactivated_turn": None,
                     }
-                    # Validator check for 'RELATION' type logic if needed,
-                    # or generic edge check
-                    # GraphValidator.validate_edge("RELATION", edge_props)
 
-                    # Note: MATCH lookup needs to be precise.
-                    # Using parameter binding for lookup values.
+                    # MERGE를 사용하여 노드 존재 보장 및 관계 생성
+                    # (라벨 제거로 범용성 확보)
                     await self.cypher.run_cypher(
                         """
-                        MATCH (v1), (v2)
-                        WHERE v1.session_id = $session_id
-                          AND v1.scenario_id = $scenario_id
-                          AND (v1.scenario_npc_id = $from_id
-                               OR v1.scenario_enemy_id = $from_id)
-                          AND v2.session_id = $session_id
-                          AND v2.scenario_id = $scenario_id
-                          AND (v2.scenario_npc_id = $to_id
-                               OR v2.scenario_enemy_id = $to_id)
+                        MERGE (v1 {tid: $from_id, session_id: $session_id})
+                        SET v1.scenario_id = $scenario_id
+                        WITH v1
+                        MERGE (v2 {tid: $to_id, session_id: $session_id})
+                        SET v2.scenario_id = $scenario_id
                         CREATE (v1)-[:RELATION {
                             relation_type: $relation_type,
                             affinity: $affinity,
@@ -426,7 +399,8 @@ class ScenarioRepository(BaseRepository):
             # 2. 현재 시퀀스의 NPC 조회 (SQL)
             npcs_rows = await conn.fetch(
                 """
-                SELECT npc_id, scenario_npc_id, name, description, tags, state
+                SELECT npc_id, scenario_npc_id, name, description, tags,
+                       hp, mp, san, str, dex, int, lux
                 FROM npc
                 WHERE session_id = $1 AND assigned_sequence_id = $2
                 """,
@@ -441,7 +415,17 @@ class ScenarioRepository(BaseRepository):
                     "description": row["description"],
                     "entity_type": "npc",
                     "tags": row["tags"] or [],
-                    "state": row["state"],
+                    "state": {
+                        "numeric": {
+                            "HP": row["hp"],
+                            "MP": row["mp"],
+                            "SAN": row["san"],
+                            "STR": row["str"],
+                            "DEX": row["dex"],
+                            "INT": row["int"],
+                            "LUX": row["lux"],
+                        }
+                    },
                     "is_defeated": None,
                 }
                 for row in npcs_rows
@@ -451,7 +435,7 @@ class ScenarioRepository(BaseRepository):
             enemies_rows = await conn.fetch(
                 """
                 SELECT enemy_id, scenario_enemy_id, name, description,
-                       tags, state, is_defeated
+                       tags, is_defeated, hp, max_hp, attack, defense
                 FROM enemy
                 WHERE session_id = $1 AND assigned_sequence_id = $2
                 """,
@@ -466,7 +450,14 @@ class ScenarioRepository(BaseRepository):
                     "description": row["description"],
                     "entity_type": "enemy",
                     "tags": row["tags"] or [],
-                    "state": row["state"],
+                    "state": {
+                        "numeric": {
+                            "HP": row["hp"],
+                            "max_hp": row["max_hp"],
+                            "attack": row["attack"],
+                            "defense": row["defense"],
+                        }
+                    },
                     "is_defeated": row["is_defeated"],
                 }
                 for row in enemies_rows
