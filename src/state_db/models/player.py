@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InventoryItem(BaseModel):
@@ -38,14 +38,14 @@ class PlayerStats(BaseModel):
     hp: int
     mp: int
     san: int
-    str: Optional[int] = None
-    dex: Optional[int] = None
-    int: Optional[int] = None
-    lux: Optional[int] = None
-    tags: List[str] = []
+    strength: Optional[int] = Field(None, alias="str")
+    dexterity: Optional[int] = Field(None, alias="dex")
+    intelligence: Optional[int] = Field(None, alias="int")
+    luck: Optional[int] = Field(None, alias="lux")
+    tags: List[str] = Field(default_factory=list)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class PlayerStateResponse(BaseModel):

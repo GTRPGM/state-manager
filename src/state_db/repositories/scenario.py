@@ -475,15 +475,14 @@ class ScenarioRepository(BaseRepository):
                     """
                     MATCH (v1)-[r:RELATION]->(v2)
                     WHERE r.session_id = $session_id
-                    RETURN
-                        coalesce(v1.scenario_npc_id, v1.scenario_enemy_id)
-                            as from_id,
-                        v1.name as from_name,
-                        coalesce(v2.scenario_npc_id, v2.scenario_enemy_id)
-                            as to_id,
-                        v2.name as to_name,
-                        r.relation_type as relation_type,
-                        r.affinity as affinity
+                    RETURN {
+                        from_id: v1.tid,
+                        from_name: v1.name,
+                        to_id: v2.tid,
+                        to_name: v2.name,
+                        relation_type: r.relation_type,
+                        affinity: r.affinity
+                    }
                     """,
                     {"session_id": session_id},
                     tx=conn,
@@ -491,6 +490,7 @@ class ScenarioRepository(BaseRepository):
 
                 # 메모리 내 필터링
                 for row in graph_results:
+                    # ResultMapper가 맵을 Python dict로 변환함
                     from_id = row.get("from_id")
                     to_id = row.get("to_id")
                     if from_id in scenario_entity_ids or to_id in scenario_entity_ids:
@@ -518,9 +518,12 @@ class ScenarioRepository(BaseRepository):
                     MATCH (p:Player {id: $player_id, session_id: $session_id})
                           -[r:RELATION]->(n:NPC)
                     WHERE r.active = true
-                    RETURN n.npc_id as npc_id, n.name as npc_name,
-                           r.affinity as affinity_score,
-                           r.relation_type as relation_type
+                    RETURN {
+                        npc_id: n.id,
+                        npc_name: n.name,
+                        affinity_score: r.affinity,
+                        relation_type: r.relation_type
+                    }
                     """,
                     {"player_id": player_id, "session_id": session_id},
                 )
@@ -528,7 +531,7 @@ class ScenarioRepository(BaseRepository):
                     if row and isinstance(row, dict):
                         player_npc_relations.append(
                             {
-                                "npc_id": row.get("npc_id", row.get("value", "")),
+                                "npc_id": row.get("npc_id"),
                                 "npc_name": row.get("npc_name"),
                                 "affinity_score": row.get("affinity_score", 0),
                                 "relation_type": row.get("relation_type", "neutral"),
