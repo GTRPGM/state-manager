@@ -25,6 +25,10 @@
 | plan_0004 | Graph Sync Refinement & Test Alignment | docs/dev/detail/plan_0004.md | done |
 | plan_0005 | GM Context Graph Relation Integration | docs/dev/detail/plan_0005.md | done |
 | plan_0006 | Commit Router Relation Support | docs/dev/detail/plan_0006.md | todo |
+| plan_0007 | Rule Engine Player Lookup Endpoint Contract | docs/dev/detail/plan_0007.md | todo |
+| plan_0008 | GM Sequence Context Endpoint | docs/dev/detail/plan_0008.md | todo |
+| plan_0009 | GM Commit from Rule Engine Result Schema | docs/dev/detail/plan_0009.md | todo |
+| plan_0010 | Cypher/SQL End-to-End Verification Hardening | docs/dev/detail/plan_0010.md | todo |
 | ref_0001 | Remove Legacy SQL Relation Tables | docs/dev/detail/ref_0001.md | done |
 <!-- PROJ_DASHBOARD_END -->
 
@@ -38,6 +42,10 @@
 - [x] docs/dev/detail/plan_0004.md
 - [x] docs/dev/detail/plan_0005.md
 - [ ] docs/dev/detail/plan_0006.md
+- [ ] docs/dev/detail/plan_0007.md
+- [ ] docs/dev/detail/plan_0008.md
+- [ ] docs/dev/detail/plan_0009.md
+- [ ] docs/dev/detail/plan_0010.md
 - [x] docs/dev/detail/ref_0001.md
 
 <!-- PROJ_TODO_END -->
