@@ -203,7 +203,7 @@ class PlayerRepository(BaseRepository):
         """NPC 호감도 업데이트 (Cypher 기반, delta 방식)
 
         Args:
-            affinity_change: 호감도 변동값 (예: +3, -2). 결과는 0~100 범위로 제한됨
+            affinity_change: 호감도 변동값 (예: +3, -2). 결과는 -100~100 범위로 제한됨
         """
         # session_id가 없으면 player_id로 조회
         if not session_id:

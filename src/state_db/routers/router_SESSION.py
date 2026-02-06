@@ -137,6 +137,14 @@ async def get_active_sessions_endpoint(
     return {"status": "success", "data": result}
 
 
+@router.get("/sessions/ended", response_model=WrappedResponse[List[SessionInfo]])
+async def get_ended_sessions_endpoint(
+    repo: Annotated[SessionRepository, Depends(get_session_repo)],
+) -> Dict[str, Any]:
+    result = await repo.get_ended_sessions()
+    return {"status": "success", "data": result}
+
+
 @router.get("/session/{session_id}", response_model=WrappedResponse[SessionInfo])
 async def get_session_detail(
     session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
@@ -172,6 +180,16 @@ async def get_progress_endpoint(
     session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
 ) -> Dict[str, Any]:
     result = await repo.get_progress(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/location", response_model=WrappedResponse[Dict[str, Any]]
+)
+async def get_location_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_location(session_id)
     return {"status": "success", "data": result}
 
 
@@ -213,6 +231,36 @@ async def get_turn_endpoint(
     return {"status": "success", "data": result}
 
 
+@router.get(
+    "/session/{session_id}/act", response_model=WrappedResponse[Dict[str, Any]]
+)
+async def get_act_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_act(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.post(
+    "/session/{session_id}/act/add", response_model=WrappedResponse[ActChangeResult]
+)
+async def add_act_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.add_act(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.post(
+    "/session/{session_id}/act/back", response_model=WrappedResponse[ActChangeResult]
+)
+async def back_act_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.back_act(session_id)
+    return {"status": "success", "data": result}
+
+
 @router.put(
     "/session/{session_id}/act", response_model=WrappedResponse[ActChangeResult]
 )
@@ -232,6 +280,49 @@ async def change_act_endpoint(
             current_act_id=request.new_act_id,
         ),
     }
+
+
+@router.get(
+    "/session/{session_id}/act/details",
+    response_model=WrappedResponse[Dict[str, Any]],
+)
+async def get_current_act_details_endpoint(
+    session_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_current_act_details(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/sequence", response_model=WrappedResponse[Dict[str, Any]]
+)
+async def get_sequence_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_sequence(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.post(
+    "/session/{session_id}/sequence/add",
+    response_model=WrappedResponse[SequenceChangeResult],
+)
+async def add_sequence_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.add_sequence(session_id)
+    return {"status": "success", "data": result}
+
+
+@router.post(
+    "/session/{session_id}/sequence/back",
+    response_model=WrappedResponse[SequenceChangeResult],
+)
+async def back_sequence_endpoint(
+    session_id: str, repo: Annotated[ProgressRepository, Depends(get_progress_repo)]
+) -> Dict[str, Any]:
+    result = await repo.back_sequence(session_id)
+    return {"status": "success", "data": result}
 
 
 @router.put(

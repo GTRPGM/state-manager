@@ -4,9 +4,9 @@ MERGE (p)-[r:RELATION]->(n)
 SET r.relation_type = $relation_type,
     r.affinity = CASE
         WHEN r.affinity IS NULL THEN
-            CASE WHEN $delta_affinity > 100 THEN 100 WHEN $delta_affinity < 0 THEN 0 ELSE $delta_affinity END
+            CASE WHEN $delta_affinity > 100 THEN 100 WHEN $delta_affinity < -100 THEN -100 ELSE $delta_affinity END
         WHEN r.affinity + $delta_affinity > 100 THEN 100
-        WHEN r.affinity + $delta_affinity < 0 THEN 0
+        WHEN r.affinity + $delta_affinity < -100 THEN -100
         ELSE r.affinity + $delta_affinity
     END,
     r.active = true,

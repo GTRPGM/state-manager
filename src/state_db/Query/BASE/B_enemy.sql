@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS enemy (
     rule_id INT NOT NULL DEFAULT 0,
 
     -- Flattened Stats
-    hp INTEGER NOT NULL DEFAULT 30,
-    max_hp INTEGER NOT NULL DEFAULT 30,
-    attack INTEGER NOT NULL DEFAULT 10,
-    defense INTEGER NOT NULL DEFAULT 5,
+    hp INTEGER NOT NULL DEFAULT 30 CHECK (hp >= 0),
+    max_hp INTEGER NOT NULL DEFAULT 30 CHECK (max_hp >= 0),
+    attack INTEGER NOT NULL DEFAULT 10 CHECK (attack BETWEEN 0 AND 99),
+    defense INTEGER NOT NULL DEFAULT 5 CHECK (defense BETWEEN 0 AND 99),
 
     tags TEXT[] DEFAULT ARRAY[]::TEXT[],
     dropped_items JSONB DEFAULT '[]'::jsonb,

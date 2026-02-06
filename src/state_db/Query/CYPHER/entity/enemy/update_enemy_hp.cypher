@@ -1,3 +1,5 @@
-MATCH (e:Enemy {enemy_id: $enemy_id, session_id: $session_id})
+// update_enemy_hp.cypher
+// Enemy HP 변경 - 그래프 노드 속성 업데이트 (미사용: SQL 트리거 경유)
+MATCH (e:Enemy {id: $enemy_id, session_id: $session_id})
 SET e.hp = coalesce(e.hp, 0) + $hp_change
-RETURN {enemy_id: e.enemy_id, current_hp: e.hp}
+RETURN {id: e.id, current_hp: e.hp}

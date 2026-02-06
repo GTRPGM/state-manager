@@ -94,7 +94,7 @@ RETURNS TRIGGER AS $func$
 DECLARE
     MASTER_SESSION_ID CONSTANT UUID := '00000000-0000-0000-0000-000000000000';
 BEGIN
-    -- RELATION 복제 (tid 매칭)
+    -- 1. RELATION 복제 (tid 매칭)
     EXECUTE format('
         SELECT * FROM ag_catalog.cypher(''state_db'', $$
             MATCH (v1)-[r:RELATION]->(v2)
@@ -112,6 +112,20 @@ BEGIN
             }]->(nv2)
         $$) AS (result ag_catalog.agtype);
     ', MASTER_SESSION_ID::text, NEW.scenario_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text, NEW.scenario_id::text);
+
+    -- 2. HAS_INVENTORY 안전망: trigger_120이 가시성 문제로 실패했을 경우 보완
+    -- MERGE로 Player/Inventory 노드 존재를 보장한 뒤, 관계가 없으면 생성
+    EXECUTE format('
+        SELECT * FROM ag_catalog.cypher(''state_db'', $$
+            MATCH (p:Player {session_id: %L})
+            MATCH (inv:Inventory {session_id: %L})
+            MERGE (p)-[:HAS_INVENTORY {
+                active: true,
+                activated_turn: 0,
+                session_id: %L
+            }]->(inv)
+        $$) AS (result ag_catalog.agtype);
+    ', NEW.session_id::text, NEW.session_id::text, NEW.session_id::text);
 
     RETURN NEW;
 END;

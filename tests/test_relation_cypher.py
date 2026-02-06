@@ -217,15 +217,15 @@ async def test_relation_cypher_caps_affinity_at_100(db_lifecycle):
 
 
 @pytest.mark.asyncio
-async def test_relation_cypher_caps_affinity_at_0(db_lifecycle):
+async def test_relation_cypher_caps_affinity_at_minus_100(db_lifecycle):
     """
-    relation.cypher가 호감도 하한(0)을 적용하는지 확인
+    relation.cypher가 호감도 하한(-100)을 적용하는지 확인
     """
     session_id = "test-session-rel-004"
     player_id = "test-player-rel-004"
     npc_uuid = "test-npc-rel-004"
 
-    # Setup: Player, NPC + 기존 RELATION (호감도 10)
+    # Setup: Player, NPC + 기존 RELATION (호감도 -80)
     setup_query = """
     CREATE (p:Player {id: $player_id, session_id: $session_id, active: true})
     CREATE (n:NPC {
@@ -233,7 +233,7 @@ async def test_relation_cypher_caps_affinity_at_0(db_lifecycle):
         scenario: 'test', rule: 1, active: true
     })
     CREATE (p)-[:RELATION {
-        relation_type: 'neutral', affinity: 10,
+        relation_type: 'neutral', affinity: -80,
         active: true, activated_turn: 0
     }]->(n)
     RETURN p.id as pid
@@ -247,7 +247,7 @@ async def test_relation_cypher_caps_affinity_at_0(db_lifecycle):
         },
     )
 
-    # relation.cypher 실행 (-30 -> -20이 되지만 0으로 제한)
+    # relation.cypher 실행 (-80 + -30 -> -110이 되지만 -100으로 제한)
     cypher_path = "src/state_db/Query/CYPHER/relation/relation.cypher"
     params = {
         "player_id": player_id,
@@ -279,8 +279,7 @@ async def test_relation_cypher_caps_affinity_at_0(db_lifecycle):
     else:
         affinity = val
 
-    assert int(affinity) == 0
-
+    assert int(affinity) == -100
 
 # ====================================================================================
 # 2. get_relations.cypher 테스트 (관계 조회)

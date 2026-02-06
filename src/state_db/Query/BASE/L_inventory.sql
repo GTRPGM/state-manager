@@ -43,9 +43,11 @@ BEGIN
             'session_id', NEW.session_id
         )::text;
 
+        -- MERGE 사용: 동일 트랜잭션 내 트리거 간 가시성 문제 방지
+        -- (trigger_300/330이 생성한 노드가 아직 보이지 않을 수 있음)
         cypher_query := '
-            MATCH (p:Player {id: $player_id, session_id: $session_id})
-            MATCH (inv:Inventory {id: $inventory_id, session_id: $session_id})
+            MERGE (p:Player {id: $player_id, session_id: $session_id})
+            MERGE (inv:Inventory {id: $inventory_id, session_id: $session_id})
             CREATE (p)-[:HAS_INVENTORY {
                 active: true,
                 activated_turn: 0,
