@@ -34,10 +34,15 @@ async def test_api_verification_flow(real_db_client: AsyncClient):
     scenario_id = inject_resp.json()["data"]["scenario_id"]
 
     # [2] 세션 시작
-    start_data = {"scenario_id": scenario_id, "location": "Tavern"}
+    start_data = {"scenario_id": scenario_id, "location": "Tavern", "user_id": 4242}
     start_resp = await real_db_client.post("/state/session/start", json=start_data)
     assert start_resp.status_code == 200
     session_id = start_resp.json()["data"]["session_id"]
+    assert start_resp.json()["data"]["user_id"] == 4242
+
+    session_resp = await real_db_client.get(f"/state/session/{session_id}")
+    assert session_resp.status_code == 200
+    assert session_resp.json()["data"]["user_id"] == 4242
 
     # [3] Inquiry - Context
     context_resp = await real_db_client.get(f"/state/session/{session_id}/context")

@@ -81,7 +81,23 @@ async def test_get_player_state(async_client: AsyncClient):
     with patch(
         "state_db.repositories.PlayerRepository.get_full_state",
         new=AsyncMock(
-            return_value={"player": {"hp": 100, "gold": 0}, "player_npc_relations": []}
+            return_value={
+                "player": {
+                    "hp": 100,
+                    "gold": 0,
+                    "items": [
+                        {
+                            "item_id": "ITEM_POTION_001",
+                            "name": "Potion",
+                            "description": "Heal",
+                            "item_type": "consumable",
+                            "meta": {"heal_amount": 20},
+                            "is_stackable": True,
+                        }
+                    ],
+                },
+                "player_npc_relations": [],
+            }
         ),
     ):
         response = await async_client.get(f"/state/player/{MOCK_PLAYER_ID}")
