@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List
 
 from fastapi import HTTPException
@@ -20,11 +21,17 @@ from state_db.models import (
 )
 from state_db.repositories.base import BaseRepository
 
+logger = logging.getLogger(__name__)
+
 
 class EntityRepository(BaseRepository):
     """
     엔티티의 생명주기 및 조회를 담당하는 리포지토리.
     원칙: 관계는 그래프(Cypher), 상태는 테이블(SQL).
+    - SQL: 엔티티 생성/삭제/상태 변경 (Source of Truth)
+    - Cypher: 그래프 노드 관리 (id, name, active만 다룸)
+    - 트리거(Stage 300): INSERT/UPDATE 시 자동 동기화
+    - 명시적 Cypher: DELETE/spawn 시 그래프 노드 보장
     """
 
     # Item
@@ -56,23 +63,14 @@ class EntityRepository(BaseRepository):
     async def get_session_npcs(
         self, session_id: str, active_only: bool = True
     ) -> List[NPCInfo]:
-        # 1. 그래프에서 NPC ID 리스트 조회 (관계/활성화 기준)
+        # 1. 그래프에서 NPC ID 리스트 조회 (활성화 기준 필터링)
         cypher_path = str(
             self.query_dir / "CYPHER" / "inquiry" / "get_session_npcs.cypher"
         )
         results = await cypher_engine.run_cypher(
             cypher_path, {"session_id": session_id, "active_only": active_only}
         )
-        # AGE 결과에서 'id' 필드 추출 및 UUID 정규화
-        npc_ids = []
-        for row in results:
-            if isinstance(row, dict):
-                val = row.get("id")
-            else:
-                val = row
-            if val:
-                npc_ids.append(str(val).strip('"'))
-
+        npc_ids = self._extract_ids(results)
         if not npc_ids:
             return []
 
@@ -90,30 +88,50 @@ class EntityRepository(BaseRepository):
         return [NPCInfo.model_validate(row) for row in rows]
 
     async def spawn_npc(self, session_id: str, data: Dict[str, Any]) -> SpawnResult:
+        # 1. SQL INSERT (Source of Truth) - 트리거가 그래프 노드 자동 생성
         sql_path = self.query_dir / "MANAGE" / "npc" / "spawn_npc.sql"
         params = [
             session_id,
-            data.get("npc_id"),
+            data.get("scenario_npc_id"),
             data.get("name"),
             data.get("description", ""),
             data.get("hp", 100),
             data.get("tags", ["npc"]),
         ]
         result = await run_sql_query(sql_path, params)
-        if result:
-            return SpawnResult(
-                id=result[0].get("id", ""), name=result[0].get("name", "")
-            )
-        raise HTTPException(status_code=500, detail="Failed to spawn NPC")
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to spawn NPC")
+
+        row = result[0]
+        npc_id = str(row.get("id", ""))
+        name = str(row.get("name", ""))
+        scenario_npc_id = str(row.get("scenario_npc_id", ""))
+        scenario_id = str(row.get("scenario_id", ""))
+
+        # 2. 명시적 Cypher MERGE (트리거와 일관성 보장, 멱등)
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "entity" / "npc" / "spawn_npc.cypher"
+        )
+        await cypher_engine.run_cypher(
+            cypher_path,
+            {
+                "npc_id": npc_id,
+                "session_id": session_id,
+                "name": name,
+                "scenario_npc_id": scenario_npc_id,
+                "scenario_id": scenario_id,
+            },
+        )
+        return SpawnResult(id=npc_id, name=name)
 
     async def remove_npc(
         self, session_id: str, npc_instance_id: str
     ) -> RemoveEntityResult:
-        # SQL 삭제 (트리거가 없으므로 명시적 삭제)
+        # 1. SQL 삭제 (DELETE 트리거 없으므로 명시적 Graph 삭제 필수)
         sql_path = self.query_dir / "MANAGE" / "npc" / "remove_npc.sql"
         await run_sql_command(sql_path, [npc_instance_id, session_id])
 
-        # Graph 노드 삭제
+        # 2. Graph 노드 삭제
         cypher_path = str(
             self.query_dir / "CYPHER" / "entity" / "npc" / "remove_npc.cypher"
         )
@@ -131,7 +149,7 @@ class EntityRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="NPC not found or already departed")
 
     async def return_npc(self, session_id: str, npc_id: str) -> NPCReturnResult:
-        """퇴장한 NPC 복귀 처리 (SQL Truth 업데이트)"""
+        """퇴장한 NPC 복귀 처리 (SQL Truth 업데이트 -> 트리거 동기화)"""
         sql_path = self.query_dir / "MANAGE" / "npc" / "return_npc.sql"
         result = await run_sql_query(sql_path, [npc_id, session_id])
         if result:
@@ -149,16 +167,7 @@ class EntityRepository(BaseRepository):
         results = await cypher_engine.run_cypher(
             cypher_path, {"session_id": session_id, "active_only": active_only}
         )
-        # AGE 결과에서 'id' 필드 추출 및 UUID 정규화
-        enemy_ids = []
-        for row in results:
-            if isinstance(row, dict):
-                val = row.get("id")
-            else:
-                val = row
-            if val:
-                enemy_ids.append(str(val).strip('"'))
-
+        enemy_ids = self._extract_ids(results)
         if not enemy_ids:
             return []
 
@@ -176,10 +185,11 @@ class EntityRepository(BaseRepository):
         return [EnemyInfo.model_validate(row) for row in rows]
 
     async def spawn_enemy(self, session_id: str, data: Dict[str, Any]) -> SpawnResult:
+        # 1. SQL INSERT (Source of Truth) - 트리거가 그래프 노드 자동 생성
         sql_path = self.query_dir / "MANAGE" / "enemy" / "spawn_enemy.sql"
         params = [
             session_id,
-            data.get("enemy_id"),
+            data.get("scenario_enemy_id"),
             data.get("name"),
             data.get("description", ""),
             data.get("hp", 30),
@@ -188,16 +198,35 @@ class EntityRepository(BaseRepository):
             data.get("tags", ["enemy"]),
         ]
         result = await run_sql_query(sql_path, params)
-        if result:
-            return SpawnResult(
-                id=result[0].get("id", ""),
-                name=result[0].get("name", ""),
-            )
-        raise HTTPException(status_code=500, detail="Failed to spawn enemy")
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to spawn enemy")
+
+        row = result[0]
+        enemy_id = str(row.get("id", ""))
+        name = str(row.get("name", ""))
+        scenario_enemy_id = str(row.get("scenario_enemy_id", ""))
+        scenario_id = str(row.get("scenario_id", ""))
+
+        # 2. 명시적 Cypher MERGE (트리거와 일관성 보장, 멱등)
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "entity" / "enemy" / "spawn_enemy.cypher"
+        )
+        await cypher_engine.run_cypher(
+            cypher_path,
+            {
+                "enemy_id": enemy_id,
+                "session_id": session_id,
+                "name": name,
+                "scenario_enemy_id": scenario_enemy_id,
+                "scenario_id": scenario_id,
+            },
+        )
+        return SpawnResult(id=enemy_id, name=name)
 
     async def update_enemy_hp(
         self, session_id: str, enemy_instance_id: str, hp_change: int
     ) -> EnemyHPUpdateResult:
+        """HP 변경 (SQL Truth 업데이트 -> 트리거 동기화)"""
         sql_path = self.query_dir / "UPDATE" / "enemy" / "update_enemy_hp.sql"
         result = await run_sql_query(
             sql_path, [enemy_instance_id, session_id, hp_change]
@@ -209,11 +238,11 @@ class EntityRepository(BaseRepository):
     async def remove_enemy(
         self, session_id: str, enemy_instance_id: str
     ) -> RemoveEntityResult:
-        # SQL 삭제
+        # 1. SQL 삭제 (DELETE 트리거 없으므로 명시적 Graph 삭제 필수)
         sql_path = self.query_dir / "MANAGE" / "enemy" / "remove_enemy.sql"
         await run_sql_command(sql_path, [enemy_instance_id, session_id])
 
-        # Graph 삭제
+        # 2. Graph 노드 삭제
         cypher_path = str(
             self.query_dir / "CYPHER" / "entity" / "enemy" / "remove_enemy.cypher"
         )
@@ -224,5 +253,20 @@ class EntityRepository(BaseRepository):
         return RemoveEntityResult()
 
     async def defeat_enemy(self, session_id: str, enemy_instance_id: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "defeated_enemy.sql"
+        """적 처치 처리 (SQL Truth 업데이트 -> 트리거 동기화)"""
+        sql_path = self.query_dir / "UPDATE" / "enemy" / "defeated_enemy.sql"
         await run_sql_command(sql_path, [enemy_instance_id, session_id])
+
+    # Utility
+    @staticmethod
+    def _extract_ids(results: List[Any]) -> List[str]:
+        """AGE 결과에서 엔티티 ID를 추출하여 UUID 문자열 리스트로 정규화."""
+        ids = []
+        for row in results:
+            if isinstance(row, dict):
+                val = row.get("id")
+            else:
+                val = row
+            if val:
+                ids.append(str(val).strip('"'))
+        return ids

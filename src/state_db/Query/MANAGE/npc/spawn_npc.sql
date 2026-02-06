@@ -25,6 +25,5 @@ FROM session WHERE session_id = $1::UUID
 RETURNING
     npc_id AS id,
     name,
-    description,
-    tags,
-    created_at;
+    scenario_npc_id,
+    scenario_id;

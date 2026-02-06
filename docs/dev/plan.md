@@ -20,7 +20,7 @@
 | F05 | API Integration | 리포지토리 및 API의 Cypher 전환 (Phase D) | todo |
 | F06 | Session Deep Copy | 세션 생성 시 그래프 데이터 복제 로직 | done |
 | plan_0001 | Phase C & D Implementation | docs/dev/detail/plan_0001.md | done |
-| plan_0002 | EntityRepo Cypher Conversion | docs/dev/detail/plan_0002.md | todo |
+| plan_0002 | EntityRepo Cypher Conversion | docs/dev/detail/plan_0002.md | done |
 | plan_0003 | ScenarioRepo Cypher Conversion | docs/dev/detail/plan_0003.md | done |
 | plan_0004 | Graph Sync Refinement & Test Alignment | docs/dev/detail/plan_0004.md | done |
 <!-- PROJ_DASHBOARD_END -->
@@ -30,7 +30,7 @@
 ## TODO (Undone detail plans)
 
 - [x] docs/dev/detail/plan_0001.md
-- [ ] docs/dev/detail/plan_0002.md
+- [x] docs/dev/detail/plan_0002.md
 - [x] docs/dev/detail/plan_0003.md
 - [x] docs/dev/detail/plan_0004.md
 - [ ] docs/dev/detail/ref_0001.md

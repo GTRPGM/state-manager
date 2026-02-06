@@ -112,5 +112,21 @@
   - **Trigger Field Safety**: 공용 트리거 함수(`sync_entity_to_graph`)에서 `NEW` 레코드 접근 시 테이블별 필드 존재 여부를 반드시 체크해야 함 (`UndefinedColumnError` 방지).
   - **Cypher Map Pattern**: `CypherEngine`은 현재 `AS (result agtype)`와 같이 단일 컬럼 반환을 전제로 하므로, 복수 필드 조회 시에는 반드시 Cypher 맵(`{...}`)을 리턴해야 함.
   - **Pydantic Shadowing**: 모델 필드명으로 `str`, `int`, `type` 등을 사용하는 것은 가급적 피하고, 필요시 `Field(alias=...)`와 `populate_by_name=True` 설정을 통해 DB 컬럼명과 매핑해야 함.
+### plan_0002 - EntityRepository Cypher Conversion
+
+- Work (brief):
+  - EntityRepository의 NPC/Enemy CRUD에 명시적 Cypher 호출을 추가하고, 레거시 코드를 정리함.
+- Actions taken (detailed):
+  - **Cypher 쿼리 작성/정리**: `entity/npc/` 4개(`spawn`, `depart`, `return`, `remove`), `entity/enemy/` 3개(`spawn`, `remove`, `defeat`) 생성. 모든 속성을 Minimalist(id, name, active, tid, scenario_id)로 통일.
+  - **EntityRepository 전환**: `spawn_npc`, `spawn_enemy`에 SQL INSERT 후 명시적 Cypher MERGE 추가. `remove_npc`, `remove_enemy`에 누락되었던 Cypher 파일 생성으로 DELETE 보장.
+  - **Spawn 파라미터 버그 수정**: `data.get("npc_id")` → `data.get("scenario_npc_id")`, `data.get("enemy_id")` → `data.get("scenario_enemy_id")`로 수정.
+  - **Legacy JSONB 제거**: `defeated_enemy.sql`에서 `jsonb_set(state, ...)` 패턴을 제거하고 평탄화된 `hp = 0`으로 전환.
+  - **Inquiry Cypher 정리**: `get_session_npcs.cypher`, `get_session_enemies.cypher`에서 10개 이상의 레거시 스탯 필드를 제거하고 `{id: n.id}` 단일 반환으로 단순화. 필터 조건을 `is_departed`/`is_defeated` → `active` 속성으로 변경.
+  - **SQL RETURNING 정비**: `spawn_npc.sql`, `spawn_enemy.sql`의 RETURNING 절에 `scenario_npc_id`/`scenario_enemy_id`, `scenario_id`를 추가하여 Cypher MERGE에 필요한 데이터 제공.
+  - **테스트 추가**: `test_graph_sync_triggers.py`에 6개 테스트 추가 (spawn 그래프 검증, remove 삭제 검증, depart/return active 토글 검증, defeat active 검증).
+- What I learned / updated understanding:
+  - **AGE 단일 컬럼 제약**: `CypherEngine`이 `as (result ag_catalog.agtype)` 단일 컬럼으로 래핑하므로, Cypher RETURN은 반드시 단일 map(`{id: n.id, name: n.name}`)이어야 한다. `n.id as id, n.name as name` 형태는 다중 컬럼으로 인식되어 `DatatypeMismatchError` 발생.
+  - **Trigger + 명시적 Cypher 공존**: 트리거(Stage 300)가 MERGE로 노드를 생성하고, 이후 명시적 Cypher도 MERGE를 사용하면 멱등성이 보장되어 충돌 없이 공존 가능.
+  - **DELETE 트리거 부재**: SQL INSERT/UPDATE에는 `sync_entity_to_graph` 트리거가 있지만, DELETE에는 없으므로 `remove_*` 메서드에서 명시적 Cypher DETACH DELETE가 필수.
 
 <!-- PROJ_WORKNOTES_END -->
