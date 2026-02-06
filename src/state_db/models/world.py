@@ -59,6 +59,7 @@ class EntityRelationInfo(BaseModel):
     to_name: str
     relation_type: str
     affinity: Optional[int] = None
+    quantity: Optional[int] = None
     active: bool = True
     activated_turn: int = 0
     deactivated_turn: Optional[int] = None

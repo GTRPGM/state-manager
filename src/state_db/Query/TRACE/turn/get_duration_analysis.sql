@@ -6,7 +6,6 @@
 
 SELECT
     turn_number,
-    phase_at_turn,
     turn_type,
     created_at,
     LEAD(created_at) OVER (ORDER BY turn_number) AS next_turn_at,

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
@@ -46,6 +46,42 @@ class EntityRepository(BaseRepository):
         )
         # ResultMapper가 단일 Map 반환 시 Dict로 변환해줌
         return [EntityRelationInfo.model_validate(row) for row in results if row]
+
+    async def upsert_relation(
+        self,
+        session_id: str,
+        cause_entity_id: str,
+        effect_entity_id: str,
+        relation_type: str,
+        turn: int,
+        affinity_score: Optional[int] = None,
+        quantity: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """세션 내 엔티티 간 관계를 생성/갱신한다."""
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "relation" / "upsert_relation.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path,
+            {
+                "session_id": session_id,
+                "cause_entity_id": cause_entity_id,
+                "effect_entity_id": effect_entity_id,
+                "relation_type": relation_type,
+                "turn": turn,
+                "affinity_score": affinity_score,
+                "quantity": quantity,
+            },
+        )
+        if not results:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Relation endpoint nodes not found: "
+                    f"{cause_entity_id} -> {effect_entity_id}"
+                ),
+            )
+        return results[0]
 
     # Item
     async def get_session_items(self, session_id: str) -> List[ItemInfo]:

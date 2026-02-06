@@ -13,7 +13,10 @@ from .management_requests import (
 )
 from .mixins import EntityBaseMixin, SessionContextMixin, StateMixin
 from .requests import (
+    CommitRequest,
+    CommitUpdate,
     EnemyHPUpdateRequest,
+    EntityDiff,
     InventoryUpdateRequest,
     ItemEarnRequest,
     ItemUseRequest,
@@ -21,6 +24,7 @@ from .requests import (
     NPCAffinityUpdateRequest,
     PlayerHPUpdateRequest,
     PlayerStatsUpdateRequest,
+    RelationDiff,
 )
 from .scenario import (
     ScenarioActInject,
@@ -76,4 +80,8 @@ __all__ = [
     "EnemyHPUpdateRequest",
     "ItemEarnRequest",
     "ItemUseRequest",
+    "EntityDiff",
+    "RelationDiff",
+    "CommitUpdate",
+    "CommitRequest",
 ]

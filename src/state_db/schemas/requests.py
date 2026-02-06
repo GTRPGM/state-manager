@@ -148,12 +148,46 @@ class ItemUseRequest(BaseModel):
 class EntityDiff(BaseModel):
     """엔티티별 변경사항"""
 
-    entity_id: str = Field(..., description="엔티티 식별자 (player 또는 NPC/Enemy ID)")
+    entity_id: str = Field(
+        ...,
+        alias="state_entity_id",
+        description="엔티티 식별자 (player 또는 NPC/Enemy ID)",
+    )
     diff: Dict[str, Any] = Field(..., description="변경할 필드와 값")
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class RelationDiff(BaseModel):
+    """관계 변경사항 (Rule Engine 내부 스키마 호환)"""
+
+    cause_entity_id: str = Field(..., description="관계 원인 엔티티 ID")
+    effect_entity_id: str = Field(..., description="관계 결과 엔티티 ID")
+    type: str = Field(..., description="관계 타입")
+    affinity_score: int | None = Field(default=None, description="호감도 점수 변화")
+    quantity: int | None = Field(default=None, description="수량 변화")
+
+
+class CommitUpdate(BaseModel):
+    """GM/Rule Engine에서 전달하는 변경 데이터 래퍼"""
+
+    diffs: list[EntityDiff] = Field(
+        default_factory=list,
+        description="엔티티 변경 목록",
+    )
+    relations: list[RelationDiff] = Field(
+        default_factory=list,
+        description="관계 변경 목록",
+    )
 
 
 class CommitRequest(BaseModel):
     """일괄 상태 확정(Commit) 요청"""
 
     turn_id: str = Field(..., description="턴 식별자 (session_id:seq)")
-    diffs: list[EntityDiff] = Field(..., description="변경사항 목록")
+    update: CommitUpdate = Field(
+        default_factory=CommitUpdate,
+        description="변경 데이터",
+    )
+    diffs: list[EntityDiff] = Field(
+        default_factory=list, description="레거시 호환용 변경사항 목록"
+    )

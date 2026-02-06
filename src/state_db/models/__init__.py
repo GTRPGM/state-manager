@@ -12,6 +12,7 @@ from .entity import (
 from .player import (
     FullPlayerState,
     InventoryItem,
+    ItemBase,
     NPCAffinityUpdateResult,
     NPCRelation,
     PlayerHPUpdateResult,
@@ -39,6 +40,7 @@ __all__ = [
     "SessionStatus",
     "SessionInfo",
     "InventoryItem",
+    "ItemBase",
     "ItemInfo",
     "NPCInfo",
     "NPCRelation",

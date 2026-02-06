@@ -3,10 +3,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException
 
 from state_db.graph.cypher_engine import engine as cypher_engine
-from state_db.infrastructure import run_sql_command, run_sql_query
+from state_db.infrastructure import run_raw_query, run_sql_command, run_sql_query
 from state_db.models import (
     FullPlayerState,
     InventoryItem,
+    ItemBase,
     NPCAffinityUpdateResult,
     NPCRelation,
     PlayerHPUpdateResult,
@@ -17,6 +18,19 @@ from state_db.repositories.base import BaseRepository
 
 
 class PlayerRepository(BaseRepository):
+    async def _get_player_id_by_session(self, session_id: str) -> Optional[str]:
+        query = """
+            SELECT player_id
+            FROM player
+            WHERE session_id = $1::uuid
+            LIMIT 1
+        """
+        rows = await run_raw_query(query, [session_id])
+        if not rows:
+            return None
+        pid = rows[0].get("player_id")
+        return str(pid) if pid else None
+
     async def get_stats(self, player_id: str) -> PlayerStats:
         sql_path = self.query_dir / "INQUIRY" / "Player_stats.sql"
         result = await run_sql_query(sql_path, [player_id])
@@ -52,16 +66,61 @@ class PlayerRepository(BaseRepository):
             )
 
         relations = await self.get_npc_relations(player_id)
-        item_ids = await self.get_item_ids(player_id)
+        item_bases = await self.get_item_bases(player_id)
 
         return FullPlayerState(
             player=PlayerStateResponse(
                 hp=stats.hp,
                 gold=0,  # gold는 현재 스키마에 없으므로 0 기본값
-                items=item_ids,
+                items=item_bases,
             ),
             player_npc_relations=relations,
         )
+
+    async def get_item_bases(self, player_id: str) -> List[ItemBase]:
+        """플레이어 보유 아이템을 player API 계약(ItemBase) 형태로 반환."""
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+        rows = await run_sql_query(sql_path, [player_id])
+        if not rows:
+            return []
+        session_id = str(rows[0].get("session_id", ""))
+        if not session_id:
+            return []
+
+        inventory_items = await self.get_inventory(session_id)
+        item_ids = [str(item.item_id) for item in inventory_items if item.item_id]
+        if not item_ids:
+            return []
+
+        query = """
+            SELECT
+                item_id,
+                scenario_item_id,
+                name,
+                description,
+                item_type,
+                meta
+            FROM item
+            WHERE session_id = $1::uuid
+              AND item_id = ANY($2::uuid[])
+            ORDER BY name ASC
+        """
+        item_rows = await run_raw_query(query, [session_id, item_ids])
+
+        result: List[ItemBase] = []
+        for row in item_rows:
+            meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
+            result.append(
+                ItemBase(
+                    item_id=str(row.get("scenario_item_id") or row.get("item_id")),
+                    name=str(row.get("name", "")),
+                    description=row.get("description") or "",
+                    item_type=str(row.get("item_type", "misc")),
+                    meta=meta,
+                    is_stackable=bool(meta.get("is_stackable", True)),
+                )
+            )
+        return result
 
     async def update_hp(
         self, player_id: str, session_id: str, hp_change: int
@@ -86,12 +145,10 @@ class PlayerRepository(BaseRepository):
         self, session_id: str, include_inactive: bool = False
     ) -> Dict[str, Any]:
         """세션의 전체 컨텍스트(인벤토리 + 관계)를 한 번에 조회 (Cypher 기반)"""
-        # session에서 player_id 조회
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
-        rows = await run_sql_query(sql_path, [session_id])
-        if not rows:
+        # session_id로 player_id 조회
+        player_id = await self._get_player_id_by_session(session_id)
+        if not player_id:
             return {"items": [], "npcs": []}
-        player_id = str(rows[0].get("player_id", ""))
 
         cypher_path = str(self.query_dir / "CYPHER" / "inquiry" / "context.cypher")
         params = {
@@ -110,12 +167,8 @@ class PlayerRepository(BaseRepository):
 
     async def get_inventory(self, session_id: str) -> List[InventoryItem]:
         """플레이어 인벤토리 조회 (Cypher 기반)"""
-        # session에서 player_id 조회
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
-        rows = await run_sql_query(sql_path, [session_id])
-        if not rows:
-            return []
-        player_id = str(rows[0].get("player_id", ""))
+        # session_id로 player_id 조회
+        player_id = await self._get_player_id_by_session(session_id)
         if not player_id:
             return []
 
@@ -184,10 +237,6 @@ class PlayerRepository(BaseRepository):
                         npc_id=props.get("npc_id", props.get("value", "")),
                         npc_name=props.get("npc_name"),
                         affinity_score=props.get("affinity_score", 0),
-                        active=props.get("active", True),
-                        activated_turn=props.get("activated_turn", 0),
-                        deactivated_turn=props.get("deactivated_turn"),
-                        relation_type=props.get("relation_type", "neutral"),
                     )
                 )
         return relations
@@ -280,7 +329,7 @@ class PlayerRepository(BaseRepository):
 
     async def update_san(self, session_id: str, san_change: int) -> None:
         """이성(SAN) 수치 증분 업데이트"""
-        sql_path = self.query_dir / "UPDATE" / "player" / "update_player_san.sql"
+        sql_path = self.query_dir / "UPDATE" / "player" / "update_player_SAN.sql"
         await run_sql_query(sql_path, [session_id, san_change])
 
     # ============================================================

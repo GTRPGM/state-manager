@@ -152,11 +152,17 @@ async def get_session_detail(
 )
 async def get_session_context(
     session_id: str,
+    sequence_id: str | None = None,
+    include_inactive: bool = False,
 ) -> Dict[str, Any]:
     from state_db.services.state_service import StateService
 
     service = StateService()
-    result = await service.get_state_snapshot(session_id)
+    result = await service.get_state_snapshot(
+        session_id=session_id,
+        sequence_id=sequence_id,
+        include_inactive=include_inactive,
+    )
     return {"status": "success", "data": result}
 
 

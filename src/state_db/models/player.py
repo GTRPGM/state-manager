@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,14 +21,20 @@ class InventoryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ItemBase(BaseModel):
+    item_id: str
+    name: str
+    description: Optional[str] = ""
+    item_type: str
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    is_stackable: bool = True
+    model_config = ConfigDict(from_attributes=True)
+
+
 class NPCRelation(BaseModel):
     npc_id: Union[str, UUID]
     npc_name: Optional[str] = None
     affinity_score: int
-    active: bool = True
-    activated_turn: int = 0
-    deactivated_turn: Optional[int] = None
-    relation_type: str = "neutral"
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -51,13 +57,13 @@ class PlayerStats(BaseModel):
 class PlayerStateResponse(BaseModel):
     hp: int
     gold: int = 0
-    items: List[int] = []
+    items: List[ItemBase] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 
 class FullPlayerState(BaseModel):
     player: PlayerStateResponse
-    player_npc_relations: List[NPCRelation]
+    player_npc_relations: List[NPCRelation] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 

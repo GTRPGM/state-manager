@@ -549,6 +549,37 @@ class ScenarioRepository(BaseRepository):
             "player_npc_relations": player_npc_relations,
         }
 
+    async def get_sequence_entity_ids(
+        self, session_id: str, sequence_id: str
+    ) -> Dict[str, List[str]]:
+        """지정 시퀀스에 배치된 NPC/Enemy 인스턴스 ID 목록 조회."""
+        async with DatabaseManager.get_connection() as conn:
+            npc_rows = await conn.fetch(
+                """
+                SELECT npc_id
+                FROM npc
+                WHERE session_id = $1
+                  AND assigned_sequence_id = $2
+                """,
+                session_id,
+                sequence_id,
+            )
+            enemy_rows = await conn.fetch(
+                """
+                SELECT enemy_id
+                FROM enemy
+                WHERE session_id = $1
+                  AND assigned_sequence_id = $2
+                """,
+                session_id,
+                sequence_id,
+            )
+
+        return {
+            "npc_ids": [str(row["npc_id"]) for row in npc_rows],
+            "enemy_ids": [str(row["enemy_id"]) for row in enemy_rows],
+        }
+
     async def advance_act(
         self, session_id: str, next_act: int, next_act_id: str, next_sequence_id: str
     ) -> Dict[str, Any]:

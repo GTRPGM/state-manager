@@ -31,7 +31,9 @@ async def state_commit(
     """
     try:
         # turn_id format: session_id:seq
-        session_id = request.turn_id.split(":")[0]
+        session_id = request.turn_id.split(":")[0].strip()
+        if not session_id:
+            raise HTTPException(status_code=400, detail="Invalid turn_id")
 
         # 1. 초기 변경 데이터 세팅
         changes = {
@@ -41,10 +43,16 @@ async def state_commit(
 
         # 세션 정보에서 player_id 획득
         session_info = await service.session_repo.get_info(session_id)
-        changes["player_id"] = session_info.player_id
+        player_id = str(session_info.player_id)
+        changes["player_id"] = player_id
+
+        # update 래퍼 우선, 레거시 top-level diffs는 fallback
+        update_payload = request.update
+        diffs = update_payload.diffs if update_payload.diffs else request.diffs
+        relations = update_payload.relations
 
         # 2. GM의 Diffs를 내부 changes 딕셔너리로 매핑
-        for item in request.diffs:
+        for item in diffs:
             eid = item.entity_id.lower()
             diff = item.diff
 
@@ -54,7 +62,7 @@ async def state_commit(
                     changes[session_field] = diff[session_field]
 
             # 플레이어 데이터 처리
-            if eid == "player":
+            if eid == "player" or item.entity_id == player_id:
                 if "hp" in diff:
                     changes["player_hp"] = diff["hp"]
                 if "san" in diff:
@@ -63,7 +71,7 @@ async def state_commit(
                     changes["player_stats"] = diff["stats"]
 
             # NPC 호감도 처리
-            elif eid.startswith("npc"):
+            elif "affinity" in diff or eid.startswith("npc"):
                 if "affinity" in diff:
                     if "npc_affinity" not in changes:
                         changes["npc_affinity"] = {}
@@ -71,12 +79,24 @@ async def state_commit(
                     changes["npc_affinity"][item.entity_id] = diff["affinity"]
 
             # 적 HP 처리
-            elif eid.startswith("enemy"):
+            elif "hp" in diff or eid.startswith("enemy"):
                 if "hp" in diff:
                     if "enemy_hp" not in changes:
                         changes["enemy_hp"] = {}
                     # GM은 'enemy-1' 또는 UUID를 보낼 수 있음 (SQL에서 처리됨)
                     changes["enemy_hp"][item.entity_id] = diff["hp"]
+
+        if relations:
+            changes["relation_updates"] = [
+                {
+                    "cause_entity_id": rel.cause_entity_id,
+                    "effect_entity_id": rel.effect_entity_id,
+                    "type": rel.type,
+                    "affinity_score": rel.affinity_score,
+                    "quantity": rel.quantity,
+                }
+                for rel in relations
+            ]
 
         # 3. 변경 사항 일괄 저장
         result = await service.write_state_changes(session_id, changes)
@@ -92,6 +112,8 @@ async def state_commit(
                 "message": result.message,
             },
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Commit Failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Commit failed: {str(e)}") from e
