@@ -135,7 +135,7 @@ jobs:
             export DB_HOST="${{ secrets.DB_HOST }}"
             export DB_PORT="${{ secrets.DB_PORT }}"
             export DB_NAME="${{ secrets.DB_NAME }}"
-
+            export RULE_ENGINE_URL="http://rule-engine:8050/"
             # External Service URLs
 
             # Others
