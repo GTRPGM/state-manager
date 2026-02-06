@@ -12,6 +12,7 @@ from state_db.infrastructure import (
 from state_db.models import (
     EnemyHPUpdateResult,
     EnemyInfo,
+    EntityRelationInfo,
     ItemInfo,
     NPCDepartResult,
     NPCInfo,
@@ -33,6 +34,18 @@ class EntityRepository(BaseRepository):
     - 트리거(Stage 300): INSERT/UPDATE 시 자동 동기화
     - 명시적 Cypher: DELETE/spawn 시 그래프 노드 보장
     """
+
+    # Relation
+    async def get_all_relations(self, session_id: str) -> List[EntityRelationInfo]:
+        """세션 내 활성 엔티티 간의 모든 관계 조회"""
+        cypher_path = str(
+            self.query_dir / "CYPHER" / "inquiry" / "get_session_relations.cypher"
+        )
+        results = await cypher_engine.run_cypher(
+            cypher_path, {"session_id": session_id}
+        )
+        # ResultMapper가 단일 Map 반환 시 Dict로 변환해줌
+        return [EntityRelationInfo.model_validate(row) for row in results if row]
 
     # Item
     async def get_session_items(self, session_id: str) -> List[ItemInfo]:

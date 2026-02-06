@@ -13,20 +13,18 @@ from state_db.models import (
 from state_db.repositories import (
     EntityRepository,
     PlayerRepository,
-    ProgressRepository,
 )
 from state_db.schemas import (
     EnemyHPUpdateRequest,
     InventoryUpdateRequest,
     ItemEarnRequest,
     ItemUseRequest,
-    LocationUpdateRequest,
     NPCAffinityUpdateRequest,
     PlayerHPUpdateRequest,
     PlayerStatsUpdateRequest,
 )
 
-from .dependencies import get_entity_repo, get_player_repo, get_progress_repo
+from .dependencies import get_entity_repo, get_player_repo
 
 router = APIRouter(tags=["State Updates"])
 

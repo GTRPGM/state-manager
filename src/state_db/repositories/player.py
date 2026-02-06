@@ -148,10 +148,10 @@ class PlayerRepository(BaseRepository):
     async def update_inventory(
         self, player_id: str, item_id: int, quantity: int
     ) -> Dict[str, Any]:
-        sql_path = self.query_dir / "UPDATE" / "inventory" / "update_inventory.sql"
-        result = await run_sql_query(sql_path, [player_id, item_id, quantity])
-        if result:
-            return result[0]
+        # Legacy SQL 'update_inventory.sql' was removed as it was non-functional.
+        # This method is kept for API compatibility but currently does no operation.
+        # TODO: Implement Cypher-based set quantity if needed,
+        #       or deprecate this endpoint.
         return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
 
     async def get_npc_relations(

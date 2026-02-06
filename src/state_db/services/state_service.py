@@ -24,11 +24,15 @@ class StateService:
 
         player_stats = None
         graph_context = {"items": [], "npcs": [], "enemies": []}
+        relations = []
 
         if player_id:
             player_stats = await self.player_repo.get_stats(player_id)
             # Cypher 기반 통합 컨텍스트 조회 (Inventory, Relations, Enemies)
             graph_context = await self.player_repo.get_full_context(session_id)
+
+        # 전체 관계(Edge) 조회
+        relations = await self.entity_repo.get_all_relations(session_id)
 
         turn_info = await self.lifecycle_repo.get_turn(session_id)
 
@@ -39,6 +43,7 @@ class StateService:
             "npcs": graph_context.get("npcs", []),  # 하위 호환성 유지
             "enemies": graph_context.get("enemies", []),
             "inventory": graph_context.get("items", []),
+            "relations": relations,
             "turn": turn_info,
             "snapshot_timestamp": session_info.updated_at,
         }
