@@ -1,172 +1,97 @@
 -- ====================================================================
 -- L_graph.sql
--- Apache AGE Graph Synchronization Logic (Phase B)
+-- Apache AGE Graph Synchronization Logic (Stage 300 & 900)
 -- ====================================================================
 
--- 1. Entity Synchronization Trigger (SQL -> Graph)
+DROP FUNCTION IF EXISTS sync_entity_to_graph() CASCADE;
+
 CREATE OR REPLACE FUNCTION sync_entity_to_graph()
 RETURNS TRIGGER AS $func$
 DECLARE
     label_name text;
-    params_text text;
-    cypher_query text;
-    props_jsonb jsonb;
-    key text;
-    val jsonb;
-    set_clauses text[] := ARRAY[]::text[];
-    set_clause_str text;
+    is_active boolean := true;
+    target_id uuid;
+    target_name text;
+    target_tid text := 'none';
+    target_scid uuid;
 BEGIN
     IF TG_TABLE_NAME = 'player' THEN
-        label_name := 'Player';
-    ELSIF TG_TABLE_NAME = 'inventory' THEN
-        label_name := 'Inventory';
-    ELSIF TG_TABLE_NAME = 'item' THEN
-        label_name := 'Item';
+        label_name := 'Player'; target_id := NEW.player_id; target_name := NEW.name;
+        target_scid := NULL;
     ELSIF TG_TABLE_NAME = 'npc' THEN
-        label_name := 'NPC';
+        label_name := 'NPC'; target_id := NEW.npc_id; target_name := NEW.name;
+        target_tid := NEW.scenario_npc_id; target_scid := NEW.scenario_id;
+        is_active := NOT COALESCE(NEW.is_departed, false);
     ELSIF TG_TABLE_NAME = 'enemy' THEN
-        label_name := 'Enemy';
-    ELSE
-        RETURN NEW;
+        label_name := 'Enemy'; target_id := NEW.enemy_id; target_name := NEW.name;
+        target_tid := NEW.scenario_enemy_id; target_scid := NEW.scenario_id;
+        is_active := NOT COALESCE(NEW.is_defeated, false);
+    ELSIF TG_TABLE_NAME = 'inventory' THEN
+        label_name := 'Inventory'; target_id := NEW.inventory_id; target_name := 'Inventory';
+        target_scid := NULL;
+    ELSIF TG_TABLE_NAME = 'item' THEN
+        label_name := 'Item'; target_id := NEW.item_id; target_name := NEW.name;
+        target_tid := NEW.scenario_item_id; target_scid := NEW.scenario_id;
+    ELSE RETURN NEW;
     END IF;
 
-    -- Use jsonb_strip_nulls
-    props_jsonb := jsonb_strip_nulls(to_jsonb(NEW));
-
-    -- Prepare parameters map
-    params_text := jsonb_build_object(
-        'props', props_jsonb,
-        'id', props_jsonb->>(lower(label_name) || '_id')
-    )::text;
-
-    -- Build dynamic SET clause
-    FOR key, val IN SELECT * FROM jsonb_each(props_jsonb)
-    LOOP
-        -- format: n.key = $props.key
-        -- We use %I for key to handle special chars, and access map property via ["key"] for safety
-        -- AGE supports map["key"] syntax.
-        set_clauses := set_clauses || format('n.%I = $props["%s"]', key, key);
-    END LOOP;
-
-    IF array_length(set_clauses, 1) > 0 THEN
-        set_clause_str := 'SET ' || array_to_string(set_clauses, ', ');
-    ELSE
-        set_clause_str := '';
-    END IF;
-
-    -- Construct Cypher query
-    cypher_query := format('
-        MERGE (n:%s { %s_id: $id, session_id: $props.session_id })
-        %s
-    ', label_name, lower(label_name), set_clause_str);
-
-    -- Execute
     EXECUTE format('
-        SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
-    ', cypher_query)
-    USING params_text::ag_catalog.agtype;
+        SELECT * FROM ag_catalog.cypher(''state_db'', $$
+            MERGE (n:%s { id: %L, session_id: %L })
+            SET n.name = %L, n.active = %s, n.tid = %L, n.scenario_id = %L
+        $$) AS (result ag_catalog.agtype);
+    ', label_name, target_id::text, NEW.session_id::text, COALESCE(target_name, 'Unknown'), is_active::text, COALESCE(target_tid, 'none'), target_scid::text);
 
     RETURN NEW;
 END;
 $func$ LANGUAGE plpgsql;
 
--- Apply Triggers
-DROP TRIGGER IF EXISTS trg_sync_player_graph ON player;
-CREATE TRIGGER trg_sync_player_graph AFTER INSERT OR UPDATE ON player FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
+-- [Stage 300] Real-time Entity Sync
+DROP TRIGGER IF EXISTS trigger_300_sync_player_graph ON player;
+CREATE TRIGGER trigger_300_sync_player_graph AFTER INSERT OR UPDATE ON player FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
 
-DROP TRIGGER IF EXISTS trg_sync_inventory_graph ON inventory;
-CREATE TRIGGER trg_sync_inventory_graph AFTER INSERT OR UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
+DROP TRIGGER IF EXISTS trigger_310_sync_npc_graph ON npc;
+CREATE TRIGGER trigger_310_sync_npc_graph AFTER INSERT OR UPDATE ON npc FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
 
-DROP TRIGGER IF EXISTS trg_sync_item_graph ON item;
-CREATE TRIGGER trg_sync_item_graph AFTER INSERT OR UPDATE ON item FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
+DROP TRIGGER IF EXISTS trigger_320_sync_enemy_graph ON enemy;
+CREATE TRIGGER trigger_320_sync_enemy_graph AFTER INSERT OR UPDATE ON enemy FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
 
-DROP TRIGGER IF EXISTS trg_sync_npc_graph ON npc;
-CREATE TRIGGER trg_sync_npc_graph AFTER INSERT OR UPDATE ON npc FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
+DROP TRIGGER IF EXISTS trigger_330_sync_inventory_graph ON inventory;
+CREATE TRIGGER trigger_330_sync_inventory_graph AFTER INSERT OR UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
 
-DROP TRIGGER IF EXISTS trg_sync_enemy_graph ON enemy;
-CREATE TRIGGER trg_sync_enemy_graph AFTER INSERT OR UPDATE ON enemy FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
+DROP TRIGGER IF EXISTS trigger_340_sync_item_graph ON item;
+CREATE TRIGGER trigger_340_sync_item_graph AFTER INSERT OR UPDATE ON item FOR EACH ROW EXECUTE FUNCTION sync_entity_to_graph();
 
--- 2. Session Initialization (Copy Template Data)
+-- [Stage 900] Final Graph Relationship Cloning
+DROP FUNCTION IF EXISTS initialize_graph_data() CASCADE;
 CREATE OR REPLACE FUNCTION initialize_graph_data()
 RETURNS TRIGGER AS $func$
 DECLARE
     MASTER_SESSION_ID CONSTANT UUID := '00000000-0000-0000-0000-000000000000';
-    params_text text;
-    cypher_query text;
 BEGIN
-    params_text := jsonb_build_object(
-        'master_sid', MASTER_SESSION_ID,
-        'new_sid', NEW.session_id,
-        'scenario_id', NEW.scenario_id
-    )::text;
-
-    -- 1. Vertex Copy (NPC)
-    cypher_query := '
-        MATCH (v:NPC)
-        WHERE v.session_id = $master_sid AND v.scenario_id = $scenario_id
-        CREATE (v2:NPC)
-        SET v2 = properties(v)
-        SET v2.session_id = $new_sid
-    ';
+    -- RELATION 복제 (tid 매칭)
     EXECUTE format('
-        SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
-    ', cypher_query)
-    USING params_text::ag_catalog.agtype;
-
-    -- 2. Vertex Copy (Enemy)
-    cypher_query := '
-        MATCH (v:Enemy)
-        WHERE v.session_id = $master_sid AND v.scenario_id = $scenario_id
-        CREATE (v2:Enemy)
-        SET v2 = properties(v)
-        SET v2.session_id = $new_sid
-    ';
-    EXECUTE format('
-        SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
-    ', cypher_query)
-    USING params_text::ag_catalog.agtype;
-
-    -- 3. Vertex Copy (Item)
-    cypher_query := '
-        MATCH (v:Item)
-        WHERE v.session_id = $master_sid AND v.scenario_id = $scenario_id
-        CREATE (v2:Item)
-        SET v2 = properties(v)
-        SET v2.session_id = $new_sid
-    ';
-    EXECUTE format('
-        SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
-    ', cypher_query)
-    USING params_text::ag_catalog.agtype;
-
-    -- 4. Edge Copy (RELATION)
-    cypher_query := '
-        MATCH (v1)-[r:RELATION]->(v2)
-        WHERE r.session_id = $master_sid AND r.scenario_id = $scenario_id
-        MATCH (nv1), (nv2)
-        WHERE nv1.session_id = $new_sid
-          AND (nv1.scenario_npc_id = v1.scenario_npc_id OR nv1.scenario_enemy_id = v1.scenario_enemy_id OR nv1.scenario_item_id = v1.scenario_item_id)
-          AND nv2.session_id = $new_sid
-          AND (nv2.scenario_npc_id = v2.scenario_npc_id OR nv2.scenario_enemy_id = v2.scenario_enemy_id OR nv2.scenario_item_id = v2.scenario_item_id)
-        CREATE (nv1)-[nr:RELATION]->(nv2)
-        SET nr = properties(r)
-        SET nr.session_id = $new_sid
-    ';
-    EXECUTE format('
-        SELECT * FROM ag_catalog.cypher(''state_db'', $$%s$$, $1) AS (result ag_catalog.agtype);
-    ', cypher_query)
-    USING params_text::ag_catalog.agtype;
-
-    RAISE NOTICE '[Graph] Initialized graph nodes and edges for session %', NEW.session_id;
+        SELECT * FROM ag_catalog.cypher(''state_db'', $$
+            MATCH (v1)-[r:RELATION]->(v2)
+            WHERE r.session_id = %L AND r.scenario_id = %L
+            MATCH (nv1 {session_id: %L}), (nv2 {session_id: %L})
+            WHERE nv1.tid = v1.tid AND nv2.tid = v2.tid
+              AND nv1.tid <> ''none''
+            CREATE (nv1)-[nr:RELATION {
+                relation_type: r.relation_type,
+                affinity: r.affinity,
+                session_id: %L,
+                scenario_id: %L,
+                active: true,
+                activated_turn: 0
+            }]->(nv2)
+        $$) AS (result ag_catalog.agtype);
+    ', MASTER_SESSION_ID::text, NEW.scenario_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text, NEW.scenario_id::text);
 
     RETURN NEW;
 END;
 $func$ LANGUAGE plpgsql;
 
--- Trigger for Session Init
-DROP TRIGGER IF EXISTS trigger_09_initialize_graph ON session;
-CREATE TRIGGER trigger_09_initialize_graph
-    AFTER INSERT ON session
-    FOR EACH ROW
-    WHEN (NEW.session_id <> '00000000-0000-0000-0000-000000000000')
-    EXECUTE FUNCTION initialize_graph_data();
+-- 가장 마지막에 실행되어야 하므로 900번 부여
+DROP TRIGGER IF EXISTS trigger_900_session_finalize_graph ON session;
+CREATE TRIGGER trigger_900_session_finalize_graph AFTER INSERT ON session FOR EACH ROW WHEN (NEW.session_id <> '00000000-0000-0000-0000-000000000000') EXECUTE FUNCTION initialize_graph_data();

@@ -46,8 +46,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 트리거 설정
-DROP TRIGGER IF EXISTS trigger_05_initialize_items ON session;
-CREATE TRIGGER trigger_05_initialize_items
+DROP TRIGGER IF EXISTS trigger_200_session_copy_items ON session;
+CREATE TRIGGER trigger_200_session_copy_items
     AFTER INSERT ON session
     FOR EACH ROW
     -- 시스템 세션(Session 0) 자체 생성 시에는 복제를 수행하지 않음

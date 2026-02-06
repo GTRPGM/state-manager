@@ -71,8 +71,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_02_initialize_turn ON session;
-CREATE TRIGGER trigger_02_initialize_turn
+DROP TRIGGER IF EXISTS trigger_100_session_init_turn ON session;
+CREATE TRIGGER trigger_100_session_init_turn
     AFTER INSERT ON session
     FOR EACH ROW
     EXECUTE FUNCTION initialize_turn();
