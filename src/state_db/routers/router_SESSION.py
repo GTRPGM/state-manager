@@ -271,3 +271,14 @@ async def get_current_sequence_details_endpoint(
 ) -> Dict[str, Any]:
     result = await repo.get_current_sequence_details(session_id)
     return {"status": "success", "data": result}
+
+
+@router.get(
+    "/session/{session_id}/act/details",
+    response_model=WrappedResponse[Dict[str, Any]],
+)
+async def get_current_act_details_endpoint(
+    session_id: str, repo: Annotated[ScenarioRepository, Depends(get_scenario_repo)]
+) -> Dict[str, Any]:
+    result = await repo.get_current_act_details(session_id)
+    return {"status": "success", "data": result}

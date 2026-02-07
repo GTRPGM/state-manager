@@ -112,7 +112,14 @@ async def state_commit(
                 "message": result.message,
             },
         }
-    except HTTPException:
+    except HTTPException as e:
+        if e.status_code == 404:
+            logger.error(
+                "Commit 404: turn_id=%s parsed_session_id=%s detail=%s",
+                request.turn_id,
+                request.turn_id.split(":")[0].strip() if request.turn_id else "",
+                e.detail,
+            )
         raise
     except Exception as e:
         logger.error(f"Commit Failed: {str(e)}")
