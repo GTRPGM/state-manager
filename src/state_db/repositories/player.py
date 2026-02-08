@@ -177,7 +177,7 @@ class PlayerRepository(BaseRepository):
             cypher_path, {"player_id": player_id, "session_id": session_id}
         )
 
-        inventory_items = []
+        inventory_items: List[InventoryItem] = []
         for row in results:
             if row and isinstance(row, dict):
                 props = row.get("properties", row)
@@ -194,16 +194,104 @@ class PlayerRepository(BaseRepository):
                         deactivated_turn=props.get("deactivated_turn"),
                     )
                 )
+
+        # Enrich inventory with SQL item metadata (name/scenario_item_id/type),
+        # because Cypher edge query may only include item_id/rule_id/quantity.
+        item_ids = [str(i.item_id) for i in inventory_items if i.item_id]
+        if not item_ids:
+            return inventory_items
+
+        item_rows = await run_raw_query(
+            """
+            SELECT
+                item_id,
+                scenario_item_id,
+                name,
+                description,
+                item_type
+            FROM item
+            WHERE session_id = $1::uuid
+              AND item_id = ANY($2::uuid[])
+            """,
+            [session_id, item_ids],
+        )
+        item_map: Dict[str, Dict[str, Any]] = {
+            str(r.get("item_id")): r for r in (item_rows or []) if r.get("item_id")
+        }
+
+        for inv in inventory_items:
+            row = item_map.get(str(inv.item_id))
+            if not row:
+                continue
+            inv.scenario_item_id = (
+                str(row.get("scenario_item_id"))
+                if row.get("scenario_item_id") is not None
+                else inv.scenario_item_id
+            )
+            if not inv.item_name:
+                inv.item_name = row.get("name")
+            if not inv.description:
+                inv.description = row.get("description")
+            if not inv.item_type:
+                inv.item_type = row.get("item_type")
         return inventory_items
 
     async def update_inventory(
-        self, player_id: str, item_id: int, quantity: int
+        self, player_id: str, rule_id: int, quantity: int
     ) -> Dict[str, Any]:
-        # Legacy SQL 'update_inventory.sql' was removed as it was non-functional.
-        # This method is kept for API compatibility but currently does no operation.
-        # TODO: Implement Cypher-based set quantity if needed,
-        #       or deprecate this endpoint.
-        return {"player_id": player_id, "item_id": item_id, "quantity": quantity}
+        """Legacy inventory endpoint adapter.
+
+        Converts rule_id-based requests to item UUID-based earn/use operations.
+        """
+        if quantity == 0:
+            return {
+                "player_id": player_id,
+                "rule_id": rule_id,
+                "quantity": quantity,
+                "skipped": True,
+                "reason": "quantity is zero",
+            }
+
+        # player_id -> session_id
+        session_sql = self.query_dir / "INQUIRY" / "session" / "Session_player.sql"
+        session_rows = await run_sql_query(session_sql, [player_id])
+        if not session_rows:
+            raise HTTPException(status_code=404, detail="Player session not found")
+        session_id = str(session_rows[0].get("session_id", ""))
+        if not session_id:
+            raise HTTPException(status_code=404, detail="Session not found for player")
+
+        # rule_id -> item state entity UUID (session scope)
+        item_rows = await run_raw_query(
+            """
+            SELECT item_id
+            FROM item
+            WHERE session_id = $1::uuid
+              AND rule_id = $2
+            ORDER BY created_at ASC
+            LIMIT 1
+            """,
+            [session_id, rule_id],
+        )
+        if not item_rows:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Item not found in session for rule_id={rule_id}",
+            )
+        item_uuid = str(item_rows[0].get("item_id", ""))
+        if not item_uuid:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Invalid item mapping for rule_id={rule_id}",
+            )
+
+        if quantity > 0:
+            result = await self.earn_item(session_id, player_id, item_uuid, quantity)
+        else:
+            result = await self.use_item(session_id, player_id, item_uuid, abs(quantity))
+
+        result["rule_id"] = rule_id
+        return result
 
     async def get_npc_relations(
         self, player_id: str, session_id: Optional[str] = None

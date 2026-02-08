@@ -83,6 +83,17 @@ class PlayerNPCRelationInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SequenceItemInfo(BaseModel):
+    item_id: Union[str, UUID]
+    scenario_item_id: str
+    name: str
+    description: Optional[str] = None
+    item_type: Optional[str] = None
+    meta: JsonField = {}
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SequenceDetailInfo(BaseModel):
     """시퀀스 상세 정보 (엔티티 및 관계 포함)"""
 
@@ -98,6 +109,7 @@ class SequenceDetailInfo(BaseModel):
     # 시퀀스 내 엔티티
     npcs: List[SequenceEntityInfo] = []
     enemies: List[SequenceEntityInfo] = []
+    items: List[SequenceItemInfo] = []
     # 엔티티 간 관계 (NPC-NPC, NPC-Enemy 등)
     entity_relations: List[EntityRelationInfo] = []
     # 플레이어-NPC 호감도 관계

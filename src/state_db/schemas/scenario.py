@@ -80,6 +80,9 @@ class ScenarioSequenceInject(BaseModel):
     description: Optional[str] = Field(default=None, description="시퀀스 설명")
     goal: Optional[str] = Field(default=None, description="목표")
     exit_triggers: List[str] = Field(default_factory=list, description="탈출/전환 조건")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="시퀀스 메타데이터 (예: sequence_type)"
+    )
     npcs: List[str] = Field(default_factory=list, description="소속 NPC ID 리스트")
     enemies: List[str] = Field(default_factory=list, description="소속 적 ID 리스트")
     items: List[str] = Field(default_factory=list, description="소속 아이템 ID 리스트")
@@ -204,6 +207,13 @@ class ScenarioInfo(BaseModel):
     scenario_id: Union[str, UUID]
     title: str
     description: Optional[str] = None
+    difficulty: Optional[str] = None
+    genre: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    acts: List[Dict[str, Any]] = Field(default_factory=list)
+    sequences: List[Dict[str, Any]] = Field(default_factory=list)
+    npcs: List[Dict[str, Any]] = Field(default_factory=list)
+    enemies: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

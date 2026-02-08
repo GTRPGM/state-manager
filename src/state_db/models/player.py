@@ -8,9 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class InventoryItem(BaseModel):
     player_id: Optional[str] = None
     item_id: Union[str, UUID]
+    scenario_item_id: Optional[str] = None
     rule_id: int
     item_name: Optional[str] = None
     description: Optional[str] = None
+    item_type: Optional[str] = None
     quantity: int
     active: bool = True
     activated_turn: int = 0

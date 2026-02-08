@@ -110,8 +110,8 @@ class ScenarioRepository(BaseRepository):
                         """
                         INSERT INTO scenario_sequence (
                             scenario_id, sequence_id, sequence_name,
-                            location_name, description, goal, exit_triggers
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            location_name, description, goal, exit_triggers, metadata
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                         """,
                         scenario_id,
                         seq.id,
@@ -120,6 +120,7 @@ class ScenarioRepository(BaseRepository):
                         seq.description,
                         seq.goal,
                         json.dumps(seq.exit_triggers),
+                        json.dumps(seq.metadata or {}),
                     )
 
                     # 4-1. NPCs (3-ID 체계: npc_id(UUID),
@@ -258,6 +259,13 @@ class ScenarioRepository(BaseRepository):
 
                 # 5. Items (SQL + Validation - 3-ID 체계:
                 # item_id(UUID), scenario_item_id(str), rule_id(int))
+                item_to_sequences: Dict[str, List[str]] = {}
+                sequence_location_by_id: Dict[str, Optional[str]] = {}
+                for seq in request.sequences:
+                    sequence_location_by_id[seq.id] = seq.location_name
+                    for seq_item_id in seq.items:
+                        item_to_sequences.setdefault(seq_item_id, []).append(seq.id)
+
                 for item in request.items:
                     # Validate before generating UUID (same pattern as NPC/Enemy)
                     node_props = {
@@ -275,6 +283,18 @@ class ScenarioRepository(BaseRepository):
                     item_id = str(uuid.uuid4())
 
                     # SQL Insert
+                    item_meta = dict(item.meta or {})
+                    assigned_sequence_ids = item_to_sequences.get(item.scenario_item_id, [])
+                    if assigned_sequence_ids:
+                        item_meta.setdefault("assigned_sequence_id", assigned_sequence_ids[0])
+                        item_meta.setdefault(
+                            "assigned_sequence_ids", assigned_sequence_ids
+                        )
+                        first_seq = assigned_sequence_ids[0]
+                        first_location = sequence_location_by_id.get(first_seq)
+                        if first_location:
+                            item_meta.setdefault("assigned_location", first_location)
+
                     await conn.execute(
                         """
                         INSERT INTO item (
@@ -291,7 +311,7 @@ class ScenarioRepository(BaseRepository):
                         item.name,
                         item.description,
                         item.item_type,
-                        json.dumps(item.meta),
+                        item_meta,
                     )
                     # Note: Item Graph Nodes are typically created on demand
                     # (Inventory) or placed in world.
@@ -352,7 +372,198 @@ class ScenarioRepository(BaseRepository):
 
         result = await run_raw_query(query, [scenario_id])
         if result:
-            return result[0]
+            scenario = dict(result[0])
+
+            acts = await run_raw_query(
+                """
+                SELECT
+                    act_id,
+                    act_name,
+                    act_description,
+                    exit_criteria,
+                    sequence_ids
+                FROM scenario_act
+                WHERE scenario_id = $1::uuid
+                ORDER BY act_id ASC
+                """,
+                [scenario_id],
+            )
+            scenario["acts"] = [
+                {
+                    "id": row.get("act_id"),
+                    "name": row.get("act_name"),
+                    "description": row.get("act_description"),
+                    "exit_criteria": row.get("exit_criteria"),
+                    "sequences": row.get("sequence_ids") or [],
+                }
+                for row in (acts or [])
+            ]
+
+            sequences = await run_raw_query(
+                """
+                SELECT
+                    sequence_id,
+                    sequence_name,
+                    location_name,
+                    description,
+                    goal,
+                    exit_triggers,
+                    metadata
+                FROM scenario_sequence
+                WHERE scenario_id = $1::uuid
+                ORDER BY sequence_id ASC
+                """,
+                [scenario_id],
+            )
+            master_session_id = "00000000-0000-0000-0000-000000000000"
+            npc_seq_rows = await run_raw_query(
+                """
+                SELECT assigned_sequence_id, scenario_npc_id
+                FROM npc
+                WHERE scenario_id = $1::uuid
+                  AND session_id = $2::uuid
+                  AND assigned_sequence_id IS NOT NULL
+                """,
+                [scenario_id, master_session_id],
+            )
+            enemy_seq_rows = await run_raw_query(
+                """
+                SELECT assigned_sequence_id, scenario_enemy_id
+                FROM enemy
+                WHERE scenario_id = $1::uuid
+                  AND session_id = $2::uuid
+                  AND assigned_sequence_id IS NOT NULL
+                """,
+                [scenario_id, master_session_id],
+            )
+            item_seq_rows = await run_raw_query(
+                """
+                SELECT DISTINCT assigned_sequence_id, scenario_item_id
+                FROM (
+                    SELECT
+                        COALESCE(
+                            NULLIF(meta->>'assigned_sequence_id', ''),
+                            NULLIF(meta->>'assigned_sequence', ''),
+                            NULLIF(meta->>'sequence_id', '')
+                        ) AS assigned_sequence_id,
+                        scenario_item_id
+                    FROM item
+                    WHERE scenario_id = $1::uuid
+                      AND session_id = $2::uuid
+
+                    UNION ALL
+
+                    SELECT
+                        jsonb_array_elements_text(
+                            COALESCE(meta->'assigned_sequence_ids', '[]'::jsonb)
+                        ) AS assigned_sequence_id,
+                        scenario_item_id
+                    FROM item
+                    WHERE scenario_id = $1::uuid
+                      AND session_id = $2::uuid
+                ) mapped
+                WHERE assigned_sequence_id IS NOT NULL
+                  AND assigned_sequence_id <> ''
+                """,
+                [scenario_id, master_session_id],
+            )
+            npcs_by_seq: Dict[str, set[str]] = {}
+            for row in npc_seq_rows or []:
+                seq_id = row.get("assigned_sequence_id")
+                npc_id = row.get("scenario_npc_id")
+                if not seq_id or not npc_id:
+                    continue
+                npcs_by_seq.setdefault(str(seq_id), set()).add(str(npc_id))
+
+            enemies_by_seq: Dict[str, set[str]] = {}
+            for row in enemy_seq_rows or []:
+                seq_id = row.get("assigned_sequence_id")
+                enemy_id = row.get("scenario_enemy_id")
+                if not seq_id or not enemy_id:
+                    continue
+                enemies_by_seq.setdefault(str(seq_id), set()).add(str(enemy_id))
+
+            items_by_seq: Dict[str, set[str]] = {}
+            for row in item_seq_rows or []:
+                seq_id = row.get("assigned_sequence_id")
+                item_id = row.get("scenario_item_id")
+                if not seq_id or not item_id:
+                    continue
+                items_by_seq.setdefault(str(seq_id), set()).add(str(item_id))
+
+            scenario["sequences"] = [
+                {
+                    "id": row.get("sequence_id"),
+                    "name": row.get("sequence_name"),
+                    "location_name": row.get("location_name"),
+                    "description": row.get("description"),
+                    "goal": row.get("goal"),
+                    "exit_triggers": row.get("exit_triggers") or [],
+                    "metadata": row.get("metadata") or {},
+                    "npcs": sorted(
+                        npcs_by_seq.get(str(row.get("sequence_id")), set())
+                    ),
+                    "enemies": sorted(
+                        enemies_by_seq.get(str(row.get("sequence_id")), set())
+                    ),
+                    "items": sorted(
+                        items_by_seq.get(str(row.get("sequence_id")), set())
+                    ),
+                }
+                for row in (sequences or [])
+            ]
+
+            npcs = await run_raw_query(
+                """
+                SELECT scenario_npc_id, name, description
+                FROM npc
+                WHERE scenario_id = $1::uuid
+                  AND session_id = $2::uuid
+                ORDER BY scenario_npc_id ASC
+                """,
+                [scenario_id, master_session_id],
+            )
+            npc_map: Dict[str, Dict[str, Any]] = {}
+            for row in npcs or []:
+                sid = row.get("scenario_npc_id")
+                if not sid:
+                    continue
+                npc_map.setdefault(
+                    str(sid),
+                    {
+                        "scenario_npc_id": sid,
+                        "name": row.get("name"),
+                        "description": row.get("description"),
+                    },
+                )
+            scenario["npcs"] = list(npc_map.values())
+
+            enemies = await run_raw_query(
+                """
+                SELECT scenario_enemy_id, name, description
+                FROM enemy
+                WHERE scenario_id = $1::uuid
+                  AND session_id = $2::uuid
+                ORDER BY scenario_enemy_id ASC
+                """,
+                [scenario_id, master_session_id],
+            )
+            enemy_map: Dict[str, Dict[str, Any]] = {}
+            for row in enemies or []:
+                sid = row.get("scenario_enemy_id")
+                if not sid:
+                    continue
+                enemy_map.setdefault(
+                    str(sid),
+                    {
+                        "scenario_enemy_id": sid,
+                        "name": row.get("name"),
+                        "description": row.get("description"),
+                    },
+                )
+            scenario["enemies"] = list(enemy_map.values())
+
+            return scenario
         raise HTTPException(status_code=404, detail="Scenario not found")
 
     async def get_current_context(self, session_id: str) -> Dict[str, Any]:
@@ -463,7 +674,43 @@ class ScenarioRepository(BaseRepository):
                 for row in enemies_rows
             ]
 
-            # 4. 엔티티 간 관계 조회 (Apache AGE Graph)
+            # 4. 현재 시퀀스 아이템 조회 (meta의 시퀀스 배치 정보 기준)
+            items_rows = await conn.fetch(
+                """
+                SELECT item_id, scenario_item_id, name, description, item_type, meta
+                FROM item
+                WHERE session_id = $1
+                  AND (
+                    COALESCE(
+                        NULLIF(meta->>'assigned_sequence_id', ''),
+                        NULLIF(meta->>'assigned_sequence', ''),
+                        NULLIF(meta->>'sequence_id', '')
+                    ) = $2
+                    OR EXISTS (
+                        SELECT 1
+                        FROM jsonb_array_elements_text(
+                            COALESCE(meta->'assigned_sequence_ids', '[]'::jsonb)
+                        ) AS sid(seq_id)
+                        WHERE sid.seq_id = $2
+                    )
+                  )
+                """,
+                session_id,
+                current_sequence_id,
+            )
+            items = [
+                {
+                    "item_id": str(row["item_id"]),
+                    "scenario_item_id": row["scenario_item_id"],
+                    "name": row["name"],
+                    "description": row["description"],
+                    "item_type": row["item_type"],
+                    "meta": row["meta"] or {},
+                }
+                for row in items_rows
+            ]
+
+            # 5. 엔티티 간 관계 조회 (Apache AGE Graph)
             entity_relations = []
             scenario_entity_ids = [n["scenario_entity_id"] for n in npcs] + [
                 e["scenario_entity_id"] for e in enemies
@@ -505,7 +752,7 @@ class ScenarioRepository(BaseRepository):
                             }
                         )
 
-            # 5. 플레이어-NPC 관계 (Graph 기반 조회)
+            # 6. 플레이어-NPC 관계 (Graph 기반 조회)
             player_npc_relations = []
             player_row = await conn.fetchrow(
                 "SELECT player_id FROM player WHERE session_id = $1 LIMIT 1",
@@ -545,6 +792,7 @@ class ScenarioRepository(BaseRepository):
             **sequence_info,
             "npcs": npcs,
             "enemies": enemies,
+            "items": items,
             "entity_relations": entity_relations,
             "player_npc_relations": player_npc_relations,
         }
