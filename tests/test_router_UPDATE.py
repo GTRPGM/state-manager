@@ -200,7 +200,7 @@ async def test_earn_item(async_client: AsyncClient):
             json={
                 "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
-                "state_entity_id": MOCK_ITEM_ENTITY_ID,
+                "item_id": MOCK_ITEM_ENTITY_ID,
                 "quantity": 3,
             },
         )
@@ -229,7 +229,7 @@ async def test_use_item(async_client: AsyncClient):
             json={
                 "session_id": MOCK_SESSION_ID,
                 "player_id": MOCK_PLAYER_ID,
-                "state_entity_id": MOCK_ITEM_ENTITY_ID,
+                "item_id": MOCK_ITEM_ENTITY_ID,
                 "quantity": 1,
             },
         )
@@ -304,7 +304,7 @@ async def test_earn_item_invalid_uuid_returns_422(async_client: AsyncClient):
         json={
             "session_id": "x",
             "player_id": "x",
-            "state_entity_id": MOCK_ITEM_ENTITY_ID,
+            "item_id": MOCK_ITEM_ENTITY_ID,
             "quantity": 1,
         },
     )
@@ -318,7 +318,7 @@ async def test_use_item_invalid_uuid_returns_422(async_client: AsyncClient):
         json={
             "session_id": "x",
             "player_id": "x",
-            "state_entity_id": MOCK_ITEM_ENTITY_ID,
+            "item_id": MOCK_ITEM_ENTITY_ID,
             "quantity": 1,
         },
     )

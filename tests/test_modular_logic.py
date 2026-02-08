@@ -147,13 +147,13 @@ async def test_step5_item_earn_logic(real_db_client: AsyncClient, scenario_paylo
     assert items, "session items should not be empty"
     item_id = items[0]["item_id"]
 
-    # 아이템 획득 시도 (state_entity_id 기반)
+    # 아이템 획득 시도 (item_id 기반)
     resp = await real_db_client.post(
         "/state/player/item/earn",
         json={
             "session_id": sid,
             "player_id": pid,
-            "state_entity_id": item_id,
+            "item_id": item_id,
             "quantity": 5,
         },
     )

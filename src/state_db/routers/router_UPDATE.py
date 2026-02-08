@@ -138,7 +138,7 @@ async def earn_item_endpoint(
     result = await repo.earn_item(
         str(request.session_id),
         str(request.player_id),
-        str(request.state_entity_id) if request.state_entity_id else None,
+        str(request.item_id) if request.item_id else None,
         request.quantity,
     )
     return {"status": "success", "data": result}
@@ -152,7 +152,7 @@ async def use_item_endpoint(
     result = await repo.use_item(
         str(request.session_id),
         str(request.player_id),
-        str(request.state_entity_id) if request.state_entity_id else None,
+        str(request.item_id) if request.item_id else None,
         request.quantity,
     )
     return {"status": "success", "data": result}

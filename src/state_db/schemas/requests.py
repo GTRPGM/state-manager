@@ -111,9 +111,8 @@ class ItemEarnRequest(BaseModel):
 
     session_id: UUID = Field(..., description="세션 UUID")
     player_id: UUID = Field(..., description="플레이어 UUID")
-    state_entity_id: UUID | None = Field(
+    item_id: UUID | None = Field(
         default=None,
-        alias="item_id",
         description="아이템 상태 엔티티 ID(UUID)",
     )
     rule_id: int | None = Field(
@@ -123,12 +122,11 @@ class ItemEarnRequest(BaseModel):
     quantity: int = Field(..., description="획득 수량")
 
     model_config = ConfigDict(
-        populate_by_name=True,
         json_schema_extra={
             "example": {
                 "session_id": "76502a46-4f97-4878-953b-f9afd8919f19",
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
-                "state_entity_id": "4f70f42f-8b6f-4fc2-9a6f-2c2e87046c11",
+                "item_id": "4f70f42f-8b6f-4fc2-9a6f-2c2e87046c11",
                 "quantity": 2,
             }
         },
@@ -140,9 +138,8 @@ class ItemUseRequest(BaseModel):
 
     session_id: UUID = Field(..., description="세션 UUID")
     player_id: UUID = Field(..., description="플레이어 UUID")
-    state_entity_id: UUID | None = Field(
+    item_id: UUID | None = Field(
         default=None,
-        alias="item_id",
         description="아이템 상태 엔티티 ID(UUID)",
     )
     rule_id: int | None = Field(
@@ -152,12 +149,11 @@ class ItemUseRequest(BaseModel):
     quantity: int = Field(..., description="사용 수량")
 
     model_config = ConfigDict(
-        populate_by_name=True,
         json_schema_extra={
             "example": {
                 "session_id": "76502a46-4f97-4878-953b-f9afd8919f19",
                 "player_id": "ed0234e3-ac5a-49ab-adc2-bab72f01953d",
-                "state_entity_id": "4f70f42f-8b6f-4fc2-9a6f-2c2e87046c11",
+                "item_id": "4f70f42f-8b6f-4fc2-9a6f-2c2e87046c11",
                 "quantity": 1,
             }
         },

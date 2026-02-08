@@ -144,7 +144,7 @@ async def test_full_lifecycle_db_logic(real_db_client: AsyncClient):
         json={
             "session_id": session_id,
             "player_id": player_id,
-            "state_entity_id": item_id,
+            "item_id": item_id,
             "quantity": 5,
         },
     )

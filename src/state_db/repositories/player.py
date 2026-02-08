@@ -134,10 +134,8 @@ class PlayerRepository(BaseRepository):
     async def update_stats(
         self, player_id: str, session_id: str, stat_changes: Dict[str, int]
     ) -> PlayerStats:
-        import json
-
         sql_path = self.query_dir / "UPDATE" / "player" / "update_player_stats.sql"
-        params = [player_id, session_id, json.dumps(stat_changes)]
+        params = [player_id, session_id, stat_changes]
         await run_sql_command(sql_path, params)
         return await self.get_stats(player_id)
 
@@ -390,7 +388,7 @@ class PlayerRepository(BaseRepository):
                 "quantity": quantity,
                 "total_quantity": 0,
                 "skipped": True,
-                "reason": "state_entity_id(item_id) was not provided",
+                "reason": "item_id was not provided",
             }
 
         # 필요한 ID들 조회
@@ -415,7 +413,7 @@ class PlayerRepository(BaseRepository):
                     "quantity": quantity,
                     "total_quantity": 0,
                     "skipped": True,
-                    "reason": "item state_entity_id not found in session",
+                    "reason": "item_id not found in session",
                 }
             raise
 
@@ -453,7 +451,7 @@ class PlayerRepository(BaseRepository):
                 "remaining_quantity": 0,
                 "active": False,
                 "skipped": True,
-                "reason": "state_entity_id(item_id) was not provided",
+                "reason": "item_id was not provided",
             }
 
         # 필요한 ID들 조회
@@ -481,7 +479,7 @@ class PlayerRepository(BaseRepository):
                     "remaining_quantity": 0,
                     "active": False,
                     "skipped": True,
-                    "reason": "item state_entity_id not found in session",
+                    "reason": "item_id not found in session",
                 }
             raise
 
