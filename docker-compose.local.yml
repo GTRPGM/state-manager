@@ -1,54 +1,30 @@
 services:
-  db:
-    image: ghcr.io/gtrpgm/postgres-ex:latest
-    container_name: gtrpgm-db
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=parking_db
-    ports:
-      - "5435:5432"
-    networks:
-      - gtrpgm-net
-
-  # Mock Rule Engine (로컬 테스트용)
-  rule-engine:
-    image: python:3.11-alpine
-    container_name: mock-rule-engine
-    command: ["python", "-c", "from http.server import HTTPServer, BaseHTTPRequestHandler; import json; H=type('H',(BaseHTTPRequestHandler,),{'do_GET':lambda s:(s.send_response(200),s.send_header('Content-Type','application/json'),s.end_headers(),s.wfile.write(b'{\"status\":\"success\"}')),'do_POST':lambda s:(s.send_response(200),s.send_header('Content-Type','application/json'),s.end_headers(),s.wfile.write(b'{\"status\":\"success\"}')),'log_message':lambda s,f,*a:print(f'[Mock] {a[0]}')}); print('Mock Rule Engine on 8050'); HTTPServer(('0.0.0.0',8050),H).serve_forever()"]
-    ports:
-      - "8050:8050"
-    networks:
-      - gtrpgm-net
-
   state-manager:
     build: .
     container_name: state-manager
     restart: unless-stopped
-    depends_on:
-      - db
-      - rule-engine
     ports:
       - "8030:8030"
     environment:
-      - DB_HOST=db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=parking_db
-      - DB_PORT=5432
-      - APP_HOST=0.0.0.0
-      - APP_PORT=8030
-      - APP_ENV=local
-      - AGE_GRAPH_NAME=state_db
-      # 마이크로서비스 프록시 설정
-      - RULE_ENGINE_URL=http://rule-engine:8050
-      - GM_URL=http://gm:8020
-      - PROXY_TIMEOUT=10.0
-      - PROXY_MAX_RETRIES=3
+      DB_HOST: host.docker.internal
+      DB_USER: state_user
+      DB_PASSWORD: state_local_change_me
+      DB_NAME: state_db
+      DB_PORT: 8621
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8030
+      APP_ENV: local
+      AGE_GRAPH_NAME: state_db
+      RULE_ENGINE_URL: http://host.docker.internal:8050
+      GM_URL: http://host.docker.internal:8020
+      PROXY_TIMEOUT: 10.0
+      PROXY_MAX_RETRIES: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-      - gtrpgm-net
+      - platform-net
 
 networks:
-  gtrpgm-net:
-    driver: bridge
+  platform-net:
+    name: platform-net
+    external: true

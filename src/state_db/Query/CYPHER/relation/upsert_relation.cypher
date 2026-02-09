@@ -6,8 +6,16 @@ SET
     r.active = true,
     r.activated_turn = coalesce(r.activated_turn, $turn),
     r.deactivated_turn = null,
-    r.affinity = coalesce($affinity_score, r.affinity),
+    r.affinity = coalesce(r.affinity, 0) + coalesce($affinity_score, 0),
     r.quantity = coalesce($quantity, r.quantity)
+
+WITH cause, effect, r
+SET r.affinity = CASE
+    WHEN r.affinity > 100 THEN 100
+    WHEN r.affinity < -100 THEN -100
+    ELSE r.affinity
+END
+
 RETURN {
     cause_entity_id: coalesce(cause.id, cause.tid),
     effect_entity_id: coalesce(effect.id, effect.tid),

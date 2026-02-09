@@ -97,6 +97,17 @@ async def state_commit(
                 }
                 for rel in relations
             ]
+            logger.info(
+                "state_commit turning in %s relations for session=%s",
+                len(changes["relation_updates"]),
+                session_id,
+            )
+
+        # 디버그: 변경 사항 로깅 (특히 관계 및 NPC 호감도)
+        if "npc_affinity" in changes:
+            logger.info(f"Commit changes - NPC Affinity: {changes['npc_affinity']}")
+        if "relation_updates" in changes:
+            logger.info(f"Commit changes - Relations: {changes['relation_updates']}")
 
         # 3. 변경 사항 일괄 저장
         result = await service.write_state_changes(session_id, changes)

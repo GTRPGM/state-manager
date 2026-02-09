@@ -39,4 +39,7 @@
 
 ## Compatibility / migration notes
 
-- TBD
+- 리모트 모놀리식 DB를 서비스별 DB로 분리하는 마이그레이션은 단일 SQL 엔트리 파일(`db/migrations/0001_monolith_to_service_split.sql`)을 기준으로 관리한다.
+- 이관 검증은 SQL 문법, API 계약, 커밋 플로우, 상태 가드를 포함한 통합 스크립트 세트로 고정해 회귀를 차단한다.
+- 루트 `docker-compose.local.yml` 기준 실행 시 state-manager는 `18030` 포트를 사용하고 DB는 `state_db`/`state_user`를 사용한다.
+- 같은 환경에서 rule-engine/BE-router는 `gtrpgm` DB를 공유한다.

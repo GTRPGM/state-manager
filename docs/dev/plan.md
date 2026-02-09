@@ -29,6 +29,7 @@
 | plan_0008 | GM Sequence Context Endpoint | docs/dev/detail/plan_0008.md | done |
 | plan_0009 | GM Commit from Rule Engine Result Schema | docs/dev/detail/plan_0009.md | done |
 | plan_0010 | Cypher/SQL End-to-End Verification Hardening | docs/dev/detail/plan_0010.md | done |
+| plan_0011 | Remote DB dump 기반 서비스 분리 이관 + 단일 SQL | docs/dev/detail/plan_0011.md | doing |
 | ref_0001 | Remove Legacy SQL Relation Tables | docs/dev/detail/ref_0001.md | done |
 <!-- PROJ_DASHBOARD_END -->
 
@@ -46,6 +47,7 @@
 - [x] docs/dev/detail/plan_0008.md
 - [x] docs/dev/detail/plan_0009.md
 - [x] docs/dev/detail/plan_0010.md
+- [ ] docs/dev/detail/plan_0011.md
 - [x] docs/dev/detail/ref_0001.md
 
 <!-- PROJ_TODO_END -->

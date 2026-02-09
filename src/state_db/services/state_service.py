@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 from state_db.models import ApplyJudgmentSkipped, StateUpdateResult
@@ -10,6 +11,7 @@ from state_db.repositories import (
     SessionRepository,
 )
 
+logger = logging.getLogger("uvicorn.error")
 ApplyJudgmentResult = Union[StateUpdateResult, ApplyJudgmentSkipped]
 
 
@@ -90,7 +92,11 @@ class StateService:
             enemies = [enemy for enemy in enemies if _entity_id(enemy) in enemy_ids]
 
             # 시퀀스 단위 world snapshot에서는 관련 엔티티 관계만 남긴다.
+            # Player와의 관계도 포함해야 하므로 player_id를 허용 목록에 추가
             allowed_ids = npc_ids.union(enemy_ids)
+            if player_id:
+                allowed_ids.add(str(player_id))
+
             relations = [
                 rel
                 for rel in relations
@@ -157,7 +163,14 @@ class StateService:
         if "relation_updates" in changes:
             turn_info = await self.lifecycle_repo.get_turn(session_id)
             current_turn = int(getattr(turn_info, "current_turn", 0))
+            logger.info(
+                "write_state_changes relations count=%s session=%s turn=%s",
+                len(changes["relation_updates"]),
+                session_id,
+                current_turn,
+            )
             for rel in changes["relation_updates"]:
+                logger.info(f"Upserting relation: {rel}")
                 await self.entity_repo.upsert_relation(
                     session_id=session_id,
                     cause_entity_id=str(rel.get("cause_entity_id", "")),

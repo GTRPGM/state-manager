@@ -19,7 +19,8 @@
 ### How to run
 
 - **Local API**: `bin/project run` (Uses `uv run python src/state_db/main.py`)
-- **Docker Compose (Dev)**: `bin/project run-compose` (Starts DB & App containers)
+- **Root Compose**: `bin/project up state-manager`
+- **Root Compose Port**: `http://localhost:18030`
 - **Utilities**: `bin/project {lint|pre-commit}`
 
 ### How to test (unit)
@@ -42,12 +43,25 @@
 - **Agtype Handling**: AGE 쿼리 결과는 `ResultMapper`를 통해 Python Native Type으로 변환 후 사용해야 합니다.
 - **Legacy Dependencies**: `pyproject.toml`에 포함된 `langgraph`, `langchain-core`는 현재 사용되지 않는 레거시 의존성입니다.
 - **Branch Strategy**: 현재 진행 중인 모든 Refactoring 및 Plan(`plan_####`) 작업은 별도 브랜치 생성 없이 `refactor/mk-graph` 브랜치에 직접 커밋합니다. 커밋은 각 플랜(Plan) 단위로 구분하여 수행합니다.
+- **DB 이관 원칙**: 리모트 덤프 기준의 서비스 분리 이관은 `single-entry SQL` 파일 1개를 기준으로 관리하고, 검증은 `scripts/*integration*` + `api_verification.py`로 고정합니다.
+- **로컬 compose DB 매핑**: state-manager는 `state_db` / `state_user`, rule-engine/BE-router는 `gtrpgm` / `gtrpgm` 공유를 사용합니다.
 
 <!-- PROJ_UNDERSTANDING_END -->
 
 <!-- PROJ_WORKNOTES_BEGIN -->
 
 ## Work Notes by Detail
+
+### plan_0011 - 리모트 DB 덤프 기반 서비스 분리 이관 + 단일 SQL (planned)
+
+- Work (brief):
+  - 리모트 모놀리식 DB를 서비스별 DB로 분리 이관하고, 이를 재현 가능한 테스트 베이스로 검증할 예정.
+- Actions planned (detailed):
+  - `pg_dump` 기반 리모트 덤프 절차를 표준화하고 복원 체크리스트를 문서화.
+  - `db/migrations/0001_monolith_to_service_split.sql` 단일 파일에 DDL/DML 순서를 통합.
+  - 이관 후 `scripts/verify_sql_syntax.py`, `scripts/api_verification.py`, `scripts/integration_commit_flow.py`, `scripts/integration_state_guards.py`를 동일 데이터셋으로 실행.
+- What to validate:
+  - row count/hash 일치, 관계(Cypher) 정합성, 세션/턴/커밋 의미적 동등성.
 
 ### ref_0000 - Core Engine Handover Notes
 
