@@ -104,7 +104,74 @@ class ScenarioRepository(BaseRepository):
                         act.sequences,
                     )
 
-                # 4. Sequences & Entities (SQL + Graph)
+                # 4. Items (SQL + Validation - 3-ID 체계:
+                # item_id(UUID), scenario_item_id(str), rule_id(int))
+                item_to_sequences: Dict[str, List[str]] = {}
+                sequence_location_by_id: Dict[str, Optional[str]] = {}
+                for seq in request.sequences:
+                    sequence_location_by_id[seq.id] = seq.location_name
+                    for seq_item_id in seq.items:
+                        item_to_sequences.setdefault(seq_item_id, []).append(seq.id)
+
+                item_map: Dict[str, str] = {}
+                for item in request.items:
+                    # Validate before generating UUID (same pattern as NPC/Enemy)
+                    node_props = {
+                        "name": item.name,
+                        "scenario_id": scenario_id,
+                        "scenario_item_id": item.scenario_item_id,
+                        "session_id": MASTER_SESSION_ID,
+                        "active": True,
+                        "rule": item.rule_id,
+                        "activated_turn": 0,
+                    }
+                    GraphValidator.validate_node("item", node_props)
+
+                    # Generate UUID after validation passes
+                    item_id = str(uuid.uuid4())
+                    item_map[item.scenario_item_id] = item_id
+
+                    # SQL Insert
+                    item_meta = dict(item.meta or {})
+                    assigned_sequence_ids = item_to_sequences.get(
+                        item.scenario_item_id, []
+                    )
+                    if assigned_sequence_ids:
+                        item_meta.setdefault("quantity", 1)
+                        item_meta.setdefault(
+                            "assigned_sequence_id", assigned_sequence_ids[0]
+                        )
+                        item_meta.setdefault(
+                            "assigned_sequence_ids", assigned_sequence_ids
+                        )
+                        first_seq = assigned_sequence_ids[0]
+                        first_location = sequence_location_by_id.get(first_seq)
+                        if first_location:
+                            item_meta.setdefault("assigned_location", first_location)
+
+                    await conn.execute(
+                        """
+                        INSERT INTO item (
+                            item_id, session_id, scenario_id,
+                            scenario_item_id, rule_id, name,
+                            description, item_type, meta
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        """,
+                        item_id,
+                        MASTER_SESSION_ID,
+                        scenario_id,
+                        item.scenario_item_id,
+                        item.rule_id,
+                        item.name,
+                        item.description,
+                        item.item_type,
+                        item_meta,
+                    )
+
+                # 5. Sequences & Entities (SQL + Graph)
+                npc_map: Dict[str, str] = {}
+                enemy_map: Dict[str, str] = {}
+
                 for seq in request.sequences:
                     await conn.execute(
                         """
@@ -123,15 +190,13 @@ class ScenarioRepository(BaseRepository):
                         json.dumps(seq.metadata or {}),
                     )
 
-                    # 4-1. NPCs (3-ID 체계: npc_id(UUID),
-                    # scenario_npc_id(str), rule_id(int))
+                    # 5-1. NPCs
                     for npc_id in seq.npcs:
                         n = next(
                             (x for x in request.npcs if x.scenario_npc_id == npc_id),
                             None,
                         )
                         if n:
-                            # 1. Validate first (before any DB operation)
                             node_props = {
                                 "name": n.name,
                                 "scenario_id": scenario_id,
@@ -142,11 +207,9 @@ class ScenarioRepository(BaseRepository):
                                 "activated_turn": 0,
                             }
                             GraphValidator.validate_node("npc", node_props)
-
-                            # 2. Generate UUID after validation passes
                             generated_npc_id = str(uuid.uuid4())
+                            npc_map[n.scenario_npc_id] = generated_npc_id
 
-                            # 3. SQL Insert with generated UUID
                             state = n.state or {}
                             num_state = state.get("numeric", {})
                             await conn.execute(
@@ -183,14 +246,9 @@ class ScenarioRepository(BaseRepository):
                                 num_state.get("SAN", 10),
                             )
                         else:
-                            msg = (
-                                f"NPC ID '{npc_id}' in sequence '{seq.id}' "
-                                "not found in request.npcs"
-                            )
-                            logger.warning(msg)
+                            logger.warning(f"NPC '{npc_id}' not found")
 
-                    # 4-2. Enemies (3-ID 체계: enemy_id(UUID),
-                    # scenario_enemy_id(str), rule_id(int))
+                    # 5-2. Enemies
                     for enemy_id in seq.enemies:
                         e = next(
                             (
@@ -201,7 +259,6 @@ class ScenarioRepository(BaseRepository):
                             None,
                         )
                         if e:
-                            # 1. Validate first (before any DB operation)
                             node_props = {
                                 "name": e.name,
                                 "scenario_id": scenario_id,
@@ -212,11 +269,9 @@ class ScenarioRepository(BaseRepository):
                                 "activated_turn": 0,
                             }
                             GraphValidator.validate_node("enemy", node_props)
-
-                            # 2. Generate UUID after validation passes
                             generated_enemy_id = str(uuid.uuid4())
+                            enemy_map[e.scenario_enemy_id] = generated_enemy_id
 
-                            # 3. SQL Insert with generated UUID
                             state = e.state or {}
                             num_state = state.get("numeric", {})
                             hp = num_state.get("HP", 30)
@@ -244,79 +299,101 @@ class ScenarioRepository(BaseRepository):
                                 seq.id,
                                 seq.location_name,
                                 e.tags,
-                                e.dropped_items,
+                                json.dumps(e.dropped_items),
                                 hp,
                                 hp,
                                 num_state.get("attack", 10),
                                 num_state.get("defense", 5),
                             )
                         else:
-                            msg = (
-                                f"Enemy ID '{enemy_id}' in sequence '{seq.id}' "
-                                "not found in request.enemies"
+                            logger.warning(f"Enemy '{enemy_id}' not found")
+
+                # 6. Entity-Item Ownership (Graph)
+                for n in request.npcs:
+                    if n.items:
+                        npc_instance_id = npc_map.get(n.scenario_npc_id)
+                        if npc_instance_id:
+                            inventory_id = str(uuid.uuid4())
+                            await conn.execute(
+                                "INSERT INTO inventory (inventory_id, session_id) VALUES ($1, $2)",
+                                inventory_id,
+                                MASTER_SESSION_ID,
                             )
-                            logger.warning(msg)
+                            await self.cypher.run_cypher(
+                                """
+                                MATCH (e:NPC {id: $npc_id, session_id: $session_id})
+                                MATCH (inv:Inventory {id: $inv_id, session_id: $session_id})
+                                MERGE (e)-[h:HAS_INVENTORY {active: true, activated_turn: 0, session_id: $session_id}]->(inv)
+                                """,
+                                {
+                                    "npc_id": npc_instance_id,
+                                    "inv_id": inventory_id,
+                                    "session_id": MASTER_SESSION_ID,
+                                },
+                                tx=conn,
+                            )
+                            for item_ref in n.items:
+                                await self.cypher.run_cypher(
+                                    """
+                                    MATCH (inv:Inventory {id: $inv_id, session_id: $session_id})
+                                    MATCH (i:Item {tid: $scenario_item_id, session_id: $session_id})
+                                    MERGE (inv)-[c:CONTAINS {session_id: $session_id, active: true}]->(i)
+                                    SET c.quantity = $quantity
+                                    """,
+                                    {
+                                        "inv_id": inventory_id,
+                                        "scenario_item_id": item_ref[
+                                            "scenario_item_id"
+                                        ],
+                                        "quantity": item_ref.get("quantity", 1),
+                                        "session_id": MASTER_SESSION_ID,
+                                    },
+                                    tx=conn,
+                                )
 
-                # 5. Items (SQL + Validation - 3-ID 체계:
-                # item_id(UUID), scenario_item_id(str), rule_id(int))
-                item_to_sequences: Dict[str, List[str]] = {}
-                sequence_location_by_id: Dict[str, Optional[str]] = {}
-                for seq in request.sequences:
-                    sequence_location_by_id[seq.id] = seq.location_name
-                    for seq_item_id in seq.items:
-                        item_to_sequences.setdefault(seq_item_id, []).append(seq.id)
+                for e in request.enemies:
+                    if e.items:
+                        enemy_instance_id = enemy_map.get(e.scenario_enemy_id)
+                        if enemy_instance_id:
+                            inventory_id = str(uuid.uuid4())
+                            await conn.execute(
+                                "INSERT INTO inventory (inventory_id, session_id) VALUES ($1, $2)",
+                                inventory_id,
+                                MASTER_SESSION_ID,
+                            )
+                            await self.cypher.run_cypher(
+                                """
+                                MATCH (e:Enemy {id: $enemy_id, session_id: $session_id})
+                                MATCH (inv:Inventory {id: $inv_id, session_id: $session_id})
+                                MERGE (e)-[h:HAS_INVENTORY {active: true, activated_turn: 0, session_id: $session_id}]->(inv)
+                                """,
+                                {
+                                    "enemy_id": enemy_instance_id,
+                                    "inv_id": inventory_id,
+                                    "session_id": MASTER_SESSION_ID,
+                                },
+                                tx=conn,
+                            )
+                            for item_ref in e.items:
+                                await self.cypher.run_cypher(
+                                    """
+                                    MATCH (inv:Inventory {id: $inv_id, session_id: $session_id})
+                                    MATCH (i:Item {tid: $scenario_item_id, session_id: $session_id})
+                                    MERGE (inv)-[c:CONTAINS {session_id: $session_id, active: true}]->(i)
+                                    SET c.quantity = $quantity
+                                    """,
+                                    {
+                                        "inv_id": inventory_id,
+                                        "scenario_item_id": item_ref[
+                                            "scenario_item_id"
+                                        ],
+                                        "quantity": item_ref.get("quantity", 1),
+                                        "session_id": MASTER_SESSION_ID,
+                                    },
+                                    tx=conn,
+                                )
 
-                for item in request.items:
-                    # Validate before generating UUID (same pattern as NPC/Enemy)
-                    node_props = {
-                        "name": item.name,
-                        "scenario_id": scenario_id,
-                        "scenario_item_id": item.scenario_item_id,
-                        "session_id": MASTER_SESSION_ID,
-                        "active": True,
-                        "rule": item.rule_id,
-                        "activated_turn": 0,
-                    }
-                    GraphValidator.validate_node("item", node_props)
-
-                    # Generate UUID after validation passes
-                    item_id = str(uuid.uuid4())
-
-                    # SQL Insert
-                    item_meta = dict(item.meta or {})
-                    assigned_sequence_ids = item_to_sequences.get(item.scenario_item_id, [])
-                    if assigned_sequence_ids:
-                        item_meta.setdefault("assigned_sequence_id", assigned_sequence_ids[0])
-                        item_meta.setdefault(
-                            "assigned_sequence_ids", assigned_sequence_ids
-                        )
-                        first_seq = assigned_sequence_ids[0]
-                        first_location = sequence_location_by_id.get(first_seq)
-                        if first_location:
-                            item_meta.setdefault("assigned_location", first_location)
-
-                    await conn.execute(
-                        """
-                        INSERT INTO item (
-                            item_id, session_id, scenario_id,
-                            scenario_item_id, rule_id, name,
-                            description, item_type, meta
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                        """,
-                        item_id,
-                        MASTER_SESSION_ID,
-                        scenario_id,
-                        item.scenario_item_id,
-                        item.rule_id,
-                        item.name,
-                        item.description,
-                        item.item_type,
-                        item_meta,
-                    )
-                    # Note: Item Graph Nodes are typically created on demand
-                    # (Inventory) or placed in world.
-
-                # 6. Relations (Graph Edges)
+                # 7. Relations (Graph Edges)
                 for rel in request.relations:
                     edge_props = {
                         "relation_type": rel.relation_type,
@@ -500,9 +577,7 @@ class ScenarioRepository(BaseRepository):
                     "goal": row.get("goal"),
                     "exit_triggers": row.get("exit_triggers") or [],
                     "metadata": row.get("metadata") or {},
-                    "npcs": sorted(
-                        npcs_by_seq.get(str(row.get("sequence_id")), set())
-                    ),
+                    "npcs": sorted(npcs_by_seq.get(str(row.get("sequence_id")), set())),
                     "enemies": sorted(
                         enemies_by_seq.get(str(row.get("sequence_id")), set())
                     ),
@@ -705,6 +780,7 @@ class ScenarioRepository(BaseRepository):
                     "name": row["name"],
                     "description": row["description"],
                     "item_type": row["item_type"],
+                    "quantity": (row["meta"] or {}).get("quantity", 1),
                     "meta": row["meta"] or {},
                 }
                 for row in items_rows

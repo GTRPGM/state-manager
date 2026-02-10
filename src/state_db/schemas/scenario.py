@@ -26,6 +26,10 @@ class ScenarioInjectNPC(BaseModel):
     description: str = Field(default="", description="NPC 설명")
     tags: List[str] = Field(default_factory=list, description="태그")
     state: Dict[str, Any] = Field(default_factory=dict, description="상태 데이터")
+    items: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="소유 아이템 리스트 ({scenario_item_id, quantity})",
+    )
     is_departed: bool = Field(default=False, description="퇴장 여부")
 
 
@@ -42,7 +46,11 @@ class ScenarioInjectEnemy(BaseModel):
         description="상태 (hp, attack 등)",
     )
     dropped_items: List[int] = Field(
-        default_factory=list, description="드롭 아이템 Rule ID 리스트"
+        default_factory=list, description="드롭 아이템 Rule ID 리스트 (deprecated)"
+    )
+    items: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="소유 아이템 리스트 ({scenario_item_id, quantity})",
     )
 
 

@@ -89,6 +89,7 @@ class SequenceItemInfo(BaseModel):
     name: str
     description: Optional[str] = None
     item_type: Optional[str] = None
+    quantity: int = 1
     meta: JsonField = {}
 
     model_config = ConfigDict(from_attributes=True)

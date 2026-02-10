@@ -12,14 +12,14 @@ BEGIN
         assigned_sequence_id, assigned_location, scenario_id, scenario_enemy_id,
         rule_id, tags,
         hp, max_hp, attack, defense,
-        dropped_items, is_defeated
+        dropped_items, owned_items, is_defeated
     )
     SELECT
         gen_random_uuid(), src.entity_type, src.name, src.description, NEW.session_id,
         src.assigned_sequence_id, src.assigned_location, src.scenario_id, src.scenario_enemy_id,
         src.rule_id, src.tags,
         src.hp, src.max_hp, src.attack, src.defense,
-        src.dropped_items, false
+        src.dropped_items, src.owned_items, false
     FROM enemy src
     WHERE src.session_id = MASTER_SESSION_ID
       AND src.scenario_id = NEW.scenario_id;

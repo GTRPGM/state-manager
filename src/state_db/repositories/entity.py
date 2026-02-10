@@ -194,6 +194,7 @@ class EntityRepository(BaseRepository):
         sql_path = self.query_dir / "MANAGE" / "npc" / "depart_npc.sql"
         result = await run_sql_query(sql_path, [npc_id, session_id])
         if result:
+            await self._drop_owned_items(session_id, npc_id, "NPC")
             return NPCDepartResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="NPC not found or already departed")
 
@@ -305,6 +306,63 @@ class EntityRepository(BaseRepository):
         """적 처치 처리 (SQL Truth 업데이트 -> 트리거 동기화)"""
         sql_path = self.query_dir / "UPDATE" / "enemy" / "defeated_enemy.sql"
         await run_sql_command(sql_path, [enemy_instance_id, session_id])
+        await self._drop_owned_items(session_id, enemy_instance_id, "Enemy")
+
+    async def _drop_owned_items(
+        self, session_id: str, entity_id: str, entity_label: str
+    ) -> None:
+        """엔티티가 소유한 아이템을 현재 위치(Sequence)에 드롭"""
+        # 1. 엔티티의 현재 시퀀스 ID 조회
+        query = (
+            f"SELECT assigned_sequence_id FROM {entity_label.lower()} "
+            f"WHERE {entity_label.lower()}_id = $1"
+        )
+        rows = await run_raw_query(query, [entity_id])
+        if not rows or not rows[0]["assigned_sequence_id"]:
+            return
+
+        seq_id = rows[0]["assigned_sequence_id"]
+
+        # 2. 그래프에서 인벤토리 및 소유 아이템 조회
+        cypher_query = f"""
+            MATCH (e:{entity_label} {{id: $entity_id, session_id: $session_id}})
+                  -[:HAS_INVENTORY]->(inv:Inventory)
+                  -[c:CONTAINS]->(i:Item)
+            RETURN {{ item_id: i.id, quantity: c.quantity }}
+        """
+        items = await cypher_engine.run_cypher(
+            cypher_query, {"entity_id": entity_id, "session_id": session_id}
+        )
+
+        for item_row in items:
+            item_id = str(item_row["item_id"])
+            quantity = item_row.get("quantity", 1)
+
+            # 3. SQL: item meta 업데이트 (필드 드롭 상태로 변경)
+            await run_sql_command(
+                self.query_dir / "UPDATE" / "item" / "update_item_meta_drop.sql",
+                [seq_id, item_id, quantity],
+            )
+
+            # 4. Graph: 소유 관계 삭제 및 필드 관계 생성
+            await cypher_engine.run_cypher(
+                """
+                MATCH (inv:Inventory)-[c:CONTAINS]->(i:Item {id: $item_id, session_id: $session_id})
+                MATCH (s:Sequence {id: $seq_id, session_id: $session_id})
+                DELETE c
+                CREATE (s)-[:HAS_ITEM {
+                    quantity: $quantity,
+                    active: true,
+                    session_id: $session_id
+                }]->(i)
+                """,
+                {
+                    "item_id": item_id,
+                    "seq_id": seq_id,
+                    "session_id": session_id,
+                    "quantity": quantity,
+                },
+            )
 
     # Utility
     @staticmethod

@@ -12,14 +12,14 @@ BEGIN
         assigned_sequence_id, assigned_location, scenario_id, scenario_npc_id,
         rule_id, tags,
         hp, mp, str, dex, int, lux, san,
-        is_departed
+        owned_items, is_departed
     )
     SELECT
         gen_random_uuid(), n.entity_type, n.name, n.description, NEW.session_id,
         n.assigned_sequence_id, n.assigned_location, n.scenario_id, n.scenario_npc_id,
         n.rule_id, n.tags,
         n.hp, n.mp, n.str, n.dex, n.int, n.lux, n.san,
-        false
+        n.owned_items, false
     FROM npc n
     WHERE n.session_id = MASTER_SESSION_ID
       AND n.scenario_id = NEW.scenario_id;
