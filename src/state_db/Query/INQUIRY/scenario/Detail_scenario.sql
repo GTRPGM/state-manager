@@ -1,1 +1,1 @@
-SELECT * FROM scenario WHERE scenario_id = :scenario_id;
+SELECT * FROM scenario WHERE scenario_id = $1;

@@ -1,17 +1,26 @@
--- 활성 세션 조회
+-- --------------------------------------------------------------------
+-- Session_active.sql
+-- 활성 세션 조회 (플레이어 ID 포함)
+-- 용도: 현재 진행 중인 세션 목록 확인
+-- --------------------------------------------------------------------
+
 SELECT
-    session_id,
-    scenario_id,
-    current_act,
-    current_sequence,
-    current_phase,
-    current_turn,
-    location,
-    status,
-    started_at,
-    created_at,
-    updated_at
-FROM session
-WHERE status = 'active'
-ORDER BY started_at DESC;
--- p.player_id is missing here, but let's keep it simple for now or join
+    s.session_id,
+    s.scenario_id,
+    s.user_id,
+    p.player_id,
+    s.current_act,
+    s.current_sequence,
+    s.current_act_id,
+    s.current_sequence_id,
+    s.current_turn,
+    s.location,
+    s.status,
+    s.started_at,
+    s.ended_at,
+    s.created_at,
+    s.updated_at
+FROM session s
+LEFT JOIN player p ON s.session_id = p.session_id
+WHERE s.status = 'active'
+ORDER BY s.started_at DESC;

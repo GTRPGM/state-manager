@@ -1,0 +1,8 @@
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# 추가로 무시하면 좋은 것들
+.git
+.venv
+.env

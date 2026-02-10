@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from .database import DatabaseManager, set_age_path
+from .connection import DatabaseManager, set_age_path
 
 logger = logging.getLogger("state_db.infrastructure.schema")
 
@@ -11,18 +11,20 @@ async def initialize_schema(query_dir: Path) -> None:
     base_dir = query_dir / "BASE"
 
     # 의존성을 고려한 실행 순서 정의
-    initial_tables = ["B_scenario.sql", "B_session.sql"]
+    initial_tables = [
+        "B_scenario.sql",
+        "B_session.sql",
+        "B_scenario_act.sql",
+        "B_scenario_sequence.sql",
+    ]
     entity_tables = [
         "B_player.sql",
         "B_npc.sql",
         "B_enemy.sql",
         "B_item.sql",
-        "B_phase.sql",
         "B_turn.sql",
     ]
     relation_tables = [
-        "B_player_inventory.sql",
-        "B_player_npc_relations.sql",
         "B_inventory.sql",
     ]
 

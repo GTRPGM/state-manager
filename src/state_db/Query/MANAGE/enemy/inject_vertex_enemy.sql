@@ -1,5 +1,5 @@
 SELECT * FROM cypher('state_db', $$
-    CREATE (n:enemy {
+    CREATE (n:Enemy {
         enemy_id: $enemy_id,
         session_id: $session_id,
         scenario_id: $scenario_id,

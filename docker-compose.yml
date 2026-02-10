@@ -10,13 +10,40 @@ services:
 
     environment:
       DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
+      # External Service URLs
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      # External Service
+      BE_ROUTER_HOST: ${BE_ROUTER_HOST}
+      BE_ROUTER_PORT: ${BE_ROUTER_PORT}
+
+      GM_HOST: ${GM_HOST}
+      GM_PORT: ${GM_PORT}
+
+      STATE_MANAGER_HOST: ${STATE_MANAGER_HOST}
+      STATE_MANAGER_PORT: ${STATE_MANAGER_PORT}
+
+      SCENARIO_SERVICE_HOST: ${SCENARIO_SERVICE_HOST}
+      SCENARIO_SERVICE_PORT: ${SCENARIO_SERVICE_PORT}
+
+      RULE_ENGINE_HOST: ${RULE_ENGINE_HOST}
+      RULE_ENGINE_PORT: ${RULE_ENGINE_PORT}
+
+      LLM_GATEWAY_HOST: ${LLM_GATEWAY_HOST}
+      LLM_GATEWAY_PORT: ${LLM_GATEWAY_PORT}
+
+      WEB_HOST: ${WEB_HOST}
+      WEB_PORT: ${WEB_PORT}
 
       APP_HOST: 0.0.0.0
       APP_PORT: ${PORT}
       APP_ENV: production
+      RULE_ENGINE_URL: "http://rule-engine:8050/"
 
     networks:
       - platform-net

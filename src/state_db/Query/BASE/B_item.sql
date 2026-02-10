@@ -3,19 +3,25 @@
 -- 아이템 엔티티 테이블 구조 (Base)
 -- ====================================================================
 
+
 CREATE TABLE IF NOT EXISTS item (
-    -- Rule Engine의 item 고유 ID
-    item_id UUID PRIMARY KEY,
+    -- 1. Instance ID (UUID)
+    item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- 2. Rule ID (INT from Rule Engine)
+    rule_id INT NOT NULL,
+
+    -- 3. Scenario String ID
+    scenario_item_id VARCHAR(100) NOT NULL,
 
     -- 엔티티 유형
     entity_type VARCHAR(10) NOT NULL DEFAULT 'item',
 
     -- 세션 참조
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
-    scenario_id UUID NOT NULL,
-    scenario_item_id UUID NOT NULL,
 
-    name VARCHAR(20) NOT NULL,
+    scenario_id UUID NOT NULL,
+    name VARCHAR(40) NOT NULL,
     description TEXT DEFAULT '',
 
     -- 아이템 분류 (소모품, 장비, 퀘스트 아이템 등)

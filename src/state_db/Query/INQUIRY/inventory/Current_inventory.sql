@@ -1,10 +1,13 @@
--- [용도] 특정 엔티티(Player/NPC)의 인벤토리 설정 및 제한 수치 확인
+-- --------------------------------------------------------------------
+-- Current_inventory.sql
+-- 특정 세션의 플레이어 인벤토리 설정 확인
+-- $1: session_id
+-- --------------------------------------------------------------------
+
 SELECT
     inventory_id,
     capacity,
-    weight_limit,
-    state
+    weight_limit
 FROM inventory
-WHERE session_id = :session_id
-  AND owner_entity_id = :owner_id
-  AND owner_entity_type = :entity_type; -- 'player' 또는 'npc'
+WHERE session_id = $1
+LIMIT 1;

@@ -1,23 +1,23 @@
-from typing import Any, Dict, List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException
 
 from state_db.infrastructure import execute_sql_function, run_sql_command, run_sql_query
-from state_db.models import (
-    ActChangeResult,
-    SequenceChangeResult,
-    SessionInfo,
-)
-
-from .world import WorldStateRepository
+from state_db.models import SessionInfo
+from state_db.repositories.base import BaseRepository
 
 
-class SessionRepository(WorldStateRepository):
-    # Session Lifecycle
+class SessionRepository(BaseRepository):
+    """세션의 생명주기 및 기본 조회를 담당하는 리포지토리"""
 
     async def start(
-        self, scenario_id: str, act: int, sequence: int, location: str
+        self,
+        scenario_id: str,
+        act: int,
+        sequence: int,
+        location: str,
+        user_id: Optional[int] = None,
     ) -> SessionInfo:
         try:
             scenario_uuid = UUID(scenario_id)
@@ -27,17 +27,31 @@ class SessionRepository(WorldStateRepository):
             ) from e
 
         result = await execute_sql_function(
-            "create_session", [scenario_uuid, act, sequence, location]
+            "create_session", [scenario_uuid, act, sequence, location, user_id]
         )
         session_id = result[0].get("create_session") if result else None
         if not session_id:
             raise Exception("Failed to create session")
 
-        return await self.get_info(session_id)
+        _result = await self.get_info(session_id)
+        _result.user_id = user_id
+        return _result
 
     async def end(self, session_id: str) -> None:
         sql_path = self.query_dir / "MANAGE" / "session" / "end_session.sql"
+
         await run_sql_command(sql_path, [session_id])
+
+    async def delete(self, session_id: str) -> dict:
+        """세션 완전 삭제 (CASCADE로 관련 데이터 모두 삭제)"""
+        sql_path = self.query_dir / "MANAGE" / "session" / "delete_session.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return {"session_id": session_id, "status": "deleted"}
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found or is Session 0 (protected)",
+        )
 
     async def pause(self, session_id: str) -> None:
         sql_path = self.query_dir / "MANAGE" / "session" / "pause_session.sql"
@@ -47,10 +61,9 @@ class SessionRepository(WorldStateRepository):
         sql_path = self.query_dir / "MANAGE" / "session" / "resume_session.sql"
         await run_sql_command(sql_path, [session_id])
 
-    # Session Query
-
     async def get_info(self, session_id: str) -> SessionInfo:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_show.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return SessionInfo.model_validate(result[0])
@@ -62,81 +75,19 @@ class SessionRepository(WorldStateRepository):
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_all_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_all.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_paused_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_paused.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
     async def get_ended_sessions(self) -> List[SessionInfo]:
-        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended-r.sql"
+        # [dev 반영] -r 접미사 제거
+        sql_path = self.query_dir / "INQUIRY" / "session" / "Session_ended.sql"
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
-
-    async def get_progress(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Progress_get-r.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    # Session Utilities
-
-    async def phase_check(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "phase" / "phase_check.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def turn_changed(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "turn" / "turn_changed.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def add_act(self, session_id: str) -> ActChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "act" / "add_act.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return ActChangeResult.model_validate(result[0])
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def back_act(self, session_id: str) -> ActChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "act" / "back_act.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return ActChangeResult.model_validate(result[0])
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def act_check(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "act" / "act_check.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def add_sequence(self, session_id: str) -> SequenceChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "sequence" / "add_sequence.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return SequenceChangeResult.model_validate(result[0])
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def back_sequence(self, session_id: str) -> SequenceChangeResult:
-        sql_path = self.query_dir / "MANAGE" / "sequence" / "back_sequence.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return SequenceChangeResult.model_validate(result[0])
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def limit_sequence(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "MANAGE" / "sequence" / "limit_sequence.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")

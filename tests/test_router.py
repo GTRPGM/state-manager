@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -11,12 +11,24 @@ MOCK_SCENARIO_ID = "550e8400-e29b-41d4-a716-446655440000"
 
 @pytest.mark.asyncio
 async def test_start_session(async_client: AsyncClient):
-    mock_response = {
+    mock_response = MagicMock()
+    mock_response.session_id = MOCK_SESSION_ID
+    mock_response.scenario_id = MOCK_SCENARIO_ID
+    mock_response.player_id = MOCK_PLAYER_ID
+    mock_response.current_act = 1
+    mock_response.current_sequence = 1
+    mock_response.current_act_id = "act-1"
+    mock_response.current_sequence_id = "seq-1"
+    mock_response.location = "Starting Town"
+    mock_response.status = "active"
+    mock_response.model_dump.return_value = {
         "session_id": MOCK_SESSION_ID,
         "scenario_id": MOCK_SCENARIO_ID,
         "player_id": MOCK_PLAYER_ID,
         "current_act": 1,
         "current_sequence": 1,
+        "current_act_id": "act-1",
+        "current_sequence_id": "seq-1",
         "location": "Starting Town",
         "status": "active",
     }
@@ -81,7 +93,7 @@ async def test_update_player_hp(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_update_inventory(async_client: AsyncClient):
-    mock_response = {"player_id": MOCK_PLAYER_ID, "item_id": 5, "quantity": 3}
+    mock_response = {"player_id": MOCK_PLAYER_ID, "rule_id": 5, "quantity": 3}
 
     with patch(
         "state_db.repositories.PlayerRepository.update_inventory",
@@ -89,7 +101,7 @@ async def test_update_inventory(async_client: AsyncClient):
     ):
         response = await async_client.put(
             "/state/inventory/update",
-            json={"player_id": MOCK_PLAYER_ID, "item_id": 5, "quantity": 3},
+            json={"player_id": MOCK_PLAYER_ID, "rule_id": 5, "quantity": 3},
         )
 
         assert response.status_code == 200

@@ -25,13 +25,6 @@ JsonField = Annotated[Any, BeforeValidator(parse_json)]
 # ====================================================================
 
 
-class Phase(str, Enum):
-    EXPLORATION = "exploration"
-    COMBAT = "combat"
-    DIALOGUE = "dialogue"
-    REST = "rest"
-
-
 class SessionStatus(str, Enum):
     ACTIVE = "active"
     PAUSED = "paused"

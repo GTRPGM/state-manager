@@ -4,7 +4,10 @@
 -- --------------------------------------------------------------------
 
 UPDATE session
-SET current_sequence = GREATEST(current_sequence - 1, 1)  -- 최소 1
-WHERE session_id = $1
+SET
+    current_sequence = GREATEST(current_sequence - 1, 1),  -- 최소 1
+    current_sequence_id = CONCAT('seq-', GREATEST(current_sequence - 1, 1)::text),
+    updated_at = NOW()
+WHERE session_id = $1::uuid
   AND status = 'active'
-RETURNING current_act, current_sequence;
+RETURNING session_id, current_act, current_sequence;

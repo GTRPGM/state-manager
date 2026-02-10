@@ -8,10 +8,17 @@ from pydantic import BaseModel, ConfigDict
 class SessionInfo(BaseModel):
     session_id: Union[str, UUID]
     scenario_id: Union[str, UUID]
+    user_id: Optional[int] = None  # 외부 시스템 사용자 식별자 (Optional)
     player_id: Optional[Union[str, UUID]] = None
+
+    # 숫자 카운터
     current_act: int
     current_sequence: int
-    current_phase: str = "exploration"
+
+    # 문자열 ID (신규)
+    current_act_id: Optional[str] = "act-1"
+    current_sequence_id: Optional[str] = "seq-1"
+
     current_turn: int = 1
     location: Optional[str] = None
     status: str

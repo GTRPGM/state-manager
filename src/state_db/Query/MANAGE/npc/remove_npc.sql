@@ -2,29 +2,29 @@
 -- remove_npc.sql
 -- NPC 제거 (물리적 삭제)
 -- 용도: 스토리 진행으로 NPC 퇴장 또는 GM 명령
--- API: DELETE /state/npc/{npc_instance_id}
+-- API: DELETE /state/session/{session_id}/npc/{npc_instance_id}
 -- --------------------------------------------------------------------
 
 -- NPC 인스턴스 삭제
 DELETE FROM npc
-WHERE npc_instance_id = $1
-  AND session_id = $2
+WHERE npc_id = $1::UUID
+  AND session_id = $2::UUID
 RETURNING
-    npc_instance_id,
     npc_id,
+    scenario_npc_id,
     name,
     description,
     created_at,
     updated_at;
 
 -- 파라미터:
--- $1: npc_instance_id (UUID)
+-- $1: npc_id (UUID)
 -- $2: session_id (UUID)
 
 -- 결과 예:
--- npc_instance_id | npc_id | name         | description
--- ----------------|--------|--------------|----------------------
--- uuid-456        | 5      | Merchant Tom | A friendly merchant
+-- npc_id   | scenario_npc_id | name         | description
+-- ---------|-----------------|--------------|----------------------
+-- uuid-456 | npc-elder       | Village Elder| A wise old man
 
 -- 주의:
 -- - CASCADE 관계가 있다면 관련 데이터도 함께 삭제됨
