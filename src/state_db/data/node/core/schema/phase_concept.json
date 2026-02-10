@@ -1,0 +1,56 @@
+{
+  "schema_type": "concept_ref",
+  "name": "phase",
+  "description": "session 내 선택가능한 행동단위",
+
+  "created_at": {
+    "type": "timestamp",
+    "auto": "now",
+    "description": "Phase 개념 정의 스키마가 생성된 시점"
+  },
+
+  "source": {
+    "ref_schema": "session_schema.json",
+    "ref_field": "current_phase",
+    "ownership": "session"
+  },
+
+  "phase_definition": {
+    "type": "enum",
+    "values": ["exploration","combat","dialogue","rest"]
+  },
+
+  "semantics": {
+    "exploration": {
+      "description": "자유 탐색 및 환경 상호작용 단계",
+      "rule_scope": ["movement", "perception", "interaction"],
+      "allowed_actions": ["move", "inspect", "talk", "use_item"]
+    },
+
+    "combat": {
+      "description": "전투 규칙이 활성화되는 단계",
+      "rule_scope": ["initiative", "attack", "defense", "damage"],
+      "allowed_actions": ["attack", "skill", "defend", "item"]
+    },
+
+    "dialogue": {
+      "description": "대화 중심 진행 단계",
+      "rule_scope": ["persuasion", "deception", "emotion"],
+      "allowed_actions": ["talk", "negotiate", "threaten"]
+    },
+
+    "rest": {
+      "description": "회복 및 정비 단계",
+      "rule_scope": ["recovery", "time_pass"],
+      "allowed_actions": ["rest", "heal", "prepare"]
+    }
+  },
+
+  "used_by": [
+    "GM",
+    "RuleEngine",
+    "ScenarioWriter",
+    "play_cache",
+    "play_log_DB"
+  ]
+}

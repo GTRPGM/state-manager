@@ -1,0 +1,50 @@
+{
+  "schema_type": "concept_ref",
+  "name": "inventory",
+  "description": "Player 또는 NPC가 소유하는 아이템 컨테이너 노드",
+
+  "ownership": {
+    "owner_entity": ["player", "npc"],
+    "ownership_type": "edge",
+    "edge_name": "player_inventory"
+  },
+
+  "lifecycle": {
+    "created_on": "entity_spawn",
+    "destroyed_on": ["session_end", "explicit_remove"]
+  },
+
+  "scope": {
+    "session_bound": true,
+    "shared": false
+  },
+
+  "state_constraints": {
+    "capacity": {
+      "type": "integer",
+      "nullable": true,
+      "description": "인벤토리 최대 수용 가능 슬롯 수 (null이면 무제한)"
+    },
+    "weight_limit": {
+      "type": "number",
+      "nullable": true,
+      "description": "총 무게 제한 (RuleEngine에서 계산)"
+    }
+  },
+
+  "edges": {
+    "earn_item": {
+      "target": "item",
+      "source": "rule_DB",
+      "cardinality": "0..n",
+      "description": "RuleEngine에서 판정된 아이템을 inventory에 연결"
+    }
+  },
+
+  "used_by": [
+    "GM",
+    "RuleEngine",
+    "play_cache",
+    "state_db"
+  ]
+}
