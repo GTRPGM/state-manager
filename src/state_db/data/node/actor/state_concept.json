@@ -1,0 +1,52 @@
+{
+  "schema_type": "concept_ref",
+  "name": "state",
+  "description": "게임 규칙에 의해 변화하는 엔티티 및 세션의 동적 상태 집합",
+
+  "created_at": {
+    "type": "timestamp",
+    "auto": "now"
+  },
+
+  "scope": {
+    "applicable_to": "entity",
+    "mutable": true,
+    "changed_by": ["GM"],
+    "change_unit": "turn"
+  },
+
+  "state_structure": {
+    "type": "object",
+    "properties": {
+      "numeric": {
+        "description": "HP, MP, sanity 등 수치형 상태",
+        "type": "map",
+        "value_type": "number",
+        "default_keys": ["HP", "MP"]
+      },
+
+      "boolean": {
+        "description": "버프 활성화 여부 등",
+        "type": "map",
+        "value_type": "boolean"
+      }
+    }
+  },
+
+  "semantics": {
+    "mutation_rule": {
+      "description": "State는 반드시 turn 단위 트랜잭션 내에서만 변경된다"
+    },
+    "rollback_rule": {
+      "description": "트랜잭션이 rollback 되면 state 변경은 적용되지 않는다"
+    }
+  },
+
+  "used_by": [
+    "player",
+    "npc",
+    "session",
+    "RuleEngine",
+    "play_log_DB"
+  ]
+}
