@@ -94,24 +94,30 @@ RETURNS TRIGGER AS $func$
 DECLARE
     MASTER_SESSION_ID CONSTANT UUID := '00000000-0000-0000-0000-000000000000';
 BEGIN
-    -- RELATION 복제 (tid 매칭)
+    -- RELATION 복제 (tid 매칭, 중복 방지)
     EXECUTE format('
         SELECT * FROM ag_catalog.cypher(''state_db'', $$
             MATCH (v1)-[r:RELATION]->(v2)
             WHERE r.session_id = %L AND r.scenario_id = %L
-            MATCH (nv1 {session_id: %L}), (nv2 {session_id: %L})
-            WHERE nv1.tid = v1.tid AND nv2.tid = v2.tid
-              AND nv1.tid <> ''none''
-            CREATE (nv1)-[nr:RELATION {
-                relation_type: r.relation_type,
-                affinity: r.affinity,
+            WITH v1.tid AS from_tid, v2.tid AS to_tid, r.relation_type AS relation_type, max(r.affinity) AS affinity
+            WHERE from_tid <> ''none'' AND to_tid <> ''none''
+            MATCH (src {session_id: %L, tid: from_tid})
+            WITH from_tid, to_tid, relation_type, affinity, min(src.id) AS src_id
+            MATCH (dst {session_id: %L, tid: to_tid})
+            WITH from_tid, to_tid, relation_type, affinity, src_id, min(dst.id) AS dst_id
+            MATCH (nv1 {session_id: %L, tid: from_tid, id: src_id})
+            MATCH (nv2 {session_id: %L, tid: to_tid, id: dst_id})
+            MERGE (nv1)-[nr:RELATION {
+                relation_type: relation_type,
                 session_id: %L,
-                scenario_id: %L,
-                active: true,
-                activated_turn: 0
+                scenario_id: %L
             }]->(nv2)
+            SET nr.affinity = affinity,
+                nr.active = true,
+                nr.activated_turn = coalesce(nr.activated_turn, 0),
+                nr.deactivated_turn = null
         $$) AS (result ag_catalog.agtype);
-    ', MASTER_SESSION_ID::text, NEW.scenario_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text, NEW.scenario_id::text);
+    ', MASTER_SESSION_ID::text, NEW.scenario_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text, NEW.session_id::text, NEW.scenario_id::text);
 
     RETURN NEW;
 END;

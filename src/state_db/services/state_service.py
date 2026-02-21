@@ -85,12 +85,13 @@ class StateService:
             )
             npc_ids = set(ids.get("npc_ids", []))
             enemy_ids = set(ids.get("enemy_ids", []))
+            item_ids = set(ids.get("item_ids", []))
 
             npcs = [npc for npc in npcs if _entity_id(npc) in npc_ids]
             enemies = [enemy for enemy in enemies if _entity_id(enemy) in enemy_ids]
 
             # 시퀀스 단위 world snapshot에서는 관련 엔티티 관계만 남긴다.
-            allowed_ids = npc_ids.union(enemy_ids)
+            allowed_ids = npc_ids.union(enemy_ids).union(item_ids)
             relations = [
                 rel
                 for rel in relations

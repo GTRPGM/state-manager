@@ -328,23 +328,25 @@ class ScenarioRepository(BaseRepository):
                         "deactivated_turn": None,
                     }
 
-                    # MERGE를 사용하여 노드 존재 보장 및 관계 생성
-                    # (라벨 제거로 범용성 확보)
+                    # AGE에서 head(collect(...)) 경유 시 비정상 익명 노드로 연결되는 케이스가 있어
+                    # tid/session_id로 직접 매치한 후 단일 페어에만 MERGE를 수행한다.
                     await self.cypher.run_cypher(
                         """
-                        MERGE (v1 {tid: $from_id, session_id: $session_id})
-                        SET v1.scenario_id = $scenario_id
-                        WITH v1
-                        MERGE (v2 {tid: $to_id, session_id: $session_id})
-                        SET v2.scenario_id = $scenario_id
-                        CREATE (v1)-[:RELATION {
+                        MATCH (v1 {tid: $from_id, session_id: $session_id})
+                        MATCH (v2 {tid: $to_id, session_id: $session_id})
+                        WITH v1, v2
+                        ORDER BY id(v1), id(v2)
+                        LIMIT 1
+                        MERGE (v1)-[r:RELATION {
                             relation_type: $relation_type,
-                            affinity: $affinity,
                             session_id: $session_id,
-                            scenario_id: $scenario_id,
-                            active: $active,
-                            activated_turn: $activated_turn
+                            scenario_id: $scenario_id
                         }]->(v2)
+                        SET
+                            r.affinity = $affinity,
+                            r.active = $active,
+                            r.activated_turn = coalesce(r.activated_turn, $activated_turn),
+                            r.deactivated_turn = null
                         """,
                         {
                             "session_id": MASTER_SESSION_ID,
@@ -800,7 +802,7 @@ class ScenarioRepository(BaseRepository):
     async def get_sequence_entity_ids(
         self, session_id: str, sequence_id: str
     ) -> Dict[str, List[str]]:
-        """지정 시퀀스에 배치된 NPC/Enemy 인스턴스 ID 목록 조회."""
+        """지정 시퀀스에 배치된 NPC/Enemy/Item 인스턴스 ID 목록 조회."""
         async with DatabaseManager.get_connection() as conn:
             npc_rows = await conn.fetch(
                 """
@@ -822,10 +824,34 @@ class ScenarioRepository(BaseRepository):
                 session_id,
                 sequence_id,
             )
+            item_rows = await conn.fetch(
+                """
+                SELECT item_id
+                FROM item
+                WHERE session_id = $1
+                  AND (
+                    COALESCE(
+                        NULLIF(meta->>'assigned_sequence_id', ''),
+                        NULLIF(meta->>'assigned_sequence', ''),
+                        NULLIF(meta->>'sequence_id', '')
+                    ) = $2
+                    OR EXISTS (
+                        SELECT 1
+                        FROM jsonb_array_elements_text(
+                            COALESCE(meta->'assigned_sequence_ids', '[]'::jsonb)
+                        ) AS sid(seq_id)
+                        WHERE sid.seq_id = $2
+                    )
+                  )
+                """,
+                session_id,
+                sequence_id,
+            )
 
         return {
             "npc_ids": [str(row["npc_id"]) for row in npc_rows],
             "enemy_ids": [str(row["enemy_id"]) for row in enemy_rows],
+            "item_ids": [str(row["item_id"]) for row in item_rows],
         }
 
     async def advance_act(
